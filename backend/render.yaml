@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: b60-api
+    runtime: node
+    region: fra
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DART_POS_URL
+        sync: false
+      - key: DART_POS_API_KEY
+        sync: false

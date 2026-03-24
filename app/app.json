@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "B60 Burgers",
+    "slug": "b60-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "b60app",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#111111"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ae.b60.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used for profile photo",
+        "NSUserNotificationsUsageDescription": "Get notified when your order is ready"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#111111"
+      },
+      "package": "ae.b60.app",
+      "permissions": ["NOTIFICATIONS", "VIBRATE"]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#F05A1A"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b60-burgers-app"
+      },
+      "supabaseUrl": "https://yyygcbovqblkzehjrtqw.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5eWdjYm92cWJsa3plaGpydHF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzODkzNTEsImV4cCI6MjA4OTk2NTM1MX0.OB7oYdN8_Lp6uSaolG0bOSc_Yo1E4UkfwfKn2g5_uLs",
+      "apiUrl": "https://b60-api.onrender.com/api"
+    }
+  }
+}
