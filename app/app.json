@@ -6,11 +6,11 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "b60app",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#111111"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": false,
@@ -23,7 +23,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#111111"
+        "backgroundColor": "#FFFFFF"
       },
       "package": "ae.b60.app",
       "permissions": [
@@ -39,6 +39,12 @@
         {
           "icon": "./assets/images/notification-icon.png",
           "color": "#F05A1A"
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": []
         }
       ]
     ],

@@ -1,18 +1,20 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native'
+import React, { useEffect, useRef } from 'react'
+import { View, Text, StyleSheet, ScrollView, Pressable, Animated } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Star, TrendingUp, Gift } from 'lucide-react-native'
+import { router } from 'expo-router'
+import { Star, TrendingUp, Gift, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp } from 'lucide-react-native'
 import { loyaltyApi } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
-import { Colors, Spacing, Radius, Typography } from '../../utils/theme'
+import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
 import { POINTS_TO_AED } from '../../utils/constants'
 import type { LoyaltyTransaction } from '../../types'
 
 const TIERS = [
-  { name: 'Bronze', min: 0, max: 999, color: '#CD7F32' },
-  { name: 'Silver', min: 1000, max: 4999, color: '#C0C0C0' },
-  { name: 'Gold', min: 5000, max: Infinity, color: '#FFD700' },
+  { name: 'Bronze', min: 0, max: 999, color: '#CD7F32', next: 1000 },
+  { name: 'Silver', min: 1000, max: 4999, color: '#A8A8A8', next: 5000 },
+  { name: 'Gold', min: 5000, max: Infinity, color: '#FFD700', next: null },
 ]
 
 function getTier(points: number) {
@@ -21,10 +23,8 @@ function getTier(points: number) {
 
 export default function LoyaltyScreen() {
   const user = useAuthStore((s) => s.user)
-  const { data: balance, isLoading } = useQuery({
-    queryKey: ['loyalty', 'balance'],
-    queryFn: loyaltyApi.getBalance,
-  })
+  const [howToOpen, setHowToOpen] = React.useState(false)
+
   const { data: history } = useQuery({
     queryKey: ['loyalty', 'history'],
     queryFn: loyaltyApi.getHistory,
@@ -35,60 +35,140 @@ export default function LoyaltyScreen() {
   const nextTier = TIERS.find(t => t.min > points)
   const progress = nextTier ? (points - tier.min) / (nextTier.min - tier.min) : 1
 
+  const progressAnim = useRef(new Animated.Value(0)).current
+  const countAnim = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(progressAnim, {
+        toValue: Math.min(progress, 1),
+        duration: 1000,
+        delay: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(countAnim, {
+        toValue: points,
+        duration: 1200,
+        useNativeDriver: false,
+      }),
+    ]).start()
+  }, [points])
+
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  })
+
+  const displayPoints = countAnim.interpolate({
+    inputRange: [0, points || 1],
+    outputRange: [0, points || 0],
+  })
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: Spacing.lg, padding: Spacing.lg }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Loyalty Points</Text>
 
-        {/* Points Card */}
+        {/* Big Points Card */}
         <LinearGradient
-          colors={[tier.color + 'CC', tier.color + '44']}
+          colors={[Colors.primary, Colors.primaryDark, '#1B2A4A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={styles.pointsCard}
         >
-          <View style={styles.pointsCardTop}>
-            <Star size={28} color={tier.color} fill={tier.color} />
-            <View style={styles.tierBadge}>
-              <Text style={[styles.tierText, { color: tier.color }]}>{tier.name}</Text>
+          {/* Decorative circle */}
+          <View style={styles.decorCircle} />
+
+          <View style={styles.cardTop}>
+            <View>
+              <Text style={styles.cardLabel}>YOUR POINTS</Text>
+              <Animated.Text style={styles.pointsNumber}>
+                {displayPoints.interpolate ? points.toLocaleString() : points.toLocaleString()}
+              </Animated.Text>
+              <Text style={styles.aedValue}>≈ AED {(points * POINTS_TO_AED).toFixed(0)} redeemable</Text>
+            </View>
+            <View style={[styles.tierBadge, { backgroundColor: tier.color }]}>
+              <Star size={12} color={Colors.black} fill={Colors.black} />
+              <Text style={styles.tierText}>{tier.name}</Text>
             </View>
           </View>
-          <Text style={styles.pointsNumber}>{points.toLocaleString()}</Text>
-          <Text style={styles.pointsLabel}>POINTS</Text>
-          <Text style={styles.aedValue}>≈ AED {(points * POINTS_TO_AED).toFixed(0)} value</Text>
 
-          {/* Progress to next tier */}
+          {/* Progress bar */}
           {nextTier && (
             <View style={styles.progressSection}>
               <Text style={styles.progressLabel}>
                 {nextTier.min - points} pts to {nextTier.name}
               </Text>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: tier.color }]} />
+              <View style={styles.progressTrack}>
+                <Animated.View style={[styles.progressFill, { width: progressWidth, backgroundColor: tier.color }]} />
               </View>
             </View>
           )}
+
+          {/* Tier milestones */}
+          <View style={styles.tierMilestones}>
+            {TIERS.map((t, i) => (
+              <View key={t.name} style={styles.milestone}>
+                <View style={[styles.milestoneIcon, { backgroundColor: points >= t.min ? t.color : 'rgba(255,255,255,0.2)' }]}>
+                  <Text style={styles.milestoneEmoji}>{i === 0 ? '🥉' : i === 1 ? '🥈' : '🥇'}</Text>
+                </View>
+                <Text style={styles.milestoneName}>{t.name}</Text>
+                <Text style={styles.milestonePts}>{t.min}</Text>
+              </View>
+            ))}
+          </View>
         </LinearGradient>
 
-        {/* How It Works */}
-        <View style={styles.howItWorks}>
-          <Text style={styles.sectionTitle}>How It Works</Text>
-          <View style={styles.ruleRow}>
-            <TrendingUp size={20} color={Colors.primary} />
-            <Text style={styles.ruleText}>Spend AED 1 → Earn 1 Point</Text>
-          </View>
-          <View style={styles.ruleRow}>
-            <Gift size={20} color={Colors.primary} />
-            <Text style={styles.ruleText}>100 Points → AED 5 off your order</Text>
-          </View>
+        {/* Redeem Now CTA */}
+        <Pressable style={styles.redeemBtn} onPress={() => router.push('/(tabs)/cart')}>
+          <Text style={styles.redeemBtnText}>Redeem Points</Text>
+          <Text style={styles.redeemBtnSub}>Use in your next order</Text>
+        </Pressable>
+
+        {/* How It Works accordion */}
+        <View style={[styles.card, Shadows.card]}>
+          <Pressable
+            style={styles.accordionHeader}
+            onPress={() => setHowToOpen(!howToOpen)}
+          >
+            <Text style={styles.sectionTitle}>How to Earn More</Text>
+            {howToOpen ? <ChevronUp size={18} color={Colors.textMuted} /> : <ChevronDown size={18} color={Colors.textMuted} />}
+          </Pressable>
+          {howToOpen && (
+            <View style={styles.accordionBody}>
+              <View style={styles.ruleRow}>
+                <View style={[styles.ruleIcon, { backgroundColor: Colors.primaryTint }]}>
+                  <TrendingUp size={16} color={Colors.primary} />
+                </View>
+                <Text style={styles.ruleText}>Spend AED 1 → Earn 1 Point</Text>
+              </View>
+              <View style={styles.ruleRow}>
+                <View style={[styles.ruleIcon, { backgroundColor: Colors.successTint }]}>
+                  <Gift size={16} color={Colors.success} />
+                </View>
+                <Text style={styles.ruleText}>100 Points → AED 5 off your order</Text>
+              </View>
+              <View style={styles.ruleRow}>
+                <View style={[styles.ruleIcon, { backgroundColor: 'rgba(255,229,0,0.15)' }]}>
+                  <Star size={16} color="#C4A000" />
+                </View>
+                <Text style={styles.ruleText}>Reach Gold tier for exclusive perks</Text>
+              </View>
+            </View>
+          )}
         </View>
 
-        {/* History */}
+        {/* Transaction History */}
         <View style={styles.historySection}>
           <Text style={styles.sectionTitle}>History</Text>
-          {history?.map((tx) => (
-            <TransactionRow key={tx.id} tx={tx} />
-          ))}
-          {!history?.length && (
-            <Text style={Typography.bodySmall}>No transactions yet. Start ordering! 🍔</Text>
+          {history && history.length > 0 ? (
+            history.map((tx) => <TransactionRow key={tx.id} tx={tx} />)
+          ) : (
+            <View style={[styles.card, styles.emptyHistory]}>
+              <Text style={styles.emptyEmoji}>🍔</Text>
+              <Text style={styles.emptyText}>No transactions yet</Text>
+              <Text style={styles.emptySubtext}>Start ordering to earn points!</Text>
+            </View>
           )}
         </View>
       </ScrollView>
@@ -99,7 +179,12 @@ export default function LoyaltyScreen() {
 function TransactionRow({ tx }: { tx: LoyaltyTransaction }) {
   const isEarned = tx.type === 'earned' || tx.type === 'bonus'
   return (
-    <View style={styles.txRow}>
+    <View style={[styles.txRow, { backgroundColor: isEarned ? Colors.successTint : Colors.errorTint }]}>
+      <View style={[styles.txIcon, { backgroundColor: isEarned ? Colors.success : Colors.error }]}>
+        {isEarned
+          ? <ArrowUpRight size={14} color={Colors.white} />
+          : <ArrowDownLeft size={14} color={Colors.white} />}
+      </View>
       <View style={styles.txLeft}>
         <Text style={styles.txDesc}>{tx.description}</Text>
         <Text style={styles.txDate}>{new Date(tx.created_at).toLocaleDateString('en-AE')}</Text>
@@ -113,36 +198,93 @@ function TransactionRow({ tx }: { tx: LoyaltyTransaction }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  title: { fontSize: 28, fontWeight: '900', color: Colors.white },
-  pointsCard: { borderRadius: Radius.xl, padding: Spacing.lg, gap: 4 },
-  pointsCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  scroll: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
+  title: { fontSize: 28, fontWeight: '900', color: Colors.text },
+  pointsCard: {
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    overflow: 'hidden',
+    ...Shadows.glowStrong,
+  },
+  decorCircle: {
+    position: 'absolute',
+    right: -40,
+    top: -40,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 24,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  cardLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.6)', letterSpacing: 2, marginBottom: 4 },
+  pointsNumber: { fontSize: 64, fontWeight: '900', color: Colors.white, lineHeight: 68 },
+  aedValue: { fontSize: 14, color: 'rgba(255,255,255,0.8)', fontWeight: '600', marginTop: 2 },
   tierBadge: {
-    borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 4,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
   },
-  tierText: { fontSize: 13, fontWeight: '700' },
-  pointsNumber: { fontSize: 56, fontWeight: '900', color: Colors.white, marginTop: 8 },
-  pointsLabel: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 3 },
-  aedValue: { fontSize: 16, color: 'rgba(255,255,255,0.85)', fontWeight: '600', marginTop: 4 },
-  progressSection: { marginTop: 16, gap: 6 },
-  progressLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '600' },
-  progressBar: { height: 6, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: Radius.full, overflow: 'hidden' },
+  tierText: { fontSize: 12, fontWeight: '800', color: Colors.black },
+  progressSection: { gap: 6 },
+  progressLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600' },
+  progressTrack: { height: 10, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: Radius.full, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: Radius.full },
-  howItWorks: {
-    backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.md,
-    gap: Spacing.sm, borderWidth: 1, borderColor: Colors.border,
+  tierMilestones: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 4 },
+  milestone: { alignItems: 'center', gap: 3 },
+  milestoneIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  milestoneEmoji: { fontSize: 16 },
+  milestoneName: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.8)' },
+  milestonePts: { fontSize: 9, color: 'rgba(255,255,255,0.5)' },
+  redeemBtn: {
+    backgroundColor: Colors.yellow,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: Colors.white, marginBottom: 4 },
-  ruleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  ruleText: { ...Typography.body },
+  redeemBtnText: { fontSize: 16, fontWeight: '800', color: Colors.text },
+  redeemBtnSub: { fontSize: 12, color: Colors.textSecondary },
+  card: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  accordionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: Spacing.md,
+  },
+  accordionBody: { padding: Spacing.md, paddingTop: 0, gap: Spacing.sm },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: Colors.text },
+  ruleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  ruleIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  ruleText: { fontSize: 14, color: Colors.textSecondary, flex: 1 },
   historySection: { gap: Spacing.sm },
+  emptyHistory: { padding: Spacing.xl, alignItems: 'center', gap: Spacing.sm },
+  emptyEmoji: { fontSize: 32 },
+  emptyText: { fontSize: 16, fontWeight: '700', color: Colors.text },
+  emptySubtext: { fontSize: 13, color: Colors.textMuted },
   txRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.md,
-    borderWidth: 1, borderColor: Colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    borderRadius: Radius.md,
+    padding: Spacing.sm + 2,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  txLeft: { gap: 2 },
-  txDesc: { fontSize: 14, fontWeight: '600', color: Colors.text },
-  txDate: { ...Typography.caption },
-  txPoints: { fontSize: 15, fontWeight: '700' },
+  txIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  txLeft: { flex: 1, gap: 1 },
+  txDesc: { fontSize: 13, fontWeight: '600', color: Colors.text },
+  txDate: { fontSize: 11, color: Colors.textMuted },
+  txPoints: { fontSize: 14, fontWeight: '700' },
 })

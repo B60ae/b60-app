@@ -1,18 +1,32 @@
+import { useRef, useEffect } from 'react'
 import { Tabs } from 'expo-router'
 import { Home, UtensilsCrossed, ShoppingCart, Star, User } from 'lucide-react-native'
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet, Animated } from 'react-native'
 import { Colors } from '../../utils/theme'
 import { useCartStore } from '../../stores/cartStore'
 
 function CartTabIcon({ color, size }: { color: string; size: number }) {
   const count = useCartStore((s) => s.items.length)
+  const prevCount = useRef(count)
+  const badgeScale = useRef(new Animated.Value(1)).current
+
+  useEffect(() => {
+    if (count > prevCount.current) {
+      Animated.sequence([
+        Animated.spring(badgeScale, { toValue: 1.5, useNativeDriver: true, tension: 300, friction: 8 }),
+        Animated.spring(badgeScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 8 }),
+      ]).start()
+    }
+    prevCount.current = count
+  }, [count])
+
   return (
     <View>
       <ShoppingCart size={size} color={color} />
       {count > 0 && (
-        <View style={styles.badge}>
+        <Animated.View style={[styles.badge, { transform: [{ scale: badgeScale }] }]}>
           <Text style={styles.badgeText}>{count > 9 ? '9+' : count}</Text>
-        </View>
+        </Animated.View>
       )}
     </View>
   )
@@ -26,11 +40,12 @@ export default function TabsLayout() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarStyle: {
-          backgroundColor: Colors.surface,
+          backgroundColor: Colors.white,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: 72,
+          paddingBottom: 12,
+          paddingTop: 4,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}

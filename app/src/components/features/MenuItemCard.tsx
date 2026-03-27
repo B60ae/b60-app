@@ -1,7 +1,11 @@
+import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Image } from 'expo-image'
+import { LinearGradient } from 'expo-linear-gradient'
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
+import * as Haptics from 'expo-haptics'
 import { Plus } from 'lucide-react-native'
-import { Colors, Radius, Spacing, Typography, Shadows } from '../../utils/theme'
+import { Colors, Radius, Spacing, Shadows } from '../../utils/theme'
 import type { MenuItem } from '../../types'
 
 interface MenuItemCardProps {
@@ -11,64 +15,150 @@ interface MenuItemCardProps {
 }
 
 export function MenuItemCard({ item, onPress, onQuickAdd }: MenuItemCardProps) {
+  const scale = useSharedValue(1)
+  const addScale = useSharedValue(1)
+
+  const cardAnim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }))
+  const addAnim = useAnimatedStyle(() => ({ transform: [{ scale: addScale.value }] }))
+
+  const handleAdd = () => {
+    addScale.value = withSpring(0.8, {}, () => { addScale.value = withSpring(1) })
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    onQuickAdd(item)
+  }
+
   return (
-    <Pressable style={styles.card} onPress={() => onPress(item)}>
-      <Image
-        source={{ uri: item.image_url }}
-        style={styles.image}
-        contentFit="cover"
-        transition={200}
-        placeholder={{ color: Colors.surface }}
-      />
-      {item.is_featured && (
-        <View style={styles.featuredBadge}>
-          <Text style={styles.featuredText}>🔥 HOT</Text>
+    <Animated.View style={[styles.wrapper, item.is_featured && Shadows.glowStrong, cardAnim]}>
+      <Pressable
+        onPress={() => onPress(item)}
+        onPressIn={() => { scale.value = withSpring(0.97) }}
+        onPressOut={() => { scale.value = withSpring(1) }}
+        style={styles.card}
+      >
+        <View style={styles.imageContainer}>
+          {item.image_url ? (
+            <Image
+              source={{ uri: item.image_url }}
+              style={styles.image}
+              contentFit="cover"
+              transition={300}
+            />
+          ) : (
+            <View style={[styles.image, styles.imagePlaceholder]}>
+              <Text style={styles.placeholderEmoji}>🍔</Text>
+            </View>
+          )}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.6)']}
+            style={styles.gradient}
+          />
+          {item.is_featured && (
+            <View style={styles.featuredBadge}>
+              <Text style={styles.featuredText}>🔥 HOT</Text>
+            </View>
+          )}
+          <Text style={styles.nameOverlay} numberOfLines={2}>{item.name}</Text>
         </View>
-      )}
-      <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.desc} numberOfLines={2}>{item.description}</Text>
+
         <View style={styles.footer}>
-          <Text style={styles.price}>AED {item.price.toFixed(0)}</Text>
-          <Pressable style={styles.addBtn} onPress={() => onQuickAdd(item)}>
-            <Plus size={18} color={Colors.white} strokeWidth={2.5} />
-          </Pressable>
+          {item.description ? (
+            <Text style={styles.desc} numberOfLines={1}>{item.description}</Text>
+          ) : null}
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>AED {item.price.toFixed(0)}</Text>
+            <Animated.View style={addAnim}>
+              <Pressable onPress={handleAdd} style={styles.addBtn} hitSlop={8}>
+                <Plus size={16} color={Colors.white} strokeWidth={3} />
+              </Pressable>
+            </Animated.View>
+          </View>
         </View>
-      </View>
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   )
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.white,
+    ...Shadows.card,
+    margin: 4,
+  },
   card: {
-    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.card,
   },
-  image: { width: '100%', height: 160 },
+  imageContainer: {
+    height: 180,
+    justifyContent: 'flex-end',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  imagePlaceholder: {
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  placeholderEmoji: { fontSize: 40 },
+  gradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '65%',
+  },
   featuredBadge: {
     position: 'absolute',
     top: 10,
     left: 10,
     backgroundColor: Colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: Radius.full,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
   },
-  featuredText: { color: Colors.white, fontSize: 11, fontWeight: '700' },
-  info: { padding: Spacing.md },
-  name: { ...Typography.h4, marginBottom: 4 },
-  desc: { ...Typography.bodySmall, marginBottom: Spacing.sm },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  price: { ...Typography.price },
+  featuredText: { fontSize: 10, fontWeight: '800', color: Colors.white },
+  nameOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    left: 10,
+    right: 10,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.white,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  footer: {
+    padding: Spacing.sm + 2,
+    backgroundColor: Colors.white,
+  },
+  desc: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginBottom: 6,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  price: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
   addBtn: {
-    backgroundColor: Colors.primary,
-    width: 36,
-    height: 36,
+    width: 30,
+    height: 30,
     borderRadius: Radius.full,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

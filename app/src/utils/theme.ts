@@ -1,20 +1,35 @@
-// B60 Brand Design Tokens
+// B60 Brand Design Tokens — Light Theme
 export const Colors = {
   primary: '#F05A1A',
-  primaryDark: '#C94A12',
+  primaryDark: '#C94400',
   primaryLight: '#FF7A3D',
-  background: '#111111',
-  surface: '#1A1A1A',
-  surfaceElevated: '#222222',
-  border: '#2A2A2A',
-  text: '#FFFFFF',
-  textSecondary: '#AAAAAA',
-  textMuted: '#666666',
+  yellow: '#FFE500',
+  background: '#FFFFFF',
+  surface: '#F8F9FA',
+  surfaceElevated: '#FFFFFF',
+  border: '#EEEEEE',
+  borderStrong: '#DDDDDD',
+  text: '#1B2A4A',
+  textSecondary: '#444444',
+  textMuted: '#888888',
+  textInverse: '#FFFFFF',
   success: '#22C55E',
   error: '#EF4444',
   warning: '#F59E0B',
   white: '#FFFFFF',
   black: '#000000',
+  overlay: 'rgba(0,0,0,0.5)',
+  // Tints
+  primaryTint: 'rgba(240, 90, 26, 0.08)',
+  successTint: 'rgba(34, 197, 94, 0.1)',
+  errorTint: 'rgba(239, 68, 68, 0.1)',
+}
+
+export const Fonts = {
+  heading: 'Outfit_700Bold',
+  headingBlack: 'Outfit_900Black',
+  body: 'Inter_400Regular',
+  bodySemiBold: 'Inter_600SemiBold',
 }
 
 export const Typography = {
@@ -43,6 +58,7 @@ export const Radius = {
   md: 12,
   lg: 16,
   xl: 24,
+  xxl: 32,
   full: 999,
 }
 
@@ -50,15 +66,29 @@ export const Shadows = {
   card: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  cardStrong: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 6,
   },
   glow: {
     shadowColor: '#F05A1A',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
+  },
+  glowStrong: {
+    shadowColor: '#F05A1A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+    elevation: 10,
   },
 }

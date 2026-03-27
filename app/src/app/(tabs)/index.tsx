@@ -1,25 +1,57 @@
-import { ScrollView, View, Text, StyleSheet, Pressable } from 'react-native'
+import React, { useEffect, useRef } from 'react'
+import { ScrollView, View, Text, StyleSheet, Pressable, Animated, FlatList } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { Bell, ChevronRight } from 'lucide-react-native'
-import { menuApi } from '../../services/api'
+import { Bell, MapPin, ChevronRight, Flame, Star, Zap } from 'lucide-react-native'
+import { menuApi, locationsApi } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
 import { MenuItemCard } from '../../components/features/MenuItemCard'
 import { useCartStore } from '../../stores/cartStore'
-import { Colors, Spacing, Radius, Typography } from '../../utils/theme'
-import { LOCATIONS } from '../../utils/constants'
+import { HeroBanner } from '../../components/ui/HeroBanner'
+import { PointsBanner } from '../../components/ui/PointsBanner'
+import { SectionHeader } from '../../components/ui/SectionHeader'
+import { SkeletonLoader } from '../../components/ui/SkeletonLoader'
+import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
 import type { MenuItem } from '../../types'
+
+const CATEGORY_QUICK = [
+  { id: 'burgers', label: 'Burgers', emoji: '🍔' },
+  { id: 'chicken', label: 'Chicken', emoji: '🍗' },
+  { id: 'fries', label: 'Fries', emoji: '🍟' },
+  { id: 'dessert', label: 'Dessert', emoji: '🍫' },
+  { id: 'extras', label: 'Extras', emoji: '🥤' },
+]
+
+const PROMOS = [
+  { id: '1', title: 'Double Points', subtitle: 'This weekend only', color: '#F05A1A', icon: Zap },
+  { id: '2', title: 'New Drop', subtitle: 'Try the Vegas Smash', color: '#1B2A4A', icon: Flame },
+  { id: '3', title: 'Loyalty Rewards', subtitle: 'Redeem your points', color: '#22A855', icon: Star },
+]
 
 export default function HomeScreen() {
   const user = useAuthStore((s) => s.user)
   const addItem = useCartStore((s) => s.addItem)
 
-  const { data: featured } = useQuery({
+  const fadeAnim = useRef(new Animated.Value(0)).current
+  const slideAnim = useRef(new Animated.Value(30)).current
+
+  const { data: featured, isLoading: loadingFeatured } = useQuery({
     queryKey: ['menu', 'featured'],
     queryFn: menuApi.getFeatured,
   })
+
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: locationsApi.getAll,
+  })
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 60 }),
+    ]).start()
+  }, [])
 
   const handleItemPress = (item: MenuItem) => {
     router.push({ pathname: '/item/[id]', params: { id: item.id } })
@@ -29,71 +61,137 @@ export default function HomeScreen() {
     addItem(item, 1, [])
   }
 
+  const loyaltyPoints = user?.loyalty_points ?? 0
+  const loyaltyTier = loyaltyPoints >= 5000 ? 'Gold' : loyaltyPoints >= 1000 ? 'Silver' : 'Bronze'
+  const aedValue = loyaltyPoints * 0.05
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+
         {/* Header */}
-        <View style={styles.header}>
+        <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <View>
             <Text style={styles.greeting}>Hey {user?.name?.split(' ')[0] ?? 'there'} 👋</Text>
             <Text style={styles.sub}>What are you smashing today?</Text>
           </View>
           <Pressable style={styles.notifBtn}>
-            <Bell size={22} color={Colors.text} />
+            <Bell size={20} color={Colors.text} />
           </Pressable>
-        </View>
+        </Animated.View>
 
         {/* Hero Banner */}
-        <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.hero}>
-          <Text style={styles.heroTitle}>SMASH IT.</Text>
-          <Text style={styles.heroSub}>Dubai's boldest burgers. Pick up in minutes.</Text>
-          <Pressable style={styles.heroBtn} onPress={() => router.push('/(tabs)/menu')}>
-            <Text style={styles.heroBtnText}>Order Now</Text>
-            <ChevronRight size={18} color={Colors.primary} />
-          </Pressable>
-        </LinearGradient>
+        <HeroBanner
+          imageUri="https://b60.ae/images/fancy.webp"
+          title="SMASH IT."
+          subtitle="Dubai's boldest burgers. Pick up in minutes."
+          ctaLabel="Order Now"
+          onCtaPress={() => router.push('/(tabs)/menu')}
+          height={270}
+        />
 
-        {/* Loyalty Quick View */}
+        {/* Category Quick Jump */}
+        <Animated.View style={{ opacity: fadeAnim, marginTop: Spacing.lg }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryRow}
+          >
+            {CATEGORY_QUICK.map((cat) => (
+              <Pressable
+                key={cat.id}
+                style={styles.categoryChip}
+                onPress={() => router.push('/(tabs)/menu')}
+              >
+                <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+                <Text style={styles.categoryLabel}>{cat.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </Animated.View>
+
+        {/* Points Banner */}
         {user && (
-          <Pressable style={styles.loyaltyCard} onPress={() => router.push('/(tabs)/loyalty')}>
-            <View>
-              <Text style={styles.loyaltyLabel}>YOUR POINTS</Text>
-              <Text style={styles.loyaltyPoints}>{user.loyalty_points.toLocaleString()}</Text>
-            </View>
-            <View style={styles.loyaltyRight}>
-              <Text style={styles.loyaltyAed}>≈ AED {(user.loyalty_points * 0.05).toFixed(0)}</Text>
-              <Text style={styles.loyaltySub}>tap to redeem →</Text>
-            </View>
-          </Pressable>
+          <Animated.View style={{ opacity: fadeAnim, marginTop: Spacing.md }}>
+            <PointsBanner
+              points={loyaltyPoints}
+              tier={loyaltyTier}
+              aedValue={aedValue}
+              onPress={() => router.push('/(tabs)/loyalty')}
+            />
+          </Animated.View>
         )}
 
-        {/* Locations */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Our Locations</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -Spacing.lg }}>
-            <View style={styles.locationsRow}>
-              {LOCATIONS.map((loc) => (
-                <View key={loc.id} style={styles.locationChip}>
-                  <Text style={styles.locationName}>{loc.name}</Text>
-                  <Text style={styles.locationCity}>{loc.city}</Text>
+        {/* Promo Strip */}
+        <Animated.View style={{ opacity: fadeAnim, marginTop: Spacing.lg }}>
+          <SectionHeader title="Offers & News" />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.promoRow}
+          >
+            {PROMOS.map((promo) => {
+              const Icon = promo.icon
+              return (
+                <Pressable key={promo.id} style={[styles.promoCard, { backgroundColor: promo.color }]}>
+                  <Icon size={20} color="rgba(255,255,255,0.9)" />
+                  <Text style={styles.promoTitle}>{promo.title}</Text>
+                  <Text style={styles.promoSub}>{promo.subtitle}</Text>
+                </Pressable>
+              )
+            })}
+          </ScrollView>
+        </Animated.View>
+
+        {/* Fan Favourites */}
+        <Animated.View style={{ opacity: fadeAnim, marginTop: Spacing.lg }}>
+          <SectionHeader
+            title="🔥 Fan Favourites"
+            onSeeAll={() => router.push('/(tabs)/menu')}
+          />
+          {loadingFeatured ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuredRow}>
+              {[1, 2, 3].map((i) => <SkeletonLoader key={i} variant="card" width={180} height={220} style={styles.featuredCard} />)}
+            </ScrollView>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.featuredRow}
+              snapToInterval={196}
+              decelerationRate="fast"
+            >
+              {featured?.map((item) => (
+                <View key={item.id} style={styles.featuredCard}>
+                  <MenuItemCard item={item} onPress={handleItemPress} onQuickAdd={handleQuickAdd} />
                 </View>
               ))}
-            </View>
-          </ScrollView>
-        </View>
+            </ScrollView>
+          )}
+        </Animated.View>
 
-        {/* Featured Items */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🔥 Fan Favourites</Text>
-          {featured?.map((item) => (
-            <MenuItemCard
-              key={item.id}
-              item={item}
-              onPress={handleItemPress}
-              onQuickAdd={handleQuickAdd}
-            />
-          ))}
-        </View>
+        {/* Locations */}
+        <Animated.View style={{ opacity: fadeAnim, marginTop: Spacing.lg, marginBottom: Spacing.xxl }}>
+          <SectionHeader title="📍 Our Branches" />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.locationRow}
+          >
+            {(locations ?? []).map((loc: any) => (
+              <View key={loc.id} style={[styles.locationCard, Shadows.card]}>
+                <View style={styles.locationHeader}>
+                  <MapPin size={14} color={Colors.primary} />
+                  <Text style={styles.locationCity}>{loc.city}</Text>
+                </View>
+                <Text style={styles.locationName}>{loc.name}</Text>
+                {loc.address && <Text style={styles.locationAddr} numberOfLines={1}>{loc.address}</Text>}
+                <View style={[styles.openDot, { backgroundColor: loc.is_open !== false ? Colors.success : Colors.error }]} />
+              </View>
+            ))}
+          </ScrollView>
+        </Animated.View>
+
       </ScrollView>
     </SafeAreaView>
   )
@@ -101,46 +199,80 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  scroll: { paddingBottom: Spacing.xxl },
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-    padding: Spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
   },
   greeting: { fontSize: 22, fontWeight: '800', color: Colors.text },
-  sub: { ...Typography.bodySmall, marginTop: 2 },
+  sub: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
   notifBtn: {
     width: 42, height: 42, borderRadius: Radius.full,
     backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center',
+    ...Shadows.card,
   },
-  hero: {
-    margin: Spacing.lg, borderRadius: Radius.xl, padding: Spacing.lg, gap: 8,
+  categoryRow: {
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
   },
-  heroTitle: { fontSize: 40, fontWeight: '900', color: Colors.white, letterSpacing: -1 },
-  heroSub: { fontSize: 14, color: 'rgba(255,255,255,0.85)', fontWeight: '500' },
-  heroBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: Colors.white, borderRadius: Radius.full,
-    alignSelf: 'flex-start', paddingHorizontal: 20, paddingVertical: 10, marginTop: 8,
+  categoryChip: {
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    minWidth: 72,
+    ...Shadows.card,
   },
-  heroBtnText: { color: Colors.primary, fontWeight: '700', fontSize: 15 },
-  loyaltyCard: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginHorizontal: Spacing.lg, marginBottom: Spacing.lg,
-    backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.md,
-    borderWidth: 1, borderColor: Colors.primary + '44',
+  categoryEmoji: { fontSize: 24, marginBottom: 4 },
+  categoryLabel: { fontSize: 11, fontWeight: '600', color: Colors.text },
+  promoRow: {
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
   },
-  loyaltyLabel: { fontSize: 10, fontWeight: '700', color: Colors.primary, letterSpacing: 2 },
-  loyaltyPoints: { fontSize: 28, fontWeight: '900', color: Colors.white },
-  loyaltyRight: { alignItems: 'flex-end' },
-  loyaltyAed: { fontSize: 16, fontWeight: '700', color: Colors.primary },
-  loyaltySub: { ...Typography.caption, marginTop: 2 },
-  section: { paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg, gap: Spacing.md },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
-  locationsRow: { flexDirection: 'row', gap: 10, paddingHorizontal: Spacing.lg },
-  locationChip: {
-    backgroundColor: Colors.surface, borderRadius: Radius.md,
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderWidth: 1, borderColor: Colors.border,
+  promoCard: {
+    width: 160,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    justifyContent: 'flex-end',
+    gap: 4,
+    minHeight: 100,
   },
-  locationName: { color: Colors.text, fontWeight: '700', fontSize: 13 },
-  locationCity: { color: Colors.textMuted, fontSize: 11, marginTop: 2 },
+  promoTitle: { fontSize: 15, fontWeight: '800', color: Colors.white },
+  promoSub: { fontSize: 11, color: 'rgba(255,255,255,0.8)' },
+  featuredRow: {
+    paddingHorizontal: Spacing.md,
+    gap: 4,
+  },
+  featuredCard: { width: 180 },
+  locationRow: {
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
+  },
+  locationCard: {
+    width: 160,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    position: 'relative',
+  },
+  locationHeader: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  locationCity: { fontSize: 11, fontWeight: '600', color: Colors.primary },
+  locationName: { fontSize: 13, fontWeight: '700', color: Colors.text },
+  locationAddr: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  openDot: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
 })
