@@ -98,6 +98,19 @@ ordersRouter.post('/',
   }
 )
 
+// ─── Order History (must be before /:id) ──────────────────────────────────────
+ordersRouter.get('/history', async (req: AuthRequest, res) => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('user_id', req.userId!)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  if (error) return res.status(500).json({ error: 'Failed to fetch history' })
+  res.json(data)
+})
+
 // ─── Get Order ────────────────────────────────────────────────────────────────
 ordersRouter.get('/:id', async (req: AuthRequest, res) => {
   const { data, error } = await supabase
@@ -132,17 +145,4 @@ ordersRouter.get('/:id/track', async (req: AuthRequest, res) => {
   }
 
   res.json({ status: order.status, estimated_ready_at: order.estimated_ready_at })
-})
-
-// ─── Order History ────────────────────────────────────────────────────────────
-ordersRouter.get('/history', async (req: AuthRequest, res) => {
-  const { data, error } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('user_id', req.userId!)
-    .order('created_at', { ascending: false })
-    .limit(50)
-
-  if (error) return res.status(500).json({ error: 'Failed to fetch history' })
-  res.json(data)
 })
