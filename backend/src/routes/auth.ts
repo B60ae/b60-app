@@ -9,6 +9,32 @@ export const authRouter = Router()
 // Temp OTP store (use Redis in production)
 const otpStore = new Map<string, { otp: string; expires: number }>()
 
+async function sendOtpEmail(email: string, otp: string): Promise<void> {
+  const resendApiKey = process.env.RESEND_API_KEY
+  if (!resendApiKey) {
+    // No email provider — just log it (for local dev / Railway logs)
+    console.log(`[OTP] ${email} → ${otp}`)
+    return
+  }
+
+  const { Resend } = await import('resend')
+  const resend = new Resend(resendApiKey)
+
+  await resend.emails.send({
+    from: 'B60 Burgers <noreply@b60.ae>',
+    to: email,
+    subject: 'Your B60 login code',
+    html: `
+      <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:32px;background:#111;color:#fff;border-radius:12px">
+        <h2 style="color:#F05A1A;margin:0 0 8px">B60 BURGERS</h2>
+        <p style="color:#aaa;margin:0 0 24px">Your one-time login code:</p>
+        <div style="font-size:48px;font-weight:900;letter-spacing:12px;color:#fff;text-align:center;padding:24px;background:#1a1a1a;border-radius:8px;margin-bottom:24px">${otp}</div>
+        <p style="color:#666;font-size:13px">Expires in 5 minutes. Don't share this code.</p>
+      </div>
+    `,
+  })
+}
+
 // ─── Send OTP ─────────────────────────────────────────────────────────────────
 authRouter.post('/otp/send',
   body('email').isEmail().withMessage('Invalid email address'),
@@ -20,21 +46,13 @@ authRouter.post('/otp/send',
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
     otpStore.set(email, { otp, expires: Date.now() + 5 * 60 * 1000 })
 
-    // Send OTP via Supabase email
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-        data: { otp_code: otp },
-      },
-    })
-
-    if (error) {
-      // Fallback: log OTP for testing (remove in production)
-      console.log(`[OTP] ${email} → ${otp}`)
+    try {
+      await sendOtpEmail(email, otp)
+    } catch (err) {
+      console.error('[OTP email failed]', err)
+      console.log(`[OTP FALLBACK] ${email} → ${otp}`)
     }
 
-    console.log(`[OTP] ${email} → ${otp}`)
     res.json({ success: true, message: 'OTP sent' })
   }
 )
@@ -59,7 +77,7 @@ authRouter.post('/otp/verify',
     // Upsert user by email
     const { data: user, error } = await supabase
       .from('users')
-      .upsert({ email, phone: email }, { onConflict: 'email' })
+      .upsert({ email }, { onConflict: 'email' })
       .select()
       .single()
 
