@@ -76,7 +76,7 @@ export default function ItemDetailScreen() {
   }
 
   const optionsCost = selectedOptions.reduce((s, o) => s + o.price_delta, 0)
-  const lineTotal = item ? (item.price + optionsCost) * quantity : 0
+  const lineTotal = item ? (Number(item.price || 0) + optionsCost) * quantity : 0
 
   const handleAddToCart = () => {
     if (!item) return
@@ -142,9 +142,9 @@ export default function ItemDetailScreen() {
       >
         {/* Price row */}
         <View style={styles.priceRow}>
-          <Text style={styles.price}>AED {(item.price + optionsCost).toFixed(0)}</Text>
+          <Text style={styles.price}>AED {(Number(item.price || 0) + optionsCost).toFixed(0)}</Text>
           {optionsCost > 0 && (
-            <Text style={styles.basePrice}>Base AED {item.price.toFixed(0)}</Text>
+            <Text style={styles.basePrice}>Base AED {Number(item.price || 0).toFixed(0)}</Text>
           )}
         </View>
 

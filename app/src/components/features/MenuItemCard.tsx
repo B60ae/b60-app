@@ -97,7 +97,7 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
 
           {/* Price pill — bottom-right */}
           <View style={styles.pricePill}>
-            <Text style={styles.priceText}>AED {item.price.toFixed(0)}</Text>
+            <Text style={styles.priceText}>AED {Number(item.price || 0).toFixed(0)}</Text>
           </View>
 
           {/* Sold out overlay */}

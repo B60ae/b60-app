@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -11,9 +11,8 @@ import {
 } from 'lucide-react-native'
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, useDerivedValue,
-  interpolate, Extrapolation,
+  useAnimatedProps, interpolate, Extrapolation,
 } from 'react-native-reanimated'
-import { ReText } from 'react-native-reanimated'
 import { loyaltyApi } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
 import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
@@ -35,17 +34,7 @@ function getTier(points: number) {
 // ─── Animated Points Number ──────────────────────────────────────────────────
 
 function AnimatedPointsText({ target }: { target: number }) {
-  const progress = useSharedValue(0)
-
-  useEffect(() => {
-    progress.value = withTiming(target, { duration: 1400 })
-  }, [target])
-
-  const displayText = useDerivedValue(() =>
-    Math.round(progress.value).toLocaleString()
-  )
-
-  return <ReText style={styles.pointsNumber} text={displayText} />
+  return <Text style={styles.pointsNumber}>{target.toLocaleString()}</Text>
 }
 
 // ─── Animated Progress Bar ───────────────────────────────────────────────────

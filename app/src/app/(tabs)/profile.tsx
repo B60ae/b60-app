@@ -14,7 +14,6 @@ import * as Haptics from 'expo-haptics'
 import Animated, {
   useSharedValue, useAnimatedProps, withTiming, useDerivedValue,
 } from 'react-native-reanimated'
-import { ReText } from 'react-native-reanimated'
 import { useAuthStore } from '../../stores/authStore'
 import { ordersApi, authApi } from '../../services/api'
 import { OrderStatusBadge } from '../../components/features/OrderStatusBadge'
@@ -34,20 +33,8 @@ function getTier(points: number): string {
   return 'Bronze'
 }
 
-// ─── Animated Stat Number ────────────────────────────────────────────────────
-
 function AnimatedStat({ target, prefix = '' }: { target: number; prefix?: string }) {
-  const progress = useSharedValue(0)
-
-  useEffect(() => {
-    progress.value = withTiming(target, { duration: 1200 })
-  }, [target])
-
-  const displayText = useDerivedValue(() =>
-    `${prefix}${Math.round(progress.value).toLocaleString()}`
-  )
-
-  return <ReText style={styles.statNum} text={displayText} />
+  return <Text style={styles.statNum}>{`${prefix}${target.toLocaleString()}`}</Text>
 }
 
 // ─── Menu Row ─────────────────────────────────────────────────────────────────
@@ -83,7 +70,7 @@ export default function ProfileScreen() {
 
   const tier = getTier(user?.loyalty_points ?? 0)
   const tierColor = TIER_COLORS[tier]
-  const totalSpent = orders?.reduce((s, o) => s + o.total, 0) ?? 0
+  const totalSpent = orders?.reduce((s, o) => s + Number(o.total || 0), 0) ?? 0
 
   const handleLogout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
@@ -238,7 +225,7 @@ export default function ProfileScreen() {
                   </View>
                   <View style={styles.orderRight}>
                     <OrderStatusBadge status={order.status} />
-                    <Text style={styles.orderTotal}>AED {order.total.toFixed(0)}</Text>
+                    <Text style={styles.orderTotal}>AED {Number(order.total || 0).toFixed(0)}</Text>
                   </View>
                 </Pressable>
               </View>
