@@ -74,14 +74,28 @@ authRouter.post('/otp/verify',
 
     otpStore.delete(email)
 
-    // Upsert user by email
-    const { data: user, error } = await supabase
+    // Try to find existing user first
+    let { data: user, error } = await supabase
       .from('users')
-      .upsert({ email }, { onConflict: 'email' })
       .select()
+      .eq('email', email)
       .single()
 
-    if (error) return res.status(500).json({ error: 'Failed to create user' })
+    if (!user) {
+      // Create new user
+      const insert = await supabase
+        .from('users')
+        .insert({ email, name: '' })
+        .select()
+        .single()
+      user = insert.data
+      error = insert.error
+    }
+
+    if (error || !user) {
+      console.error('[DB ERROR]', error)
+      return res.status(500).json({ error: 'Failed to create user', detail: error?.message })
+    }
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '30d' })
 
