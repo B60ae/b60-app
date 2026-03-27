@@ -1,15 +1,26 @@
 import { useState, useRef } from 'react'
-import { View, Text, StyleSheet, ScrollView, Pressable, Animated } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Platform,
+} from 'react-native'
 import { Image } from 'expo-image'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { X, Minus, Plus, Check } from 'lucide-react-native'
+import { X, Minus, Plus, Check, ShoppingBag } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+} from 'react-native-reanimated'
 import { menuApi } from '../../services/api'
 import { useCartStore } from '../../stores/cartStore'
-import { Button } from '../../components/ui/Button'
 import { Toast } from '../../components/ui/Toast'
 import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
 import type { CustomizationOption } from '../../types'
@@ -21,8 +32,8 @@ export default function ItemDetailScreen() {
   const [showToast, setShowToast] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
 
-  const addBtnScale = useRef(new Animated.Value(1)).current
-  const qtyScale = useRef(new Animated.Value(1)).current
+  const addBtnScale = useSharedValue(1)
+  const qtyScale = useSharedValue(1)
 
   const { data: item, isLoading } = useQuery({
     queryKey: ['menu', 'item', id],
@@ -30,11 +41,17 @@ export default function ItemDetailScreen() {
     enabled: !!id,
   })
 
-  const toggleOption = (option: CustomizationOption, type: 'single' | 'multi', groupId: string) => {
+  const toggleOption = (
+    option: CustomizationOption,
+    type: 'single' | 'multi',
+    groupId: string,
+  ) => {
     if (type === 'single') {
       setSelectedOptions((prev) => [
         ...prev.filter((o) => {
-          const inGroup = item?.customizations?.find(c => c.id === groupId)?.options.some(opt => opt.id === o.id)
+          const inGroup = item?.customizations
+            ?.find((c) => c.id === groupId)
+            ?.options.some((opt) => opt.id === o.id)
           return !inGroup
         }),
         option,
@@ -43,7 +60,7 @@ export default function ItemDetailScreen() {
       setSelectedOptions((prev) =>
         prev.some((o) => o.id === option.id)
           ? prev.filter((o) => o.id !== option.id)
-          : [...prev, option]
+          : [...prev, option],
       )
     }
   }
@@ -51,10 +68,10 @@ export default function ItemDetailScreen() {
   const changeQty = (delta: number) => {
     const next = quantity + delta
     if (next < 1) return
-    Animated.sequence([
-      Animated.spring(qtyScale, { toValue: 0.85, useNativeDriver: true, tension: 300, friction: 10 }),
-      Animated.spring(qtyScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 8 }),
-    ]).start()
+    qtyScale.value = withSequence(
+      withSpring(0.82, { damping: 10, stiffness: 400 }),
+      withSpring(1, { damping: 12, stiffness: 200 }),
+    )
     setQuantity(next)
   }
 
@@ -64,19 +81,27 @@ export default function ItemDetailScreen() {
   const handleAddToCart = () => {
     if (!item) return
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-    Animated.sequence([
-      Animated.spring(addBtnScale, { toValue: 0.93, useNativeDriver: true, tension: 300, friction: 10 }),
-      Animated.spring(addBtnScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 8 }),
-    ]).start()
+    addBtnScale.value = withSequence(
+      withSpring(0.95, { damping: 10, stiffness: 400 }),
+      withSpring(1, { damping: 12, stiffness: 200 }),
+    )
     addItem(item, quantity, selectedOptions)
     setShowToast(true)
   }
+
+  const addBtnAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: addBtnScale.value }],
+  }))
+
+  const qtyAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: qtyScale.value }],
+  }))
 
   if (isLoading || !item) return null
 
   return (
     <View style={styles.container}>
-      {/* Hero image — 340px with gradient overlay */}
+      {/* Hero image — 340px */}
       <View style={styles.imageContainer}>
         <Image
           source={{ uri: item.image_url }}
@@ -84,44 +109,66 @@ export default function ItemDetailScreen() {
           contentFit="cover"
           transition={300}
         />
+        {/* Gradient overlay: bottom third */}
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.55)']}
+          colors={['transparent', 'transparent', 'rgba(0,0,0,0.72)']}
           style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0.5 }}
+          start={{ x: 0, y: 0.35 }}
           end={{ x: 0, y: 1 }}
         />
-        {/* Floating close button */}
-        <Pressable style={styles.closeBtn} onPress={() => router.back()} hitSlop={8}>
-          <X size={18} color={Colors.white} />
+
+        {/* Floating close button — blur background effect */}
+        <Pressable style={styles.closeBtn} onPress={() => router.back()} hitSlop={10}>
+          <X size={18} color={Colors.white} strokeWidth={2.5} />
         </Pressable>
-        {/* Name overlay on image */}
+
+        {/* Name + calories overlay */}
         <View style={styles.nameOverlay}>
           <Text style={styles.nameOnImage}>{item.name}</Text>
-          {item.calories ? <Text style={styles.caloriesOnImage}>{item.calories} kcal</Text> : null}
+          {item.calories ? (
+            <View style={styles.caloriePill}>
+              <Text style={styles.caloriesOnImage}>{item.calories} kcal</Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Price + Description */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        // Extra bottom padding for sticky CTA
+        contentInset={{ bottom: 100 }}
+      >
+        {/* Price row */}
         <View style={styles.priceRow}>
           <Text style={styles.price}>AED {(item.price + optionsCost).toFixed(0)}</Text>
           {optionsCost > 0 && (
             <Text style={styles.basePrice}>Base AED {item.price.toFixed(0)}</Text>
           )}
         </View>
+
+        {/* Description card */}
         {item.description ? (
-          <Text style={styles.desc}>{item.description}</Text>
+          <View style={styles.descCard}>
+            <Text style={styles.desc}>{item.description}</Text>
+          </View>
         ) : null}
 
         {/* Customizations */}
         {item.customizations?.map((group) => (
-          <View key={group.id} style={[styles.customGroup, Shadows.card]}>
+          <View key={group.id} style={styles.customGroup}>
             <View style={styles.groupHeader}>
               <Text style={styles.groupTitle}>{group.name}</Text>
-              <Text style={styles.groupType}>{group.type === 'single' ? 'Choose one' : 'Pick all that apply'}</Text>
+              <View style={styles.groupTypePill}>
+                <Text style={styles.groupType}>
+                  {group.type === 'single' ? 'Choose one' : 'Pick all that apply'}
+                </Text>
+              </View>
             </View>
             {group.options.map((option) => {
               const isSelected = selectedOptions.some((o) => o.id === option.id)
+              const isSingle = group.type === 'single'
               return (
                 <Pressable
                   key={option.id}
@@ -131,9 +178,16 @@ export default function ItemDetailScreen() {
                     toggleOption(option, group.type, group.id)
                   }}
                 >
-                  <View style={[styles.optionCheck, isSelected && styles.optionCheckActive]}>
-                    {isSelected && <Check size={12} color={Colors.white} />}
-                  </View>
+                  {/* Custom radio (single) or checkbox (multi) */}
+                  {isSingle ? (
+                    <View style={[styles.radioOuter, isSelected && styles.radioOuterActive]}>
+                      {isSelected && <View style={styles.radioInner} />}
+                    </View>
+                  ) : (
+                    <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
+                      {isSelected && <Check size={12} color={Colors.white} strokeWidth={3} />}
+                    </View>
+                  )}
                   <Text style={[styles.optionName, isSelected && { color: Colors.primary }]}>
                     {option.name}
                   </Text>
@@ -146,41 +200,63 @@ export default function ItemDetailScreen() {
           </View>
         ))}
 
-        {/* Quantity selector */}
+        {/* Quantity section */}
         <View style={styles.qtySection}>
           <Text style={styles.qtyLabel}>Quantity</Text>
           <View style={styles.qtyRow}>
-            <Pressable style={styles.qtyBtn} onPress={() => changeQty(-1)} hitSlop={8}>
-              <Minus size={20} color={Colors.text} />
+            <Pressable
+              style={[styles.qtyBtn, quantity <= 1 && styles.qtyBtnDisabled]}
+              onPress={() => changeQty(-1)}
+              hitSlop={8}
+            >
+              <Minus size={20} color={quantity <= 1 ? Colors.textMuted : Colors.text} strokeWidth={2.5} />
             </Pressable>
-            <Animated.Text style={[styles.qty, { transform: [{ scale: qtyScale }] }]}>
-              {quantity}
-            </Animated.Text>
+            <Animated.Text style={[styles.qty, qtyAnimStyle]}>{quantity}</Animated.Text>
             <Pressable style={styles.qtyBtn} onPress={() => changeQty(1)} hitSlop={8}>
-              <Plus size={20} color={Colors.text} />
+              <Plus size={20} color={Colors.text} strokeWidth={2.5} />
             </Pressable>
           </View>
         </View>
 
-        {/* Add to cart button */}
-        <Animated.View style={{ transform: [{ scale: addBtnScale }] }}>
-          <Button
-            title={`Add to Cart · AED ${lineTotal.toFixed(0)}`}
-            onPress={handleAddToCart}
-            fullWidth
-            size="lg"
-          />
-        </Animated.View>
-
-        <View style={{ height: 20 }} />
+        {/* Bottom spacer for sticky CTA */}
+        <View style={{ height: 110 }} />
       </ScrollView>
+
+      {/* Sticky add-to-cart */}
+      <View style={styles.stickyCtaWrapper} pointerEvents="box-none">
+        {/* White fade above button */}
+        <LinearGradient
+          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.96)', Colors.white]}
+          style={styles.ctaFade}
+          pointerEvents="none"
+        />
+        <View style={styles.ctaContainer}>
+          <Animated.View style={[{ flex: 1 }, addBtnAnimStyle]}>
+            <Pressable style={styles.addBtn} onPress={handleAddToCart}>
+              <View style={styles.addBtnLeft}>
+                <View style={styles.qtyBadge}>
+                  <Text style={styles.qtyBadgeText}>{quantity}</Text>
+                </View>
+                <ShoppingBag size={18} color={Colors.white} strokeWidth={2.5} />
+              </View>
+              <Text style={styles.addBtnText}>
+                Add {quantity > 1 ? `${quantity}× ` : ''}to Cart
+              </Text>
+              <Text style={styles.addBtnPrice}>AED {lineTotal.toFixed(0)}</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </View>
 
       <Toast
         visible={showToast}
         message={`${item.name} added to your cart!`}
         onHide={() => setShowToast(false)}
         actionLabel="View Cart"
-        onAction={() => { setShowToast(false); router.push('/(tabs)/cart') }}
+        onAction={() => {
+          setShowToast(false)
+          router.push('/(tabs)/cart')
+        }}
       />
     </View>
   )
@@ -188,49 +264,89 @@ export default function ItemDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+
+  // Hero
   imageContainer: {
     width: '100%',
     height: 340,
-    position: 'relative',
   },
   image: { width: '100%', height: '100%' },
   closeBtn: {
     position: 'absolute',
-    top: 52,
+    top: Platform.OS === 'ios' ? 56 : 40,
     right: 16,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: Radius.full,
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    // backdrop blur approximation via semi-transparent overlay
   },
   nameOverlay: {
     position: 'absolute',
     bottom: 20,
     left: Spacing.lg,
     right: Spacing.lg,
+    gap: 6,
   },
   nameOnImage: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '900',
     color: Colors.white,
-    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadowRadius: 6,
+    lineHeight: 34,
+  },
+  caloriePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: Radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   caloriesOnImage: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
-    fontWeight: '600',
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
+
+  // Scroll
   scroll: { flex: 1 },
   scrollContent: { padding: Spacing.lg, gap: Spacing.md },
+
+  // Price
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.sm },
-  price: { fontSize: 30, fontWeight: '900', color: Colors.primary },
-  basePrice: { fontSize: 14, color: Colors.textMuted, textDecorationLine: 'line-through' },
-  desc: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22 },
+  price: { fontSize: 32, fontWeight: '900', color: Colors.primary },
+  basePrice: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+
+  // Description card
+  descCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadows.card,
+  },
+  desc: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 22,
+  },
+
+  // Customization groups
   customGroup: {
     backgroundColor: Colors.white,
     borderRadius: Radius.lg,
@@ -238,10 +354,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     gap: Spacing.sm,
+    ...Shadows.card,
   },
-  groupHeader: { gap: 2 },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   groupTitle: { fontSize: 16, fontWeight: '800', color: Colors.text },
-  groupType: { fontSize: 12, color: Colors.textMuted },
+  groupTypePill: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  groupType: { fontSize: 11, color: Colors.textMuted, fontWeight: '600' },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -250,20 +380,49 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.border,
     gap: Spacing.sm,
+    backgroundColor: Colors.white,
   },
-  optionSelected: { borderColor: Colors.primary, backgroundColor: 'rgba(240,90,26,0.06)' },
-  optionCheck: {
+  optionSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(240,90,26,0.06)',
+  },
+  // Radio (single select) — circular 20px
+  radioOuter: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderWidth: 2,
+    borderColor: Colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  optionCheckActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  radioOuterActive: {
+    borderColor: Colors.primary,
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.primary,
+  },
+  // Checkbox (multi) — square 20px, borderRadius 4
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
   optionName: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.text },
   optionPrice: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+
+  // Quantity section
   qtySection: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -284,8 +443,79 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.border,
   },
-  qty: { fontSize: 24, fontWeight: '900', color: Colors.text, minWidth: 32, textAlign: 'center' },
+  qtyBtnDisabled: {
+    opacity: 0.4,
+  },
+  qty: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: Colors.text,
+    minWidth: 36,
+    textAlign: 'center',
+  },
+
+  // Sticky CTA
+  stickyCtaWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  ctaFade: {
+    height: 60,
+  },
+  ctaContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 20,
+    paddingTop: 8,
+    backgroundColor: Colors.white,
+    gap: Spacing.sm,
+  },
+  addBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.xl,
+    paddingVertical: 16,
+    paddingHorizontal: Spacing.lg,
+    ...Shadows.glowStrong,
+  },
+  addBtnLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginRight: 'auto' as any,
+  },
+  qtyBadge: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: Radius.full,
+    minWidth: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  qtyBadgeText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: Colors.white,
+  },
+  addBtnText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.white,
+    flex: 1,
+    textAlign: 'center',
+  },
+  addBtnPrice: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: Colors.white,
+    marginLeft: 'auto' as any,
+  },
 })

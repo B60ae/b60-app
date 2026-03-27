@@ -2,7 +2,11 @@ import React from 'react'
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { Plus } from 'lucide-react-native'
 import { Colors, Radius, Spacing, Shadows } from '../../utils/theme'
@@ -10,31 +14,55 @@ import type { MenuItem } from '../../types'
 
 interface MenuItemCardProps {
   item: MenuItem
-  onPress: (item: MenuItem) => void
-  onQuickAdd: (item: MenuItem) => void
+  onPress: () => void
+  onAddToCart: () => void
 }
 
-export function MenuItemCard({ item, onPress, onQuickAdd }: MenuItemCardProps) {
-  const scale = useSharedValue(1)
+export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) {
+  const cardScale = useSharedValue(1)
   const addScale = useSharedValue(1)
 
-  const cardAnim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }))
-  const addAnim = useAnimatedStyle(() => ({ transform: [{ scale: addScale.value }] }))
+  const cardAnim = useAnimatedStyle(() => ({
+    transform: [{ scale: cardScale.value }],
+  }))
 
-  const handleAdd = () => {
-    addScale.value = withSpring(0.8, {}, () => { addScale.value = withSpring(1) })
+  const addAnim = useAnimatedStyle(() => ({
+    transform: [{ scale: addScale.value }],
+  }))
+
+  const handleCardPressIn = () => {
+    cardScale.value = withSpring(0.97, { damping: 15, stiffness: 300 })
+  }
+
+  const handleCardPressOut = () => {
+    cardScale.value = withSpring(1, { damping: 15, stiffness: 300 })
+  }
+
+  const handleAddToCart = () => {
+    if (!item.is_available) return
+    addScale.value = withSpring(0.75, { damping: 10, stiffness: 400 }, () => {
+      addScale.value = withSpring(1, { damping: 12, stiffness: 300 })
+    })
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    onQuickAdd(item)
+    onAddToCart()
   }
 
   return (
-    <Animated.View style={[styles.wrapper, item.is_featured && Shadows.glowStrong, cardAnim]}>
+    <Animated.View
+      style={[
+        styles.wrapper,
+        item.is_featured && styles.featuredBorder,
+        cardAnim,
+      ]}
+    >
       <Pressable
-        onPress={() => onPress(item)}
-        onPressIn={() => { scale.value = withSpring(0.97) }}
-        onPressOut={() => { scale.value = withSpring(1) }}
+        onPress={onPress}
+        onPressIn={handleCardPressIn}
+        onPressOut={handleCardPressOut}
         style={styles.card}
+        disabled={!item.is_available}
       >
+        {/* Image block */}
         <View style={styles.imageContainer}>
           {item.image_url ? (
             <Image
@@ -48,30 +76,50 @@ export function MenuItemCard({ item, onPress, onQuickAdd }: MenuItemCardProps) {
               <Text style={styles.placeholderEmoji}>🍔</Text>
             </View>
           )}
+
+          {/* Gradient — bottom third */}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.6)']}
+            colors={['transparent', 'rgba(0,0,0,0.55)']}
             style={styles.gradient}
           />
+
+          {/* Featured badge — top-left */}
           {item.is_featured && (
             <View style={styles.featuredBadge}>
               <Text style={styles.featuredText}>🔥 HOT</Text>
             </View>
           )}
-          <Text style={styles.nameOverlay} numberOfLines={2}>{item.name}</Text>
+
+          {/* Item name — sits on gradient */}
+          <Text style={styles.nameOverlay} numberOfLines={2}>
+            {item.name}
+          </Text>
+
+          {/* Price pill — bottom-right */}
+          <View style={styles.pricePill}>
+            <Text style={styles.priceText}>AED {item.price.toFixed(0)}</Text>
+          </View>
+
+          {/* Sold out overlay */}
+          {!item.is_available && (
+            <View style={styles.soldOutOverlay}>
+              <Text style={styles.soldOutText}>Sold Out</Text>
+            </View>
+          )}
         </View>
 
+        {/* Footer — add button only */}
         <View style={styles.footer}>
-          {item.description ? (
-            <Text style={styles.desc} numberOfLines={1}>{item.description}</Text>
-          ) : null}
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>AED {item.price.toFixed(0)}</Text>
-            <Animated.View style={addAnim}>
-              <Pressable onPress={handleAdd} style={styles.addBtn} hitSlop={8}>
-                <Plus size={16} color={Colors.white} strokeWidth={3} />
-              </Pressable>
-            </Animated.View>
-          </View>
+          <Animated.View style={addAnim}>
+            <Pressable
+              onPress={handleAddToCart}
+              style={[styles.addBtn, !item.is_available && styles.addBtnDisabled]}
+              hitSlop={10}
+              disabled={!item.is_available}
+            >
+              <Plus size={18} color={Colors.white} strokeWidth={2.5} />
+            </Pressable>
+          </Animated.View>
         </View>
       </Pressable>
     </Animated.View>
@@ -83,83 +131,112 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: Radius.lg,
     backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
     ...Shadows.card,
     margin: 4,
+  },
+  featuredBorder: {
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
   },
   card: {
     borderRadius: Radius.lg,
     overflow: 'hidden',
+    backgroundColor: Colors.white,
   },
   imageContainer: {
     height: 180,
     justifyContent: 'flex-end',
   },
   image: {
+    position: 'absolute',
     width: '100%',
     height: '100%',
-    position: 'absolute',
   },
   imagePlaceholder: {
-    backgroundColor: Colors.surface,
+    backgroundColor: '#F0F0F0',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
   },
-  placeholderEmoji: { fontSize: 40 },
+  placeholderEmoji: {
+    fontSize: 40,
+  },
   gradient: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: '65%',
+    height: '33%',
   },
   featuredBadge: {
     position: 'absolute',
-    top: 10,
-    left: 10,
+    top: 8,
+    left: 8,
     backgroundColor: Colors.primary,
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: Radius.full,
   },
-  featuredText: { fontSize: 10, fontWeight: '800', color: Colors.white },
+  featuredText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.white,
+    letterSpacing: 0.3,
+  },
   nameOverlay: {
     position: 'absolute',
     bottom: 8,
     left: 10,
-    right: 10,
-    fontSize: 14,
+    right: 60,
+    fontSize: 13,
     fontWeight: '700',
     color: Colors.white,
-    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
-  footer: {
-    padding: Spacing.sm + 2,
+  pricePill: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
     backgroundColor: Colors.white,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
-  desc: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    marginBottom: 6,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  price: {
-    fontSize: 16,
+  priceText: {
+    fontSize: 12,
     fontWeight: '700',
     color: Colors.primary,
   },
+  soldOutOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(150,150,150,0.65)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soldOutText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.white,
+    letterSpacing: 0.5,
+  },
+  footer: {
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.white,
+    alignItems: 'flex-end',
+  },
   addBtn: {
-    width: 30,
-    height: 30,
+    width: 36,
+    height: 36,
     borderRadius: Radius.full,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  addBtnDisabled: {
+    backgroundColor: '#CCCCCC',
   },
 })
