@@ -20,6 +20,9 @@ app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PATCH', 'DELETE'] }))
 app.use(express.json())
 app.use(morgan('dev'))
 
+// Trust Railway's proxy so rate limiter gets real IPs
+app.set('trust proxy', 1)
+
 // Rate limiting
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false }))
 
