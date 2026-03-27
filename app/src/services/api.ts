@@ -41,9 +41,9 @@ export const locationsApi = {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────
 export const authApi = {
-  sendOtp: (phone: string) => client.post('/auth/otp/send', { phone }).then(r => r.data),
-  verifyOtp: (phone: string, otp: string) =>
-    client.post<{ token: string; user: any }>('/auth/otp/verify', { phone, otp }).then(r => r.data),
+  sendOtp: (email: string) => client.post('/auth/otp/send', { email }).then(r => r.data),
+  verifyOtp: (email: string, otp: string) =>
+    client.post<{ token: string; user: any }>('/auth/otp/verify', { email, otp }).then(r => r.data),
   updateProfile: (data: { name?: string; email?: string }) =>
     client.patch('/auth/profile', data).then(r => r.data),
 }
