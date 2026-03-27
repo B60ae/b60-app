@@ -26,7 +26,10 @@
         "backgroundColor": "#111111"
       },
       "package": "ae.b60.app",
-      "permissions": ["NOTIFICATIONS", "VIBRATE"]
+      "permissions": [
+        "NOTIFICATIONS",
+        "VIBRATE"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -44,11 +47,15 @@
     },
     "extra": {
       "eas": {
-        "projectId": "b60-burgers-app"
+        "projectId": "fb3367e0-b43c-471f-aa9d-9dbc5c11e0fc"
       },
       "supabaseUrl": "https://yyygcbovqblkzehjrtqw.supabase.co",
       "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5eWdjYm92cWJsa3plaGpydHF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzODkzNTEsImV4cCI6MjA4OTk2NTM1MX0.OB7oYdN8_Lp6uSaolG0bOSc_Yo1E4UkfwfKn2g5_uLs",
-      "apiUrl": "https://b60-api.onrender.com/api"
-    }
+      "apiUrl": "https://b60-app-production.up.railway.app/api",
+      "router": {
+        "origin": false
+      }
+    },
+    "owner": "b60_burgers"
   }
 }
