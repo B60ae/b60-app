@@ -21,7 +21,7 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
   const resend = new Resend(resendApiKey)
 
   await resend.emails.send({
-    from: 'B60 Burgers <noreply@b60.ae>',
+    from: 'B60 Burgers <onboarding@resend.dev>',
     to: email,
     subject: 'Your B60 login code',
     html: `
