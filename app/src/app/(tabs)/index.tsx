@@ -204,7 +204,7 @@ export default function HomeScreen() {
             imageUri="https://b60.ae/images/fancy.webp"
             title="SMASH IT."
             subtitle="Dubai's boldest burgers. Pick up in minutes."
-            ctaLabel="Order Now"
+            ctaLabel="ORDER NOW"
             onCtaPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
               router.push('/(tabs)/menu')
@@ -231,7 +231,7 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoryRow}
           >
-            {CATEGORY_QUICK.map((cat) => {
+            {CATEGORY_QUICK.map((cat, index) => {
               const isActive = activeCategory === cat.id
               return (
                 <Pressable
@@ -239,6 +239,7 @@ export default function HomeScreen() {
                   style={[
                     styles.categoryChip,
                     isActive ? styles.categoryChipActive : styles.categoryChipInactive,
+                    { transform: [{ rotate: index % 2 === 0 ? '-1.5deg' : '1.5deg' }] },
                   ]}
                   onPress={() => handleCategoryPress(cat.id)}
                 >
@@ -305,7 +306,7 @@ export default function HomeScreen() {
         {/* ── Section 5: Featured Items ── */}
         <StaggerSection index={user ? 5 : 4} style={{ marginTop: Spacing.lg }}>
           <SectionHeader
-            title="🔥 Fan Favourites"
+            title="FAN FAVOURITES"
             onSeeAll={() => router.push('/(tabs)/menu')}
           />
           {loadingFeatured ? (
@@ -434,10 +435,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greeting: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     color: Colors.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
   greetingSub: {
     fontSize: 13,
@@ -501,32 +502,43 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: Radius.full,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     gap: 6,
-    ...Shadows.card,
+    borderWidth: 2,
+    borderColor: '#0D0D0D',
   },
   categoryChipActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#0D0D0D',
+    shadowColor: '#0D0D0D',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
   },
   categoryChipInactive: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: '#FFF8F0',
+    shadowColor: '#0D0D0D',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 0,
+    elevation: 4,
   },
   categoryEmoji: {
     fontSize: 16,
   },
   categoryLabel: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   categoryLabelActive: {
-    color: Colors.white,
+    color: '#FFFFFF',
   },
   categoryLabelInactive: {
-    color: Colors.textSecondary,
+    color: '#0D0D0D',
   },
 
   // Promo cards

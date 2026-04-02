@@ -1,9 +1,20 @@
-// B60 Brand Design Tokens — Light Theme
+// B60 Brand Design Tokens — Multi-Theme Support
+export type ThemeMode = 'light' | 'dark'
+
 export const Colors = {
   primary: '#F05A1A',
   primaryDark: '#C94400',
   primaryLight: '#FF7A3D',
   yellow: '#FFE500',
+  success: '#22C55E',
+  error: '#EF4444',
+  warning: '#F59E0B',
+  white: '#FFFFFF',
+  black: '#000000',
+}
+
+export const LightTheme = {
+  ...Colors,
   background: '#FFFFFF',
   surface: '#F8F9FA',
   surfaceElevated: '#FFFFFF',
@@ -13,16 +24,30 @@ export const Colors = {
   textSecondary: '#444444',
   textMuted: '#888888',
   textInverse: '#FFFFFF',
-  success: '#22C55E',
-  error: '#EF4444',
-  warning: '#F59E0B',
-  white: '#FFFFFF',
-  black: '#000000',
   overlay: 'rgba(0,0,0,0.5)',
-  // Tints
   primaryTint: 'rgba(240, 90, 26, 0.08)',
-  successTint: 'rgba(34, 197, 94, 0.1)',
-  errorTint: 'rgba(239, 68, 68, 0.1)',
+  // Brand Touches
+  cardBg: '#FFFFFF',
+  shadowColor: '#000',
+}
+
+export const DarkTheme = {
+  ...Colors,
+  background: '#0A0A0A',
+  surface: '#121212',
+  surfaceElevated: '#1E1E1E',
+  asphalt: '#1A1A1A',
+  border: '#2A2A2A',
+  borderStrong: '#3A3A3A',
+  text: '#FFFFFF',
+  textSecondary: '#AAAAAA',
+  textMuted: '#666666',
+  textInverse: '#000000',
+  overlay: 'rgba(0,0,0,0.7)',
+  primaryTint: 'rgba(240, 90, 26, 0.15)',
+  // Brand Touches
+  cardBg: '#121212',
+  shadowColor: '#000',
 }
 
 export const Fonts = {
@@ -33,15 +58,22 @@ export const Fonts = {
 }
 
 export const Typography = {
-  h1: { fontSize: 32, fontWeight: '800' as const, color: Colors.text },
-  h2: { fontSize: 24, fontWeight: '700' as const, color: Colors.text },
-  h3: { fontSize: 20, fontWeight: '700' as const, color: Colors.text },
-  h4: { fontSize: 18, fontWeight: '600' as const, color: Colors.text },
-  body: { fontSize: 16, fontWeight: '400' as const, color: Colors.text },
-  bodySmall: { fontSize: 14, fontWeight: '400' as const, color: Colors.textSecondary },
-  caption: { fontSize: 12, fontWeight: '400' as const, color: Colors.textMuted },
-  label: { fontSize: 14, fontWeight: '600' as const, color: Colors.text },
-  price: { fontSize: 18, fontWeight: '700' as const, color: Colors.primary },
+  h1: { fontSize: 32, fontWeight: '800' as const },
+  h2: { fontSize: 24, fontWeight: '700' as const },
+  h3: { fontSize: 20, fontWeight: '700' as const },
+  h4: { fontSize: 18, fontWeight: '600' as const },
+  body: { fontSize: 16, fontWeight: '400' as const },
+  bodySmall: { fontSize: 14, fontWeight: '400' as const },
+  caption: { fontSize: 12, fontWeight: '400' as const },
+  label: { fontSize: 14, fontWeight: '700' as const },
+  price: { fontSize: 18, fontWeight: '900' as const },
+}
+
+export const Display = {
+  hero: { fontSize: 52, fontWeight: '900' as const, letterSpacing: -2, lineHeight: 52 },
+  title: { fontSize: 38, fontWeight: '900' as const, letterSpacing: -1.5, lineHeight: 40 },
+  label: { fontSize: 11, fontWeight: '800' as const, letterSpacing: 2, textTransform: 'uppercase' as const },
+  sticker: { fontSize: 13, fontWeight: '900' as const, letterSpacing: 0.5, textTransform: 'uppercase' as const },
 }
 
 export const Spacing = {
@@ -64,31 +96,16 @@ export const Radius = {
 
 export const Shadows = {
   card: {
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 3,
   },
-  cardStrong: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  glow: {
-    shadowColor: '#F05A1A',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  glowStrong: {
-    shadowColor: '#F05A1A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    elevation: 10,
+  // Neobrutalist "Hard" Shadows
+  hard: {
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
   },
 }

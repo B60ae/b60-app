@@ -6,10 +6,12 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withSequence,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { Plus } from 'lucide-react-native'
-import { Colors, Radius, Spacing, Shadows } from '../../utils/theme'
+import { LightTheme, DarkTheme, Radius, Spacing, Shadows, Typography } from '../../utils/theme'
+import { useThemeStore } from '../../stores/themeStore'
 import type { MenuItem } from '../../types'
 
 interface MenuItemCardProps {
@@ -19,6 +21,9 @@ interface MenuItemCardProps {
 }
 
 export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) {
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
+  
   const cardScale = useSharedValue(1)
   const addScale = useSharedValue(1)
 
@@ -31,19 +36,20 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
   }))
 
   const handleCardPressIn = () => {
-    cardScale.value = withSpring(0.97, { damping: 15, stiffness: 300 })
+    cardScale.value = withSpring(0.94, { damping: 6, stiffness: 600 })
   }
 
   const handleCardPressOut = () => {
-    cardScale.value = withSpring(1, { damping: 15, stiffness: 300 })
+    cardScale.value = withSpring(1, { damping: 8, stiffness: 350 })
   }
 
   const handleAddToCart = () => {
     if (!item.is_available) return
-    addScale.value = withSpring(0.75, { damping: 10, stiffness: 400 }, () => {
-      addScale.value = withSpring(1, { damping: 12, stiffness: 300 })
-    })
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    addScale.value = withSequence(
+      withSpring(0.7, { damping: 4, stiffness: 800 }),
+      withSpring(1, { damping: 6, stiffness: 400 })
+    )
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
     onAddToCart()
   }
 
@@ -83,21 +89,21 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
             style={styles.gradient}
           />
 
-          {/* Featured badge — top-left */}
+          {/* Featured badge — top-left sticker */}
           {item.is_featured && (
-            <View style={styles.featuredBadge}>
-              <Text style={styles.featuredText}>🔥 HOT</Text>
+            <View style={[styles.featuredBadge, { backgroundColor: theme.primary, borderColor: theme.black }]}>
+              <Text style={[styles.featuredText, { color: theme.white }]}>🔥 HOT</Text>
             </View>
           )}
 
           {/* Item name — sits on gradient */}
-          <Text style={styles.nameOverlay} numberOfLines={2}>
+          <Text style={[styles.nameOverlay, { color: theme.white }]} numberOfLines={2}>
             {item.name}
           </Text>
 
-          {/* Price pill — bottom-right */}
-          <View style={styles.pricePill}>
-            <Text style={styles.priceText}>AED {Number(item.price || 0).toFixed(0)}</Text>
+          {/* Price pill — bottom-right sticker */}
+          <View style={[styles.pricePill, { backgroundColor: theme.yellow, borderColor: theme.black }]}>
+            <Text style={[styles.priceText, { color: theme.black }]}>AED {Number(item.price || 0).toFixed(0)}</Text>
           </View>
 
           {/* Sold out overlay */}
@@ -109,15 +115,19 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
         </View>
 
         {/* Footer — add button only */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { backgroundColor: theme.surface }]}>
           <Animated.View style={addAnim}>
             <Pressable
               onPress={handleAddToCart}
-              style={[styles.addBtn, !item.is_available && styles.addBtnDisabled]}
+              style={[
+                styles.addBtn, 
+                { backgroundColor: theme.primary, borderColor: theme.black },
+                !item.is_available && { backgroundColor: theme.border }
+              ]}
               hitSlop={10}
               disabled={!item.is_available}
             >
-              <Plus size={18} color={Colors.white} strokeWidth={2.5} />
+              <Plus size={20} color={theme.white} strokeWidth={3} />
             </Pressable>
           </Animated.View>
         </View>
@@ -129,21 +139,22 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-    ...Shadows.card,
-    margin: 4,
+    borderRadius: Radius.md,
+    margin: 6,
+    // Neobrutalist base
+    borderWidth: 2,
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
   },
   featuredBorder: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.primary,
+    borderWidth: 3,
   },
   card: {
-    borderRadius: Radius.lg,
+    flex: 1,
+    borderRadius: Radius.md - 2,
     overflow: 'hidden',
-    backgroundColor: Colors.white,
   },
   imageContainer: {
     height: 180,
@@ -167,76 +178,82 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: '33%',
+    height: '40%',
   },
   featuredBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
+    top: 10,
+    left: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+    borderWidth: 1.5,
+    transform: [{ rotate: '-3deg' }],
   },
   featuredText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: Colors.white,
-    letterSpacing: 0.3,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   nameOverlay: {
     position: 'absolute',
-    bottom: 8,
-    left: 10,
-    right: 60,
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.white,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    bottom: 10,
+    left: 12,
+    right: 65,
+    fontSize: 16,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1.5 },
+    textShadowRadius: 4,
+    lineHeight: 18,
   },
   pricePill: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: Colors.white,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
+    bottom: 10,
+    right: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.sm,
+    borderWidth: 1.5,
+    transform: [{ rotate: '2deg' }],
   },
   priceText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '900',
   },
   soldOutOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(150,150,150,0.65)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   soldOutText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.white,
-    letterSpacing: 0.5,
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   footer: {
-    paddingHorizontal: Spacing.sm + 2,
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    backgroundColor: Colors.white,
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   addBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  addBtnDisabled: {
-    backgroundColor: '#CCCCCC',
+    // Neobrutalist shadow
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 3,
   },
 })

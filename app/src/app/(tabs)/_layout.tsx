@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { Tabs } from 'expo-router'
-import { Home, UtensilsCrossed, ShoppingCart, Star, User } from 'lucide-react-native'
+import { Home, UtensilsCrossed, ShoppingCart, Star, User, Zap } from 'lucide-react-native'
 import { View, Text, StyleSheet, Animated } from 'react-native'
 import { Colors } from '../../utils/theme'
 import { useCartStore } from '../../stores/cartStore'
@@ -54,6 +54,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="menu" options={{ title: 'Menu', tabBarIcon: ({ color, size }) => <UtensilsCrossed size={size} color={color} /> }} />
       <Tabs.Screen name="cart" options={{ title: 'Cart', tabBarIcon: ({ color, size }) => <CartTabIcon color={color} size={size} /> }} />
       <Tabs.Screen name="loyalty" options={{ title: 'Points', tabBarIcon: ({ color, size }) => <Star size={size} color={color} /> }} />
+      <Tabs.Screen name="vibe" options={{ title: 'Vibe', tabBarIcon: ({ color, size }) => <Zap size={size} color={color} /> }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <User size={size} color={color} /> }} />
     </Tabs>
   )

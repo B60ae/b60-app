@@ -15,9 +15,12 @@ import Animated, {
   useSharedValue, useAnimatedProps, withTiming, useDerivedValue,
 } from 'react-native-reanimated'
 import { useAuthStore } from '../../stores/authStore'
+import { useThemeStore } from '../../stores/themeStore'
 import { ordersApi, authApi } from '../../services/api'
 import { OrderStatusBadge } from '../../components/features/OrderStatusBadge'
-import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
+import { LightTheme, DarkTheme, Spacing, Radius, Shadows, Typography } from '../../utils/theme'
+import { Switch } from 'react-native'
+import { Moon } from 'lucide-react-native'
 
 // ─── Tier ─────────────────────────────────────────────────────────────────────
 
@@ -40,17 +43,18 @@ function AnimatedStat({ target, prefix = '' }: { target: number; prefix?: string
 // ─── Menu Row ─────────────────────────────────────────────────────────────────
 
 function MenuRow({
-  icon, label, onPress,
+  icon, label, onPress, color
 }: {
   icon: React.ReactNode
   label: string
   onPress: () => void
+  color: string
 }) {
   return (
     <Pressable style={styles.menuRow} onPress={onPress}>
       <View style={styles.menuRowIcon}>{icon}</View>
-      <Text style={styles.menuLabel}>{label}</Text>
-      <ChevronRight size={16} color={Colors.textMuted} />
+      <Text style={[styles.menuLabel, { color }]}>{label}</Text>
+      <ChevronRight size={16} color={color === '#FFFFFF' ? 'rgba(255,255,255,0.4)' : '#888888'} />
     </Pressable>
   )
 }
@@ -59,6 +63,9 @@ function MenuRow({
 
 export default function ProfileScreen() {
   const { user, logout, setUser } = useAuthStore()
+  const { themeMode, setThemeMode } = useThemeStore()
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
+
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(user?.name ?? '')
   const [savingName, setSavingName] = useState(false)
@@ -71,6 +78,11 @@ export default function ProfileScreen() {
   const tier = getTier(user?.loyalty_points ?? 0)
   const tierColor = TIER_COLORS[tier]
   const totalSpent = orders?.reduce((s, o) => s + Number(o.total || 0), 0) ?? 0
+
+  const toggleTheme = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+    setThemeMode(themeMode === 'light' ? 'dark' : 'light')
+  }
 
   const handleLogout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
@@ -96,12 +108,12 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* ── Profile Header ── */}
         <LinearGradient
-          colors={[Colors.primary, Colors.primaryDark]}
+          colors={[theme.primary, theme.primaryDark]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.profileHeader}
@@ -112,8 +124,8 @@ export default function ProfileScreen() {
           <View style={styles.avatarRow}>
             {/* Avatar with tier-color ring */}
             <View style={[styles.avatarRing, { borderColor: tierColor }]}>
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitial}>
+              <View style={[styles.avatarCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                <Text style={[styles.avatarInitial, { color: theme.white }]}>
                   {user?.name?.charAt(0).toUpperCase() ?? 'B'}
                 </Text>
               </View>
@@ -126,14 +138,14 @@ export default function ProfileScreen() {
                   <TextInput
                     value={nameInput}
                     onChangeText={setNameInput}
-                    style={styles.nameInput}
+                    style={[styles.nameInput, { color: theme.white, borderBottomColor: 'rgba(255,255,255,0.5)' }]}
                     autoFocus
                     returnKeyType="done"
                     onSubmitEditing={handleSaveName}
                     placeholderTextColor="rgba(255,255,255,0.5)"
                   />
                   <Pressable onPress={handleSaveName} hitSlop={8} disabled={savingName}>
-                    <Check size={20} color={Colors.white} />
+                    <Check size={20} color={theme.white} />
                   </Pressable>
                   <Pressable onPress={() => setEditingName(false)} hitSlop={8}>
                     <X size={20} color="rgba(255,255,255,0.6)" />
@@ -147,7 +159,7 @@ export default function ProfileScreen() {
                     setEditingName(true)
                   }}
                 >
-                  <Text style={styles.name}>{user?.name ?? 'B60 Fan'}</Text>
+                  <Text style={[styles.name, { color: theme.white }]}>{user?.name ?? 'B60 Fan'}</Text>
                   <Edit2 size={13} color="rgba(255,255,255,0.65)" />
                 </Pressable>
               )}
@@ -157,51 +169,69 @@ export default function ProfileScreen() {
 
           {/* Tier pill badge */}
           <View style={[styles.tierPill, { backgroundColor: tierColor }]}>
-            <Star size={10} color={Colors.black} fill={Colors.black} />
-            <Text style={styles.tierPillText}>{tier} Member</Text>
+            <Star size={10} color={theme.black} fill={theme.black} />
+            <Text style={[styles.tierPillText, { color: theme.black }]}>{tier} Member</Text>
           </View>
         </LinearGradient>
 
+        {/* ── Street Mode Toggle ── */}
+        <View style={[styles.menuCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.themeToggleRow}>
+            <View style={styles.themeIconBox}>
+              <Moon size={18} color={themeMode === 'dark' ? theme.yellow : theme.textSecondary} />
+              <Text style={[styles.themeLabel, { color: theme.text }]}>STREET MODE</Text>
+            </View>
+            <Switch
+              value={themeMode === 'dark'}
+              onValueChange={toggleTheme}
+              trackColor={{ false: '#767577', true: theme.primary }}
+              thumbColor={theme.white}
+            />
+          </View>
+        </View>
+
         {/* ── Stats Card ── */}
-        <View style={[styles.statsCard, Shadows.card]}>
+        <View style={[styles.statsCard, { backgroundColor: theme.surface, borderColor: theme.border }, themeMode === 'dark' ? Shadows.hard : Shadows.card]}>
           <View style={styles.stat}>
-            <AnimatedStat target={orders?.length ?? 0} />
-            <Text style={styles.statLabel}>Orders</Text>
+            <Text style={[styles.statNum, { color: theme.primary }]}>{orders?.length ?? 0}</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Orders</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
           <View style={styles.stat}>
-            <AnimatedStat target={user?.loyalty_points ?? 0} />
-            <Text style={styles.statLabel}>Points</Text>
+            <Text style={[styles.statNum, { color: theme.primary }]}>{user?.loyalty_points ?? 0}</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Points</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
           <View style={styles.stat}>
-            <AnimatedStat target={Math.round(totalSpent)} prefix="AED " />
-            <Text style={styles.statLabel}>Spent</Text>
+            <Text style={[styles.statNum, { color: theme.primary }]}>AED {Math.round(totalSpent).toLocaleString()}</Text>
+            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Spent</Text>
           </View>
         </View>
 
         {/* ── Menu Section ── */}
-        <View style={[styles.menuCard, Shadows.card]}>
+        <View style={[styles.menuCard, { backgroundColor: theme.surface, borderColor: theme.border }, themeMode === 'dark' ? Shadows.hard : Shadows.card]}>
           <MenuRow
-            icon={<ClipboardList size={18} color={Colors.primary} />}
+            icon={<ClipboardList size={18} color={theme.primary} />}
             label="Order History"
             onPress={() => router.push('/orders')}
+            color={theme.text}
           />
-          <View style={styles.rowDivider} />
+          <View style={[styles.rowDivider, { backgroundColor: theme.border }]} />
           <MenuRow
-            icon={<Star size={18} color={Colors.primary} />}
+            icon={<Star size={18} color={theme.primary} />}
             label="Loyalty Points"
             onPress={() => router.push('/(tabs)/loyalty')}
+            color={theme.text}
           />
         </View>
 
         {/* ── Recent Orders ── */}
         {orders && orders.length > 0 && (
-          <View style={[styles.menuCard, Shadows.card]}>
-            <Text style={styles.sectionTitle}>Recent Orders</Text>
+          <View style={[styles.menuCard, { backgroundColor: theme.surface, borderColor: theme.border }, themeMode === 'dark' ? Shadows.hard : Shadows.card]}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Recent Orders</Text>
             {orders.slice(0, 3).map((order, idx) => (
               <View key={order.id}>
-                {idx > 0 && <View style={styles.rowDivider} />}
+                {idx > 0 && <View style={[styles.rowDivider, { backgroundColor: theme.border }]} />}
                 <Pressable
                   style={styles.orderRow}
                   onPress={() => router.push({ pathname: '/order/[id]', params: { id: order.id } })}
@@ -213,35 +243,35 @@ export default function ProfileScreen() {
                       resizeMode="cover"
                     />
                   ) : (
-                    <View style={[styles.orderThumb, styles.orderThumbPlaceholder]}>
+                    <View style={[styles.orderThumb, styles.orderThumbPlaceholder, { backgroundColor: theme.border }]}>
                       <Text style={{ fontSize: 18 }}>🍔</Text>
                     </View>
                   )}
                   <View style={styles.orderInfo}>
-                    <Text style={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</Text>
-                    <Text style={styles.orderDate}>
+                    <Text style={[styles.orderId, { color: theme.text }]}>#{order.id.slice(-6).toUpperCase()}</Text>
+                    <Text style={[styles.orderDate, { color: theme.textMuted }]}>
                       {new Date(order.created_at).toLocaleDateString('en-AE')}
                     </Text>
                   </View>
                   <View style={styles.orderRight}>
                     <OrderStatusBadge status={order.status} />
-                    <Text style={styles.orderTotal}>AED {Number(order.total || 0).toFixed(0)}</Text>
+                    <Text style={[styles.orderTotal, { color: theme.primary }]}>AED {Number(order.total || 0).toFixed(0)}</Text>
                   </View>
                 </Pressable>
               </View>
             ))}
 
-            <Pressable style={styles.seeAllRow} onPress={() => router.push('/orders')}>
-              <Text style={styles.seeAllText}>See all orders</Text>
-              <ChevronRight size={14} color={Colors.primary} />
+            <Pressable style={[styles.seeAllRow, { borderTopColor: theme.border }]} onPress={() => router.push('/orders')}>
+              <Text style={[styles.seeAllText, { color: theme.primary }]}>See all orders</Text>
+              <ChevronRight size={14} color={theme.primary} />
             </Pressable>
           </View>
         )}
 
         {/* ── Logout ── */}
-        <Pressable style={styles.logoutBtn} onPress={handleLogout}>
-          <LogOut size={18} color={Colors.white} />
-          <Text style={styles.logoutText}>Log Out</Text>
+        <Pressable style={[styles.logoutBtn, { backgroundColor: theme.error }]} onPress={handleLogout}>
+          <LogOut size={18} color={theme.white} />
+          <Text style={[styles.logoutText, { color: theme.white }]}>Log Out</Text>
         </Pressable>
 
       </ScrollView>
@@ -252,7 +282,7 @@ export default function ProfileScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1 },
   scroll: { gap: Spacing.md, paddingBottom: Spacing.xxl },
 
   // Header
@@ -275,19 +305,17 @@ const styles = StyleSheet.create({
   },
   avatarCircle: {
     width: 70, height: 70, borderRadius: 35,
-    backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarInitial: { fontSize: 28, fontWeight: '900', color: Colors.white },
+  avatarInitial: { fontSize: 28, fontWeight: '900' },
   nameSection: { flex: 1, gap: 2 },
   greetingLabel: { fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '500' },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  name: { fontSize: 20, fontWeight: '800', color: Colors.white },
+  name: { fontSize: 20, fontWeight: '900', textTransform: 'uppercase' },
   email: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 1 },
   editNameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   nameInput: {
-    flex: 1, fontSize: 18, fontWeight: '700', color: Colors.white,
-    borderBottomWidth: 1.5, borderBottomColor: 'rgba(255,255,255,0.5)',
+    flex: 1, fontSize: 18, fontWeight: '700',
     paddingVertical: 2,
   },
   tierPill: {
@@ -296,66 +324,81 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 5,
     borderRadius: Radius.full,
   },
-  tierPillText: { fontSize: 11, fontWeight: '800', color: Colors.black },
+  tierPillText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+
+  // Theme Toggle Row
+  themeToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  themeIconBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  themeLabel: {
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
 
   // Stats
   statsCard: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.md,
     marginHorizontal: Spacing.md,
     padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: 1.5,
   },
   stat: { flex: 1, alignItems: 'center', gap: 3 },
-  statNum: { fontSize: 17, fontWeight: '800', color: Colors.primary },
-  statLabel: { fontSize: 11, color: Colors.textMuted },
-  statDivider: { width: 1, backgroundColor: Colors.border },
+  statNum: { fontSize: 17, fontWeight: '900' },
+  statLabel: { fontSize: 11 },
+  statDivider: { width: 1.5 },
 
   // Menu card
   menuCard: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.md,
     marginHorizontal: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: 1.5,
     overflow: 'hidden',
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
   menuRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
   },
   menuRowIcon: {
-    width: 34, height: 34, borderRadius: 9,
-    backgroundColor: Colors.primaryTint,
+    width: 38, height: 38, borderRadius: 10,
+    backgroundColor: 'rgba(240, 90, 26, 0.1)',
     alignItems: 'center', justifyContent: 'center',
   },
-  menuLabel: { fontSize: 15, fontWeight: '600', color: Colors.text, flex: 1 },
-  rowDivider: { height: 1, backgroundColor: Colors.border },
+  menuLabel: { fontSize: 15, fontWeight: '900', textTransform: 'uppercase', flex: 1 },
+  rowDivider: { height: 1 },
 
   // Section title
-  sectionTitle: { fontSize: 15, fontWeight: '800', color: Colors.text, marginBottom: Spacing.sm },
+  sectionTitle: { fontSize: 15, fontWeight: '900', textTransform: 'uppercase', marginBottom: Spacing.sm },
 
   // Recent orders
   orderRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     paddingVertical: Spacing.sm,
   },
-  orderThumb: { width: 48, height: 48, borderRadius: Radius.md, backgroundColor: Colors.surface },
+  orderThumb: { width: 48, height: 48, borderRadius: Radius.sm },
   orderThumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   orderInfo: { flex: 1 },
-  orderId: { fontSize: 13, fontWeight: '700', color: Colors.text },
-  orderDate: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
+  orderId: { fontSize: 13, fontWeight: '900' },
+  orderDate: { fontSize: 11, marginTop: 1 },
   orderRight: { alignItems: 'flex-end', gap: 4 },
-  orderTotal: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  orderTotal: { fontSize: 13, fontWeight: '900' },
   seeAllRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
-    paddingTop: Spacing.sm, marginTop: Spacing.sm,
-    borderTopWidth: 1, borderTopColor: Colors.border,
+    paddingTop: Spacing.md, marginTop: Spacing.sm,
+    borderTopWidth: 1,
   },
-  seeAllText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
+  seeAllText: { fontSize: 13, fontWeight: '700' },
 
   // Logout
   logoutBtn: {
@@ -363,9 +406,14 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginHorizontal: Spacing.md,
     padding: Spacing.md,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.error,
-    ...Shadows.cardStrong,
+    borderRadius: Radius.md,
+    // Neobrutalist shadow
+    borderWidth: 2,
+    borderColor: '#000000',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
   },
-  logoutText: { fontSize: 15, fontWeight: '700', color: Colors.white },
+  logoutText: { fontSize: 15, fontWeight: '900', textTransform: 'uppercase' },
 })

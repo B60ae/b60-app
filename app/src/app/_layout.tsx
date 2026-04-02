@@ -6,7 +6,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useAuthStore } from '../stores/authStore'
+import { useThemeStore } from '../stores/themeStore'
 import { ONBOARDING_KEY } from './onboarding/index'
+import { DarkTheme, LightTheme } from '../utils/theme'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,14 +29,17 @@ export default function RootLayout() {
     })
   }, [])
 
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
+
   if (!onboardingChecked) return null
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <StatusBar style="dark" backgroundColor="#FFFFFF" />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FFFFFF' } }}>
+          <StatusBar style={themeMode === 'light' ? 'dark' : 'light'} backgroundColor={theme.background} />
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}>
             {showOnboarding && <Stack.Screen name="onboarding/index" />}
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />

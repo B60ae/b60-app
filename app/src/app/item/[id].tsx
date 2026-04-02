@@ -80,10 +80,10 @@ export default function ItemDetailScreen() {
 
   const handleAddToCart = () => {
     if (!item) return
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
     addBtnScale.value = withSequence(
-      withSpring(0.95, { damping: 10, stiffness: 400 }),
-      withSpring(1, { damping: 12, stiffness: 200 }),
+      withSpring(0.88, { damping: 6, stiffness: 600 }),
+      withSpring(1, { damping: 8, stiffness: 350 }),
     )
     addItem(item, quantity, selectedOptions)
     setShowToast(true)

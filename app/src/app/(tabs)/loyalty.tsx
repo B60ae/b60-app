@@ -22,9 +22,9 @@ import type { LoyaltyTransaction } from '../../types'
 // ─── Tier Config ─────────────────────────────────────────────────────────────
 
 const TIERS = [
-  { name: 'Bronze', min: 0,    max: 999,      color: '#CD7F32', emoji: '🥉', next: 1000 },
-  { name: 'Silver', min: 1000, max: 4999,     color: '#A8A8A8', emoji: '🥈', next: 5000 },
-  { name: 'Gold',   min: 5000, max: Infinity, color: '#FFD700', emoji: '🥇', next: null },
+  { name: 'Bronze', min: 0,    max: 999,      color: '#CD7F32', next: 1000 },
+  { name: 'Silver', min: 1000, max: 4999,     color: '#A8A8A8', next: 5000 },
+  { name: 'Gold',   min: 5000, max: Infinity, color: '#FFD700', next: null },
 ]
 
 function getTier(points: number) {
@@ -37,23 +37,25 @@ function AnimatedPointsText({ target }: { target: number }) {
   return <Text style={styles.pointsNumber}>{target.toLocaleString()}</Text>
 }
 
-// ─── Animated Progress Bar ───────────────────────────────────────────────────
+// ─── Smash Meter ─────────────────────────────────────────────────────────────
 
-function ProgressBar({ progress, color }: { progress: number; color: string }) {
-  const width = useSharedValue(0)
+const SMASH_SEGMENTS = 10
 
-  useEffect(() => {
-    width.value = withTiming(Math.min(progress, 1), { duration: 1100 })
-  }, [progress])
-
-  const barStyle = useAnimatedStyle(() => ({
-    width: `${interpolate(width.value, [0, 1], [0, 100], Extrapolation.CLAMP)}%`,
-    backgroundColor: color,
-  }))
-
+function SmashMeter({ progress, color }: { progress: number; color: string }) {
+  const filled = Math.round(Math.min(progress, 1) * SMASH_SEGMENTS)
   return (
-    <View style={styles.progressTrack}>
-      <Animated.View style={[styles.progressFill, barStyle]} />
+    <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+      {Array.from({ length: SMASH_SEGMENTS }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            flex: 1,
+            height: 8,
+            borderRadius: 2,
+            backgroundColor: i < filled ? color : 'rgba(255,255,255,0.2)',
+          }}
+        />
+      ))}
     </View>
   )
 }
@@ -102,7 +104,7 @@ export default function LoyaltyScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        <Text style={styles.screenTitle}>Loyalty Points</Text>
+        <Text style={styles.screenTitle}>SMASH POINTS</Text>
 
         {/* ── Points Card ── */}
         <LinearGradient
@@ -134,7 +136,7 @@ export default function LoyaltyScreen() {
           {/* Progress bar + label */}
           {nextTier && (
             <View style={styles.progressSection}>
-              <ProgressBar progress={progress} color={tier.color} />
+              <SmashMeter progress={progress} color={tier.color} />
               <Text style={styles.progressLabel}>
                 {nextTier.min - points} pts to {nextTier.name}
               </Text>
@@ -153,7 +155,7 @@ export default function LoyaltyScreen() {
                     { backgroundColor: active ? t.color : 'rgba(255,255,255,0.15)' },
                     isCurrent && { borderWidth: 2, borderColor: Colors.white },
                   ]}>
-                    <Text style={styles.milestoneEmoji}>{t.emoji}</Text>
+                    <Text style={[styles.milestoneInitial, active && { color: Colors.white }]}>{t.name.charAt(0)}</Text>
                   </View>
                   <Text style={[styles.milestoneName, isCurrent && { color: Colors.white, fontWeight: '800' }]}>
                     {t.name}
@@ -294,26 +296,28 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18,
     alignItems: 'center', justifyContent: 'center',
   },
-  milestoneEmoji: { fontSize: 18 },
+  milestoneInitial: { fontSize: 14, fontWeight: '900' as const, color: 'rgba(255,255,255,0.5)' },
   milestoneName: { fontSize: 10, fontWeight: '600', color: 'rgba(255,255,255,0.7)' },
   milestonePts: { fontSize: 9, color: 'rgba(255,255,255,0.45)' },
 
   // Redeem CTA
   redeemBtn: {
-    backgroundColor: Colors.yellow,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: Colors.yellow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 6,
+    backgroundColor: '#FFE500',
+    borderRadius: 10,
+    padding: Spacing.md,
+    borderWidth: 2,
+    borderColor: '#0D0D0D',
+    shadowColor: '#0D0D0D',
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
   },
-  redeemBtnText: { fontSize: 17, fontWeight: '800', color: Colors.text },
-  redeemBtnSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
+  redeemBtnText: { fontSize: 16, fontWeight: '900', color: '#0D0D0D' },
+  redeemBtnSub: { fontSize: 12, fontWeight: '600', color: '#333' },
 
   // Card
   card: {
