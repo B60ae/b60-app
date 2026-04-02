@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { Animated, Text, StyleSheet, View, Pressable } from 'react-native'
-import { Colors, Radius, Spacing, Shadows } from '../../utils/theme'
+import { LightTheme, DarkTheme, Radius, Spacing, Shadows } from '../../utils/theme'
+import { useThemeStore } from '../../stores/themeStore'
 import { CheckCircle } from 'lucide-react-native'
 
 interface ToastProps {
@@ -13,6 +14,8 @@ interface ToastProps {
 }
 
 export function Toast({ message, visible, onHide, duration = 2000, actionLabel, onAction }: ToastProps) {
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
   const translateY = useRef(new Animated.Value(100)).current
   const opacity = useRef(new Animated.Value(0)).current
 
@@ -37,12 +40,20 @@ export function Toast({ message, visible, onHide, duration = 2000, actionLabel, 
   if (!visible) return null
 
   return (
-    <Animated.View style={[styles.container, { transform: [{ translateY }], opacity }]}>
-      <CheckCircle size={18} color={Colors.success} />
-      <Text style={styles.text}>{message}</Text>
+    <Animated.View style={[
+      styles.container, 
+      { 
+        backgroundColor: theme.black,
+        borderColor: theme.black,
+        transform: [{ translateY }], 
+        opacity 
+      }
+    ]}>
+      <CheckCircle size={18} color={theme.success} />
+      <Text style={[styles.text, { color: theme.white }]}>{message}</Text>
       {actionLabel && onAction && (
         <Pressable onPress={onAction} hitSlop={8}>
-          <Text style={styles.action}>{actionLabel}</Text>
+          <Text style={[styles.action, { color: theme.primary }]}>{actionLabel}</Text>
         </Pressable>
       )}
     </Animated.View>
@@ -55,26 +66,25 @@ const styles = StyleSheet.create({
     bottom: 40,
     left: 24,
     right: 24,
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.md,
     padding: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    ...Shadows.cardStrong,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.success,
+    ...Shadows.hard,
+    borderWidth: 2,
     zIndex: 999,
   },
   text: {
     fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text,
+    fontWeight: '900',
     flex: 1,
+    textTransform: 'uppercase',
   },
   action: {
     fontSize: 13,
-    fontWeight: '800',
-    color: Colors.primary,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
 })
+

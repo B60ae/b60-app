@@ -1,12 +1,13 @@
-import { Pressable, Text, StyleSheet, ActivityIndicator, Platform, View } from 'react-native'
+import { Pressable, Text, StyleSheet, ActivityIndicator, Platform, View, ViewStyle, TextStyle } from 'react-native'
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Colors, Radius, Shadows, Spacing } from '../../utils/theme'
+import { LightTheme, DarkTheme, Radius, Shadows, Spacing } from '../../utils/theme'
+import { useThemeStore } from '../../stores/themeStore'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'brand' | 'yellow'
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'brand' | 'yellow' | 'hard'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 interface ButtonProps {
@@ -20,24 +21,6 @@ interface ButtonProps {
   shadow?: boolean
 }
 
-const TEXT_COLOR: Record<ButtonVariant, string> = {
-  primary: Colors.white,
-  secondary: Colors.text,
-  outline: Colors.primary,
-  ghost: Colors.primary,
-  brand: Colors.white,
-  yellow: Colors.text,
-}
-
-const INDICATOR_COLOR: Record<ButtonVariant, string> = {
-  primary: Colors.white,
-  secondary: Colors.text,
-  outline: Colors.primary,
-  ghost: Colors.primary,
-  brand: Colors.white,
-  yellow: Colors.text,
-}
-
 export function Button({
   title,
   onPress,
@@ -48,6 +31,8 @@ export function Button({
   fullWidth = false,
   shadow = false,
 }: ButtonProps) {
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
   const scale = useSharedValue(1)
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -55,30 +40,84 @@ export function Button({
   }))
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.95, { damping: 15, stiffness: 300 })
+    scale.value = withSpring(0.96, { damping: 12, stiffness: 400 })
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
   }
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 })
+    scale.value = withSpring(1, { damping: 12, stiffness: 400 })
   }
 
   const isGradient = variant === 'brand'
-  const shadowStyle = shadow && variant === 'brand' ? Shadows.glowStrong : {}
+  const isHard = variant === 'hard'
+  
+  const shadowStyle = shadow 
+    ? (isHard ? Shadows.hard : (variant === 'brand' ? Shadows.glowStrong : Shadows.card))
+    : {}
+
+  const variantStyles: Record<ButtonVariant, ViewStyle> = {
+    primary: {
+      backgroundColor: theme.primary,
+      borderWidth: 2,
+      borderColor: theme.black,
+    },
+    secondary: {
+      backgroundColor: theme.surface,
+      borderWidth: 2,
+      borderColor: theme.borderStrong,
+    },
+    outline: {
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderColor: theme.primary,
+    },
+    ghost: {
+      backgroundColor: 'transparent',
+    },
+    yellow: {
+      backgroundColor: theme.yellow,
+      borderWidth: 2,
+      borderColor: theme.black,
+    },
+    brand: {
+      borderWidth: 2,
+      borderColor: theme.black,
+    },
+    hard: {
+      backgroundColor: theme.primary,
+      borderWidth: 2,
+      borderColor: theme.black,
+    },
+  }
+
+  const textColors: Record<ButtonVariant, string> = {
+    primary: theme.white,
+    secondary: theme.text,
+    outline: theme.primary,
+    ghost: theme.primary,
+    brand: theme.white,
+    yellow: theme.black,
+    hard: theme.white,
+  }
 
   const containerStyle = [
     styles.base,
-    styles[`size_${size}` as keyof typeof styles],
+    styles.sizes[size],
     fullWidth && styles.fullWidth,
-    (disabled || loading) && styles.disabled,
+    (disabled || loading) && styles.disabled as ViewStyle,
+    variantStyles[variant],
+    shadowStyle as ViewStyle,
     animatedStyle,
-    shadowStyle,
   ]
 
   const content = loading ? (
-    <ActivityIndicator color={INDICATOR_COLOR[variant]} size="small" />
+    <ActivityIndicator color={textColors[variant]} size="small" />
   ) : (
-    <Text style={[styles.text, styles[`textSize_${size}` as keyof typeof styles], { color: TEXT_COLOR[variant] }]}>
+    <Text style={[
+      styles.text, 
+      styles.textSizes[size], 
+      { color: textColors[variant] }
+    ]}>
       {title}
     </Text>
   )
@@ -92,19 +131,20 @@ export function Button({
         disabled={disabled || loading}
         style={[
           styles.base,
-          styles[`size_${size}` as keyof typeof styles],
+          styles.sizes[size],
           fullWidth && styles.fullWidth,
-          (disabled || loading) && styles.disabled,
+          (disabled || loading) && styles.disabled as ViewStyle,
           styles.gradientWrapper,
+          { borderColor: theme.black },
           animatedStyle,
-          shadowStyle,
+          shadowStyle as ViewStyle,
         ]}
       >
         <LinearGradient
-          colors={[Colors.primary, Colors.primaryDark]}
+          colors={[theme.primary, theme.primaryDark]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={[styles.gradient, styles[`size_${size}` as keyof typeof styles]]}
+          style={[styles.gradient, styles.sizes[size]]}
         >
           {content}
         </LinearGradient>
@@ -118,73 +158,43 @@ export function Button({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled || loading}
-      style={[
-        containerStyle,
-        styles[variant as keyof typeof styles],
-      ]}
+      style={containerStyle}
     >
       {content}
     </AnimatedPressable>
   )
 }
 
-const styles = StyleSheet.create({
+const styles = {
   base: {
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: Radius.md,
     overflow: 'hidden',
-  },
-  fullWidth: { width: '100%' },
-  disabled: { opacity: 0.45 },
-
-  // Variant backgrounds + borders
-  primary: {
-    backgroundColor: Colors.primary,
-    borderWidth: 1,
-    borderColor: Colors.primaryDark,
-  },
-  secondary: {
-    backgroundColor: Colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  yellow: {
-    backgroundColor: Colors.yellow,
-    borderWidth: 1,
-    borderColor: '#D4BF00',
-  },
-
-  // Gradient brand variant
+  } as ViewStyle,
+  fullWidth: { width: '100%' } as ViewStyle,
+  disabled: { opacity: 0.5 },
+  
   gradientWrapper: {
     padding: 0,
-    borderWidth: 1,
-    borderColor: Colors.primaryDark,
-  },
+    borderWidth: 2,
+  } as ViewStyle,
   gradient: {
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+  } as ViewStyle,
+
+  sizes: {
+    sm: { paddingVertical: 8, paddingHorizontal: 16 } as ViewStyle,
+    md: { paddingVertical: 14, paddingHorizontal: 24 } as ViewStyle,
+    lg: { paddingVertical: 18, paddingHorizontal: 32 } as ViewStyle,
   },
 
-  // Sizes
-  size_sm: { paddingVertical: 8, paddingHorizontal: 16 },
-  size_md: { paddingVertical: 14, paddingHorizontal: 24 },
-  size_lg: { paddingVertical: 18, paddingHorizontal: 32 },
-
-  // Text
-  text: { fontWeight: '700', letterSpacing: 0.2 },
-  textSize_sm: { fontSize: 13 },
-  textSize_md: { fontSize: 15 },
-  textSize_lg: { fontSize: 17 },
-})
+  text: { fontWeight: '900', letterSpacing: 0.5, textTransform: 'uppercase' } as TextStyle,
+  textSizes: {
+    sm: { fontSize: 13 } as TextStyle,
+    md: { fontSize: 15 } as TextStyle,
+    lg: { fontSize: 17 } as TextStyle,
+  },
+}

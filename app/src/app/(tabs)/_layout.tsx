@@ -1,11 +1,12 @@
 import { useRef, useEffect } from 'react'
 import { Tabs } from 'expo-router'
-import { Home, UtensilsCrossed, ShoppingCart, Star, User, Zap } from 'lucide-react-native'
+import { Home, UtensilsCrossed, ShoppingCart, Star, User } from 'lucide-react-native'
 import { View, Text, StyleSheet, Animated } from 'react-native'
-import { Colors } from '../../utils/theme'
+import { LightTheme, DarkTheme } from '../../utils/theme'
 import { useCartStore } from '../../stores/cartStore'
+import { useThemeStore } from '../../stores/themeStore'
 
-function CartTabIcon({ color, size }: { color: string; size: number }) {
+function CartTabIcon({ color, size, theme }: { color: string; size: number; theme: any }) {
   const count = useCartStore((s) => s.items.length)
   const prevCount = useRef(count)
   const badgeScale = useRef(new Animated.Value(1)).current
@@ -24,7 +25,7 @@ function CartTabIcon({ color, size }: { color: string; size: number }) {
     <View>
       <ShoppingCart size={size} color={color} />
       {count > 0 && (
-        <Animated.View style={[styles.badge, { transform: [{ scale: badgeScale }] }]}>
+        <Animated.View style={[styles.badge, { backgroundColor: theme.primary, transform: [{ scale: badgeScale }] }]}>
           <Text style={styles.badgeText}>{count > 9 ? '9+' : count}</Text>
         </Animated.View>
       )}
@@ -33,29 +34,67 @@ function CartTabIcon({ color, size }: { color: string; size: number }) {
 }
 
 export default function TabsLayout() {
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textMuted,
         tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopColor: Colors.border,
+          backgroundColor: theme.background,
+          borderTopColor: theme.border,
           borderTopWidth: 1,
           height: 72,
           paddingBottom: 12,
           paddingTop: 4,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> }} />
-      <Tabs.Screen name="menu" options={{ title: 'Menu', tabBarIcon: ({ color, size }) => <UtensilsCrossed size={size} color={color} /> }} />
-      <Tabs.Screen name="cart" options={{ title: 'Cart', tabBarIcon: ({ color, size }) => <CartTabIcon color={color} size={size} /> }} />
-      <Tabs.Screen name="loyalty" options={{ title: 'Points', tabBarIcon: ({ color, size }) => <Star size={size} color={color} /> }} />
-      <Tabs.Screen name="vibe" options={{ title: 'Vibe', tabBarIcon: ({ color, size }) => <Zap size={size} color={color} /> }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <User size={size} color={color} /> }} />
+      <Tabs.Screen 
+        name="index" 
+        options={{ 
+          title: 'Home', 
+          tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> 
+        }} 
+      />
+      <Tabs.Screen 
+        name="menu" 
+        options={{ 
+          title: 'Menu', 
+          tabBarIcon: ({ color, size }) => <UtensilsCrossed size={size} color={color} /> 
+        }} 
+      />
+      <Tabs.Screen 
+        name="cart" 
+        options={{ 
+          title: 'Cart', 
+          tabBarIcon: ({ color, size }) => <CartTabIcon color={color} size={size} theme={theme} /> 
+        }} 
+      />
+      <Tabs.Screen 
+        name="loyalty" 
+        options={{ 
+          title: 'Points', 
+          tabBarIcon: ({ color, size }) => <Star size={size} color={color} /> 
+        }} 
+      />
+      <Tabs.Screen 
+        name="profile" 
+        options={{ 
+          title: 'Profile', 
+          tabBarIcon: ({ color, size }) => <User size={size} color={color} /> 
+        }} 
+      />
+      <Tabs.Screen 
+        name="vibe" 
+        options={{ 
+          href: null,
+        }} 
+      />
     </Tabs>
   )
 }
@@ -63,10 +102,9 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   badge: {
     position: 'absolute', top: -6, right: -10,
-    backgroundColor: Colors.primary,
     borderRadius: 999, minWidth: 18, height: 18,
     alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 3,
   },
-  badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  badgeText: { color: '#fff', fontSize: 10, fontWeight: '900' },
 })

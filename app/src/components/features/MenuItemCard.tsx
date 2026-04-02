@@ -141,8 +141,10 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: Radius.md,
     margin: 6,
-    // Neobrutalist base
     borderWidth: 2,
+    borderColor: '#0D0D0D',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0D0D0D',
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,

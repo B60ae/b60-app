@@ -26,6 +26,8 @@ export const LightTheme = {
   textInverse: '#FFFFFF',
   overlay: 'rgba(0,0,0,0.5)',
   primaryTint: 'rgba(240, 90, 26, 0.08)',
+  successTint: 'rgba(34, 197, 94, 0.1)',
+  errorTint: 'rgba(239, 68, 68, 0.1)',
   // Brand Touches
   cardBg: '#FFFFFF',
   shadowColor: '#000',
@@ -45,6 +47,8 @@ export const DarkTheme = {
   textInverse: '#000000',
   overlay: 'rgba(0,0,0,0.7)',
   primaryTint: 'rgba(240, 90, 26, 0.15)',
+  successTint: 'rgba(34, 197, 94, 0.15)',
+  errorTint: 'rgba(239, 68, 68, 0.15)',
   // Brand Touches
   cardBg: '#121212',
   shadowColor: '#000',
@@ -101,11 +105,31 @@ export const Shadows = {
     shadowRadius: 8,
     elevation: 3,
   },
+  cardStrong: {
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
   // Neobrutalist "Hard" Shadows
   hard: {
     shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 0,
     elevation: 4,
+  },
+  glow: {
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  glowStrong: {
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
   },
 }

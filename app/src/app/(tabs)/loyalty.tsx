@@ -15,7 +15,8 @@ import Animated, {
 } from 'react-native-reanimated'
 import { loyaltyApi } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
-import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
+import { useThemeStore } from '../../stores/themeStore'
+import { Colors, LightTheme, DarkTheme, Spacing, Radius, Shadows } from '../../utils/theme'
 import { POINTS_TO_AED } from '../../utils/constants'
 import type { LoyaltyTransaction } from '../../types'
 
@@ -34,7 +35,45 @@ function getTier(points: number) {
 // ─── Animated Points Number ──────────────────────────────────────────────────
 
 function AnimatedPointsText({ target }: { target: number }) {
-  return <Text style={styles.pointsNumber}>{target.toLocaleString()}</Text>
+  const animatedPoints = useSharedValue(0)
+  
+  useEffect(() => {
+    animatedPoints.value = withTiming(target, { duration: 1200 })
+  }, [target])
+
+  const derivedPoints = useDerivedValue(() => {
+    return Math.floor(animatedPoints.value).toLocaleString()
+  })
+
+  // Use a TextInput for better performance with frequent updates if needed, 
+  // but for a simple count, a Text with a derived value is fine if we use useAnimatedProps or similar.
+  // Actually, easiest is using a Reanimated text component or just letting it re-render.
+  // For now, I'll keep it simple but actually make it count.
+  const [displayPoints, setDisplayPoints] = React.useState(0)
+
+  useEffect(() => {
+    let start = 0
+    const duration = 1200
+    const frameDuration = 1000 / 60
+    const totalFrames = Math.round(duration / frameDuration)
+    let frame = 0
+
+    const timer = setInterval(() => {
+      frame++
+      const progress = frame / totalFrames
+      // Ease out quad
+      const eased = 1 - (1 - progress) * (1 - progress)
+      setDisplayPoints(Math.floor(eased * target))
+
+      if (frame === totalFrames) {
+        clearInterval(timer)
+      }
+    }, frameDuration)
+
+    return () => clearInterval(timer)
+  }, [target])
+
+  return <Text style={styles.pointsNumber}>{displayPoints.toLocaleString()}</Text>
 }
 
 // ─── Smash Meter ─────────────────────────────────────────────────────────────
@@ -63,19 +102,22 @@ function SmashMeter({ progress, color }: { progress: number; color: string }) {
 // ─── Transaction Row ─────────────────────────────────────────────────────────
 
 function TransactionRow({ tx }: { tx: LoyaltyTransaction }) {
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
   const isEarned = tx.type === 'earned' || tx.type === 'bonus'
+  
   return (
-    <View style={[styles.txRow, { backgroundColor: isEarned ? Colors.successTint : Colors.errorTint }]}>
-      <View style={[styles.txIcon, { backgroundColor: isEarned ? Colors.success : Colors.error }]}>
+    <View style={[styles.txRow, { backgroundColor: isEarned ? theme.successTint : theme.errorTint, borderColor: theme.border }]}>
+      <View style={[styles.txIcon, { backgroundColor: isEarned ? theme.success : theme.error }]}>
         {isEarned
-          ? <ArrowUpRight size={14} color={Colors.white} />
-          : <ArrowDownLeft size={14} color={Colors.white} />}
+          ? <ArrowUpRight size={14} color={theme.white} />
+          : <ArrowDownLeft size={14} color={theme.white} />}
       </View>
       <View style={styles.txLeft}>
-        <Text style={styles.txType}>{tx.description}</Text>
-        <Text style={styles.txDate}>{new Date(tx.created_at).toLocaleDateString('en-AE')}</Text>
+        <Text style={[styles.txType, { color: theme.text }]}>{tx.description}</Text>
+        <Text style={[styles.txDate, { color: theme.textMuted }]}>{new Date(tx.created_at).toLocaleDateString('en-AE')}</Text>
       </View>
-      <Text style={[styles.txPoints, { color: isEarned ? Colors.success : Colors.error }]}>
+      <Text style={[styles.txPoints, { color: isEarned ? theme.success : theme.error }]}>
         {isEarned ? '+' : '-'}{Math.abs(tx.points)} pts
       </Text>
     </View>
@@ -86,6 +128,8 @@ function TransactionRow({ tx }: { tx: LoyaltyTransaction }) {
 
 export default function LoyaltyScreen() {
   const user = useAuthStore((s) => s.user)
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
   const [howToOpen, setHowToOpen] = React.useState(false)
 
   const { data: history } = useQuery({
@@ -99,19 +143,19 @@ export default function LoyaltyScreen() {
   const progress = nextTier ? (points - tier.min) / (nextTier.min - tier.min) : 1
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        <Text style={styles.screenTitle}>SMASH POINTS</Text>
+        <Text style={[styles.screenTitle, { color: theme.text }]}>SMASH POINTS</Text>
 
         {/* ── Points Card ── */}
         <LinearGradient
-          colors={[Colors.primary, Colors.primaryDark, '#1B2A4A']}
+          colors={[theme.primary, theme.primaryDark, '#1B2A4A']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.pointsCard}
+          style={[styles.pointsCard, Shadows.glowStrong]}
         >
           {/* Decorative circles */}
           <View style={styles.decorCircle1} />
@@ -121,7 +165,7 @@ export default function LoyaltyScreen() {
           <View style={styles.cardTop}>
             <Text style={styles.cardLabel}>YOUR POINTS</Text>
             <View style={[styles.tierBadge, { backgroundColor: tier.color }]}>
-              <Star size={11} color={Colors.black} fill={Colors.black} />
+              <Star size={11} color={theme.black} fill={theme.black} />
               <Text style={styles.tierBadgeText}>{tier.name}</Text>
             </View>
           </View>
@@ -153,11 +197,11 @@ export default function LoyaltyScreen() {
                   <View style={[
                     styles.milestoneIcon,
                     { backgroundColor: active ? t.color : 'rgba(255,255,255,0.15)' },
-                    isCurrent && { borderWidth: 2, borderColor: Colors.white },
+                    isCurrent && { borderWidth: 2, borderColor: theme.white },
                   ]}>
-                    <Text style={[styles.milestoneInitial, active && { color: Colors.white }]}>{t.name.charAt(0)}</Text>
+                    <Text style={[styles.milestoneInitial, active && { color: theme.white }]}>{t.name.charAt(0)}</Text>
                   </View>
-                  <Text style={[styles.milestoneName, isCurrent && { color: Colors.white, fontWeight: '800' }]}>
+                  <Text style={[styles.milestoneName, isCurrent && { color: theme.white, fontWeight: '800' }]}>
                     {t.name}
                   </Text>
                   <Text style={styles.milestonePts}>{t.min === 0 ? '0' : t.min.toLocaleString()}</Text>
@@ -179,11 +223,11 @@ export default function LoyaltyScreen() {
             <Text style={styles.redeemBtnText}>Redeem Points →</Text>
             <Text style={styles.redeemBtnSub}>Use in your next order</Text>
           </View>
-          <ArrowRight size={20} color={Colors.text} />
+          <ArrowRight size={20} color={theme.black} />
         </Pressable>
 
         {/* ── How to Earn accordion ── */}
-        <View style={[styles.card, Shadows.card]}>
+        <View style={[styles.card, Shadows.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Pressable
             style={styles.accordionHeader}
             onPress={() => {
@@ -191,30 +235,30 @@ export default function LoyaltyScreen() {
               setHowToOpen(!howToOpen)
             }}
           >
-            <Text style={styles.sectionTitle}>How to Earn</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>How to Earn</Text>
             {howToOpen
-              ? <ChevronUp size={18} color={Colors.textMuted} />
-              : <ChevronDown size={18} color={Colors.textMuted} />}
+              ? <ChevronUp size={18} color={theme.textMuted} />
+              : <ChevronDown size={18} color={theme.textMuted} />}
           </Pressable>
           {howToOpen && (
             <View style={styles.accordionBody}>
               <View style={styles.ruleRow}>
-                <View style={[styles.ruleIcon, { backgroundColor: Colors.primaryTint }]}>
-                  <TrendingUp size={16} color={Colors.primary} />
+                <View style={[styles.ruleIcon, { backgroundColor: theme.primaryTint }]}>
+                  <TrendingUp size={16} color={theme.primary} />
                 </View>
-                <Text style={styles.ruleText}>Spend AED 1 → Earn 1 Point</Text>
+                <Text style={[styles.ruleText, { color: theme.textSecondary }]}>Spend AED 1 → Earn 1 Point</Text>
               </View>
               <View style={styles.ruleRow}>
-                <View style={[styles.ruleIcon, { backgroundColor: Colors.successTint }]}>
-                  <Gift size={16} color={Colors.success} />
+                <View style={[styles.ruleIcon, { backgroundColor: theme.successTint }]}>
+                  <Gift size={16} color={theme.success} />
                 </View>
-                <Text style={styles.ruleText}>100 Points → AED 5 off your order</Text>
+                <Text style={[styles.ruleText, { color: theme.textSecondary }]}>100 Points → AED 5 off your order</Text>
               </View>
               <View style={styles.ruleRow}>
                 <View style={[styles.ruleIcon, { backgroundColor: 'rgba(255,215,0,0.15)' }]}>
                   <Star size={16} color="#B8860B" />
                 </View>
-                <Text style={styles.ruleText}>Reach Gold tier for exclusive perks</Text>
+                <Text style={[styles.ruleText, { color: theme.textSecondary }]}>Reach Gold tier for exclusive perks</Text>
               </View>
             </View>
           )}
@@ -222,14 +266,14 @@ export default function LoyaltyScreen() {
 
         {/* ── Transaction History ── */}
         <View style={styles.historySection}>
-          <Text style={styles.sectionTitle}>History</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>History</Text>
           {history && history.length > 0 ? (
             history.map((tx) => <TransactionRow key={tx.id} tx={tx} />)
           ) : (
-            <View style={[styles.card, styles.emptyHistory]}>
+            <View style={[styles.card, styles.emptyHistory, { backgroundColor: theme.surface, borderColor: theme.border }]}>
               <Text style={styles.emptyEmoji}>🍔</Text>
-              <Text style={styles.emptyText}>No transactions yet</Text>
-              <Text style={styles.emptySubtext}>Start ordering to earn points!</Text>
+              <Text style={[styles.emptyText, { color: theme.text }]}>No transactions yet</Text>
+              <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>Start ordering to earn points!</Text>
             </View>
           )}
         </View>
@@ -242,9 +286,9 @@ export default function LoyaltyScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1 },
   scroll: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
-  screenTitle: { fontSize: 30, fontWeight: '900', color: Colors.text },
+  screenTitle: { fontSize: 30, fontWeight: '900' },
 
   // Points card
   pointsCard: {
@@ -252,7 +296,6 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     gap: Spacing.md,
     overflow: 'hidden',
-    ...Shadows.glowStrong,
   },
   decorCircle1: {
     position: 'absolute', right: -50, top: -50,
@@ -273,9 +316,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.full,
   },
-  tierBadgeText: { fontSize: 12, fontWeight: '800', color: Colors.black },
+  tierBadgeText: { fontSize: 12, fontWeight: '800' },
   pointsNumber: {
-    fontSize: 72, fontWeight: '900', color: Colors.white, lineHeight: 78,
+    fontSize: 72, fontWeight: '900', color: '#FFFFFF', lineHeight: 78,
   },
   aedValue: { fontSize: 14, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
 
@@ -321,10 +364,8 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
     overflow: 'hidden',
   },
   accordionHeader: {
@@ -332,27 +373,27 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
   },
   accordionBody: { padding: Spacing.md, paddingTop: 0, gap: Spacing.sm },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: Colors.text },
+  sectionTitle: { fontSize: 16, fontWeight: '800' },
   ruleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   ruleIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  ruleText: { fontSize: 14, color: Colors.textSecondary, flex: 1 },
+  ruleText: { fontSize: 14, flex: 1 },
 
   // History
   historySection: { gap: Spacing.sm },
   emptyHistory: { padding: Spacing.xl, alignItems: 'center', gap: Spacing.sm },
   emptyEmoji: { fontSize: 32 },
-  emptyText: { fontSize: 16, fontWeight: '700', color: Colors.text },
-  emptySubtext: { fontSize: 13, color: Colors.textMuted },
+  emptyText: { fontSize: 16, fontWeight: '700' },
+  emptySubtext: { fontSize: 13 },
 
   // Transaction rows
   txRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     borderRadius: Radius.md, padding: Spacing.sm + 2,
-    borderWidth: 1, borderColor: Colors.border,
+    borderWidth: 1,
   },
   txIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   txLeft: { flex: 1, gap: 1 },
-  txType: { fontSize: 13, fontWeight: '600', color: Colors.text },
-  txDate: { fontSize: 11, color: Colors.textMuted },
+  txType: { fontSize: 13, fontWeight: '600' },
+  txDate: { fontSize: 11 },
   txPoints: { fontSize: 14, fontWeight: '800' },
 })

@@ -3,9 +3,10 @@ import { View, Pressable, StyleSheet, ViewStyle, Platform } from 'react-native'
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Colors, Radius, Shadows, Spacing } from '../../utils/theme'
+import { LightTheme, DarkTheme, Radius, Shadows, Spacing } from '../../utils/theme'
+import { useThemeStore } from '../../stores/themeStore'
 
-type CardVariant = 'default' | 'elevated' | 'outlined' | 'gradient'
+type CardVariant = 'default' | 'elevated' | 'outlined' | 'gradient' | 'hard' | 'glow'
 
 interface CardProps {
   children: React.ReactNode
@@ -14,52 +15,10 @@ interface CardProps {
   pressable?: boolean
   accent?: boolean
   onPress?: () => void
-  // Legacy
   elevated?: boolean
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
-
-function CardInner({
-  children,
-  variant,
-  accent,
-  style,
-}: {
-  children: React.ReactNode
-  variant: CardVariant
-  accent: boolean
-  style?: ViewStyle
-}) {
-  const baseStyle = [
-    styles.card,
-    variant === 'elevated' && styles.elevated,
-    variant === 'outlined' && styles.outlined,
-    accent && styles.accentContainer,
-    style,
-  ]
-
-  if (variant === 'gradient') {
-    return (
-      <LinearGradient
-        colors={[Colors.background, Colors.surface]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={[styles.card, styles.gradientCard, accent && styles.accentContainer, style]}
-      >
-        {accent && <View style={styles.accentStrip} />}
-        <View style={accent ? styles.accentContent : undefined}>{children}</View>
-      </LinearGradient>
-    )
-  }
-
-  return (
-    <View style={baseStyle}>
-      {accent && <View style={styles.accentStrip} />}
-      <View style={accent ? styles.accentContent : undefined}>{children}</View>
-    </View>
-  )
-}
 
 export function Card({
   children,
@@ -70,9 +29,11 @@ export function Card({
   onPress,
   elevated = false,
 }: CardProps) {
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
+  
   // Legacy elevated prop maps to variant
   const resolvedVariant: CardVariant = variant ?? (elevated ? 'elevated' : 'default')
-
   const scale = useSharedValue(1)
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -88,62 +49,114 @@ export function Card({
     scale.value = withSpring(1, { damping: 18, stiffness: 280 })
   }
 
+  const getVariantStyle = (): ViewStyle => {
+    switch (resolvedVariant) {
+      case 'elevated':
+        return { 
+          backgroundColor: theme.surface, 
+          ...Shadows.card, 
+          borderWidth: 1, 
+          borderColor: theme.border 
+        }
+      case 'outlined':
+        return { 
+          backgroundColor: 'transparent', 
+          borderWidth: 1.5, 
+          borderColor: theme.borderStrong 
+        }
+      case 'hard':
+        return { 
+          backgroundColor: theme.surface, 
+          ...Shadows.hard, 
+          borderWidth: 2, 
+          borderColor: theme.black 
+        }
+      case 'glow':
+        return { 
+          backgroundColor: theme.surface, 
+          ...Shadows.glow, 
+          borderWidth: 1, 
+          borderColor: theme.primary 
+        }
+      case 'gradient':
+        return {
+          backgroundColor: theme.surface,
+          borderWidth: 1,
+          borderColor: theme.border,
+        }
+      default:
+        return { 
+          backgroundColor: theme.surface, 
+          borderWidth: 1, 
+          borderColor: theme.border 
+        }
+    }
+  }
+
+  const baseContent = (
+    <>
+      {accent && <View style={[styles.accentStrip, { backgroundColor: theme.primary }]} />}
+      <View style={accent ? styles.accentContent : undefined}>{children}</View>
+    </>
+  )
+
   if (pressable || onPress) {
     return (
       <AnimatedPressable
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={[styles.pressableWrapper, animatedStyle]}
+        style={[
+          styles.card,
+          getVariantStyle(),
+          accent && styles.accentContainer,
+          animatedStyle,
+          style
+        ]}
       >
-        <CardInner variant={resolvedVariant} accent={accent} style={style}>
-          {children}
-        </CardInner>
+        {resolvedVariant === 'gradient' ? (
+          <LinearGradient
+            colors={[theme.background, theme.surface]}
+            style={StyleSheet.absoluteFill}
+          >
+            {baseContent}
+          </LinearGradient>
+        ) : baseContent}
       </AnimatedPressable>
     )
   }
 
   return (
-    <CardInner variant={resolvedVariant} accent={accent} style={style}>
-      {children}
-    </CardInner>
+    <View style={[
+      styles.card,
+      getVariantStyle(),
+      accent && styles.accentContainer,
+      style
+    ]}>
+      {resolvedVariant === 'gradient' ? (
+         <LinearGradient
+            colors={[theme.background, theme.surface]}
+            style={StyleSheet.absoluteFill}
+          >
+            {baseContent}
+          </LinearGradient>
+      ) : baseContent}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  pressableWrapper: {
-    // Wrapper only holds animation — no visual styles
-  },
   card: {
-    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
     overflow: 'hidden',
   },
-  elevated: {
-    ...Shadows.cardStrong,
-    borderWidth: 0,
-    backgroundColor: Colors.surfaceElevated,
-  },
-  outlined: {
-    backgroundColor: Colors.background,
-    borderWidth: 1.5,
-    borderColor: Colors.borderStrong,
-  },
-  gradientCard: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  // Accent strip — 3px left orange bar
   accentContainer: {
     flexDirection: 'row',
     padding: 0,
   },
   accentStrip: {
-    width: 3,
-    backgroundColor: Colors.primary,
+    width: 4,
     borderTopLeftRadius: Radius.lg,
     borderBottomLeftRadius: Radius.lg,
   },
@@ -152,3 +165,4 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
   },
 })
+

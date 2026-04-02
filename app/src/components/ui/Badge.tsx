@@ -1,7 +1,9 @@
-import { View, Text, StyleSheet } from 'react-native'
-import { Colors, Radius } from '../../utils/theme'
+import React from 'react'
+import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native'
+import { LightTheme, DarkTheme, Radius, Typography, Spacing } from '../../utils/theme'
+import { useThemeStore } from '../../stores/themeStore'
 
-type BadgeVariant = 'default' | 'success' | 'error' | 'warning' | 'info' | 'orange' | 'gold'
+type BadgeVariant = 'primary' | 'success' | 'error' | 'warning' | 'info' | 'yellow' | 'outline'
 type BadgeSize = 'sm' | 'md' | 'lg'
 
 interface BadgeProps {
@@ -9,140 +11,78 @@ interface BadgeProps {
   variant?: BadgeVariant
   size?: BadgeSize
   dot?: boolean
-  // Legacy passthrough — still supported
-  color?: string
-  textColor?: string
-}
-
-interface VariantStyle {
-  bg: string
-  text: string
-  border: string
-  dot: string
-}
-
-const VARIANT_STYLES: Record<BadgeVariant, VariantStyle> = {
-  default: {
-    bg: 'rgba(27, 42, 74, 0.08)',
-    text: Colors.text,
-    border: 'rgba(27, 42, 74, 0.2)',
-    dot: Colors.text,
-  },
-  success: {
-    bg: 'rgba(34, 197, 94, 0.12)',
-    text: '#16A34A',
-    border: 'rgba(34, 197, 94, 0.35)',
-    dot: '#16A34A',
-  },
-  error: {
-    bg: 'rgba(239, 68, 68, 0.1)',
-    text: '#DC2626',
-    border: 'rgba(239, 68, 68, 0.3)',
-    dot: '#DC2626',
-  },
-  warning: {
-    bg: 'rgba(245, 158, 11, 0.12)',
-    text: '#B45309',
-    border: 'rgba(245, 158, 11, 0.35)',
-    dot: '#D97706',
-  },
-  info: {
-    bg: 'rgba(59, 130, 246, 0.1)',
-    text: '#1D4ED8',
-    border: 'rgba(59, 130, 246, 0.3)',
-    dot: '#2563EB',
-  },
-  orange: {
-    bg: 'rgba(240, 90, 26, 0.1)',
-    text: Colors.primaryDark,
-    border: 'rgba(240, 90, 26, 0.3)',
-    dot: Colors.primary,
-  },
-  gold: {
-    bg: 'rgba(255, 229, 0, 0.18)',
-    text: '#92600A',
-    border: 'rgba(255, 229, 0, 0.55)',
-    dot: '#D4A800',
-  },
-}
-
-const SIZE_TEXT: Record<BadgeSize, number> = {
-  sm: 10,
-  md: 12,
-  lg: 14,
-}
-
-const SIZE_PADDING: Record<BadgeSize, { paddingHorizontal: number; paddingVertical: number }> = {
-  sm: { paddingHorizontal: 7, paddingVertical: 2 },
-  md: { paddingHorizontal: 10, paddingVertical: 3 },
-  lg: { paddingHorizontal: 12, paddingVertical: 5 },
 }
 
 export function Badge({
   label,
-  variant = 'default',
+  variant = 'primary',
   size = 'md',
   dot = false,
-  color,
-  textColor,
 }: BadgeProps) {
-  // Legacy color passthrough
-  const vs = VARIANT_STYLES[variant]
-  const bgColor = color ? color + '22' : vs.bg
-  const txtColor = textColor ?? vs.text
-  const borderColor = color ?? vs.border
-  const dotColor = color ?? vs.dot
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
+
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'success':
+        return { bg: theme.successTint, border: theme.success, text: theme.success }
+      case 'error':
+        return { bg: theme.errorTint, border: theme.error, text: theme.error }
+      case 'warning':
+        return { bg: 'rgba(245, 158, 11, 0.1)', border: theme.warning, text: theme.warning }
+      case 'yellow':
+        return { bg: theme.yellow, border: theme.black, text: theme.black }
+      case 'outline':
+        return { bg: 'transparent', border: theme.border, text: theme.textSecondary }
+      case 'info':
+        return { bg: 'rgba(59, 130, 246, 0.1)', border: '#3B82F6', text: '#2563EB' }
+      default:
+        return { bg: theme.primaryTint, border: theme.primary, text: theme.primary }
+    }
+  }
+
+  const vs = getVariantStyles()
 
   return (
-    <View
-      style={[
-        styles.badge,
-        SIZE_PADDING[size],
-        {
-          backgroundColor: bgColor,
-          borderColor: borderColor,
-        },
-      ]}
-    >
-      {dot && (
-        <View
-          style={[
-            styles.dot,
-            { backgroundColor: dotColor },
-          ]}
-        />
-      )}
-      <Text
-        style={[
-          styles.text,
-          {
-            fontSize: SIZE_TEXT[size],
-            color: txtColor,
-          },
-        ]}
-      >
+    <View style={[
+      styles.badge,
+      styles.sizes[size],
+      { backgroundColor: vs.bg, borderColor: vs.border }
+    ]}>
+      {dot && <View style={[styles.dot, { backgroundColor: vs.text }]} />}
+      <Text style={[
+        styles.text,
+        { color: vs.text, fontSize: size === 'sm' ? 10 : (size === 'lg' ? 13 : 11) }
+      ]}>
         {label}
       </Text>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const styles = {
   badge: {
-    borderRadius: Radius.full,
-    borderWidth: 0.5,
+    borderRadius: Radius.sm,
+    borderWidth: 1.5,
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-  },
+    gap: 4,
+  } as ViewStyle,
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-  },
+  } as ViewStyle,
   text: {
-    fontWeight: '700',
-    letterSpacing: 0.1,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  } as TextStyle,
+  sizes: {
+    sm: { paddingHorizontal: 6, paddingVertical: 2 } as ViewStyle,
+    md: { paddingHorizontal: 8, paddingVertical: 3 } as ViewStyle,
+    lg: { paddingHorizontal: 10, paddingVertical: 5 } as ViewStyle,
   },
-})
+}
+

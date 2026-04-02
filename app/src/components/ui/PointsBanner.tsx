@@ -7,7 +7,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Colors, Radius, Spacing, Shadows } from '../../utils/theme'
+import { LightTheme, DarkTheme, Radius, Spacing, Shadows } from '../../utils/theme'
+import { useThemeStore } from '../../stores/themeStore'
 
 interface PointsBannerProps {
   points: number
@@ -23,6 +24,8 @@ const TIER_COLORS = {
 }
 
 export function PointsBanner({ points, tier, aedValue, onPress }: PointsBannerProps) {
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
   const animatedPoints = useSharedValue(0)
 
   useEffect(() => {
@@ -35,22 +38,22 @@ export function PointsBanner({ points, tier, aedValue, onPress }: PointsBannerPr
   return (
     <Pressable onPress={onPress} style={styles.wrapper}>
       <LinearGradient
-        colors={['#F05A1A', '#C94400']}
+        colors={[theme.primary, theme.primaryDark]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
-        style={styles.container}
+        style={[styles.container, Shadows.glowStrong]}
       >
         <View style={styles.left}>
-          <Text style={styles.pointsNum}>{points}</Text>
+          <Text style={[styles.pointsNum, { color: theme.white }]}>{points}</Text>
           <Text style={styles.pointsLabel}>pts</Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.mid}>
-          <Text style={styles.aed}>AED {aedValue.toFixed(2)}</Text>
+          <Text style={[styles.aed, { color: theme.white }]}>AED {aedValue.toFixed(2)}</Text>
           <Text style={styles.aedLabel}>redeemable value</Text>
         </View>
         <View style={[styles.tierBadge, { backgroundColor: TIER_COLORS[tier] }]}>
-          <Text style={styles.tierText}>{tier}</Text>
+          <Text style={[styles.tierText, { color: theme.black }]}>{tier}</Text>
         </View>
       </LinearGradient>
     </Pressable>
@@ -61,7 +64,6 @@ const styles = StyleSheet.create({
   wrapper: {
     marginHorizontal: Spacing.md,
     borderRadius: Radius.lg,
-    ...Shadows.glowStrong,
   },
   container: {
     flexDirection: 'row',
@@ -70,6 +72,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     gap: Spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   left: {
     flexDirection: 'row',
@@ -79,7 +83,6 @@ const styles = StyleSheet.create({
   pointsNum: {
     fontSize: 28,
     fontWeight: '900',
-    color: Colors.white,
   },
   pointsLabel: {
     fontSize: 14,
@@ -97,7 +100,6 @@ const styles = StyleSheet.create({
   aed: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.white,
   },
   aedLabel: {
     fontSize: 11,
@@ -112,6 +114,5 @@ const styles = StyleSheet.create({
   tierText: {
     fontSize: 11,
     fontWeight: '800',
-    color: Colors.black,
   },
 })

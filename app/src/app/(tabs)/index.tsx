@@ -8,11 +8,12 @@ import {
   Animated,
   FlatList,
   Dimensions,
+  Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { Bell, MapPin, ChevronRight, Flame, Star, Zap } from 'lucide-react-native'
+import { Bell, MapPin, Zap, Flame, Star } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { menuApi, locationsApi } from '../../services/api'
@@ -23,13 +24,13 @@ import { HeroBanner } from '../../components/ui/HeroBanner'
 import { PointsBanner } from '../../components/ui/PointsBanner'
 import { SectionHeader } from '../../components/ui/SectionHeader'
 import { SkeletonLoader } from '../../components/ui/SkeletonLoader'
-import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
+import { LightTheme, DarkTheme, Spacing, Radius, Shadows } from '../../utils/theme'
+import { useThemeStore } from '../../stores/themeStore'
 import type { MenuItem } from '../../types'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
-
-const FEATURED_CARD_WIDTH = 176
-const FEATURED_SNAP_INTERVAL = 192
+const FEATURED_CARD_WIDTH = 180
+const FEATURED_SNAP_INTERVAL = 194
 
 const CATEGORY_QUICK = [
   { id: 'burgers', label: 'Burgers', emoji: '🍔' },
@@ -70,47 +71,14 @@ function getTimeGreeting(): string {
   return 'Good evening'
 }
 
-// Diagonal stripe overlay for promo cards
-function DiagonalStripes() {
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {[0, 1, 2].map((i) => (
-        <View
-          key={i}
-          style={[
-            styles.stripe,
-            { left: 30 + i * 55, top: -40 },
-          ]}
-        />
-      ))}
-    </View>
-  )
-}
-
-// Staggered section wrapper
-interface StaggerProps {
-  index: number
-  children: React.ReactNode
-  style?: object
-}
-function StaggerSection({ index, children, style }: StaggerProps) {
+function StaggerSection({ index, children, style }: { index: number, children: React.ReactNode, style?: any }) {
   const fade = useRef(new Animated.Value(0)).current
   const slide = useRef(new Animated.Value(24)).current
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fade, {
-        toValue: 1,
-        duration: 400,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slide, {
-        toValue: 0,
-        duration: 380,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fade, { toValue: 1, duration: 400, delay: index * 80, useNativeDriver: true }),
+      Animated.timing(slide, { toValue: 0, duration: 380, delay: index * 80, useNativeDriver: true }),
     ]).start()
   }, [])
 
@@ -124,9 +92,10 @@ function StaggerSection({ index, children, style }: StaggerProps) {
 export default function HomeScreen() {
   const user = useAuthStore((s) => s.user)
   const addItem = useCartStore((s) => s.addItem)
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const theme = themeMode === 'light' ? LightTheme : DarkTheme
   const [activeCategory, setActiveCategory] = useState('burgers')
 
-  // Pulsing live dot
   const pulseAnim = useRef(new Animated.Value(1)).current
   useEffect(() => {
     Animated.loop(
@@ -147,109 +116,73 @@ export default function HomeScreen() {
     queryFn: locationsApi.getAll,
   })
 
-  const handleItemPress = (item: MenuItem) => {
-    router.push({ pathname: '/item/[id]', params: { id: item.id } })
-  }
-
-  const handleQuickAdd = (item: MenuItem) => {
-    addItem(item, 1, [])
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-  }
-
   const handleCategoryPress = (id: string) => {
     setActiveCategory(id)
-    Haptics.selectionAsync()
+    if (Platform.OS !== 'web') Haptics.selectionAsync()
     router.push('/(tabs)/menu')
   }
 
   const loyaltyPoints = user?.loyalty_points ?? 0
   const loyaltyTier = loyaltyPoints >= 5000 ? 'Gold' : loyaltyPoints >= 1000 ? 'Silver' : 'Bronze'
-  const aedValue = loyaltyPoints * 0.05
   const greeting = getTimeGreeting()
   const firstName = user?.name?.split(' ')[0] ?? 'there'
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
-        {/* ── Section 0: Header ── */}
+        {/* ── Header ── */}
         <StaggerSection index={0} style={styles.header}>
           <View style={styles.headerLeft}>
-            {user ? (
-              <>
-                <Text style={styles.greeting}>Hey {firstName} 👋</Text>
-                <Text style={styles.greetingSub}>{greeting}</Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.greeting}>B60 Burgers</Text>
-                <Text style={styles.greetingSub}>Dubai's boldest smash burgers</Text>
-              </>
-            )}
+            <Text style={[styles.greeting, { color: theme.text }]}>Hey {firstName} 👋</Text>
+            <Text style={[styles.greetingSub, { color: theme.textSecondary }]}>{greeting}</Text>
           </View>
           <Pressable
-            style={styles.notifBtn}
-            onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+            style={[styles.notifBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            onPress={() => Platform.OS !== 'web' && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
           >
-            <Bell size={20} color={Colors.text} />
+            <Bell size={20} color={theme.text} />
           </Pressable>
         </StaggerSection>
 
-        {/* ── Section 1: Hero Banner + Live Dot ── */}
+        {/* ── Hero ── */}
         <StaggerSection index={1} style={styles.heroWrapper}>
           <HeroBanner
             imageUri="https://b60.ae/images/fancy.webp"
             title="SMASH IT."
-            subtitle="Dubai's boldest burgers. Pick up in minutes."
+            subtitle="Bold burgers. Pick up in minutes."
             ctaLabel="ORDER NOW"
             onCtaPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
               router.push('/(tabs)/menu')
             }}
-            height={280}
+            height={260}
           />
-          {/* Live indicator */}
-          <View style={styles.liveContainer} pointerEvents="none">
-            <Animated.View
-              style={[
-                styles.livePulse,
-                { transform: [{ scale: pulseAnim }] },
-              ]}
-            />
-            <View style={styles.liveDot} />
+          <View style={styles.liveContainer}>
+            <Animated.View style={[styles.livePulse, { transform: [{ scale: pulseAnim }], backgroundColor: theme.primary }]} />
+            <View style={[styles.liveDot, { backgroundColor: theme.primary }]} />
             <Text style={styles.liveLabel}>LIVE</Text>
           </View>
         </StaggerSection>
 
-        {/* ── Section 2: Category pills ── */}
+        {/* ── Quick Categories ── */}
         <StaggerSection index={2} style={{ marginTop: Spacing.lg }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryRow}
-          >
-            {CATEGORY_QUICK.map((cat, index) => {
-              const isActive = activeCategory === cat.id
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+            {CATEGORY_QUICK.map((cat, idx) => {
+              const active = activeCategory === cat.id
               return (
                 <Pressable
                   key={cat.id}
+                  onPress={() => handleCategoryPress(cat.id)}
                   style={[
                     styles.categoryChip,
-                    isActive ? styles.categoryChipActive : styles.categoryChipInactive,
-                    { transform: [{ rotate: index % 2 === 0 ? '-1.5deg' : '1.5deg' }] },
+                    active ? { backgroundColor: theme.black, borderColor: theme.black, ...Shadows.hard } 
+                           : { backgroundColor: theme.surface, borderColor: theme.border },
+                    { transform: [{ rotate: idx % 2 === 0 ? '-1.5deg' : '1.5deg' }] }
                   ]}
-                  onPress={() => handleCategoryPress(cat.id)}
                 >
-                  <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-                  <Text
-                    style={[
-                      styles.categoryLabel,
-                      isActive ? styles.categoryLabelActive : styles.categoryLabelInactive,
-                    ]}
-                  >
+                  <Text style={{ fontSize: 16 }}>{cat.emoji}</Text>
+                  <Text style={[styles.categoryLabel, { color: active ? theme.white : theme.textSecondary }]}>
                     {cat.label}
                   </Text>
                 </Pressable>
@@ -258,41 +191,27 @@ export default function HomeScreen() {
           </ScrollView>
         </StaggerSection>
 
-        {/* ── Section 3: Points Banner (logged in only) ── */}
+        {/* ── Points ── */}
         {user && (
           <StaggerSection index={3} style={{ marginTop: Spacing.md }}>
             <PointsBanner
               points={loyaltyPoints}
-              tier={loyaltyTier}
-              aedValue={aedValue}
+              tier={loyaltyTier as any}
+              aedValue={loyaltyPoints * 0.05}
               onPress={() => router.push('/(tabs)/loyalty')}
             />
           </StaggerSection>
         )}
 
-        {/* ── Section 4: Promo Cards ── */}
+        {/* ── Promos ── */}
         <StaggerSection index={user ? 4 : 3} style={{ marginTop: Spacing.lg }}>
-          <SectionHeader title="Offers & News" />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.promoRow}
-          >
+          <SectionHeader title="Street Offers" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.promoRow}>
             {PROMOS.map((promo) => {
               const Icon = promo.icon
               return (
-                <Pressable
-                  key={promo.id}
-                  style={styles.promoCardWrapper}
-                  onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-                >
-                  <LinearGradient
-                    colors={promo.gradientColors}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.promoCard}
-                  >
-                    <DiagonalStripes />
+                <Pressable key={promo.id} style={[styles.promoCardWrapper, Shadows.hard]}>
+                  <LinearGradient colors={promo.gradientColors} style={styles.promoCard}>
                     <Icon size={18} color="rgba(255,255,255,0.85)" />
                     <Text style={styles.promoTitle}>{promo.topLabel}</Text>
                     <Text style={styles.promoSub}>{promo.subLabel}</Text>
@@ -303,43 +222,29 @@ export default function HomeScreen() {
           </ScrollView>
         </StaggerSection>
 
-        {/* ── Section 5: Featured Items ── */}
+        {/* ── Featured ── */}
         <StaggerSection index={user ? 5 : 4} style={{ marginTop: Spacing.lg }}>
-          <SectionHeader
-            title="FAN FAVOURITES"
-            onSeeAll={() => router.push('/(tabs)/menu')}
-          />
+          <SectionHeader title="FAN FAVOURITES" onSeeAll={() => router.push('/(tabs)/menu')} />
           {loadingFeatured ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featuredRow}
-            >
-              {[1, 2, 3].map((i) => (
-                <SkeletonLoader
-                  key={i}
-                  variant="card"
-                  width={FEATURED_CARD_WIDTH}
-                  height={220}
-                  style={styles.featuredCard}
-                />
-              ))}
-            </ScrollView>
+            <View style={[styles.featuredRow, { flexDirection: 'row' }]}>
+              {[1, 2].map(i => <SkeletonLoader key={i} variant="card" width={FEATURED_CARD_WIDTH} height={220} />)}
+            </View>
           ) : (
             <FlatList
               data={featured}
-              keyExtractor={(item) => item.id}
+              keyExtractor={item => item.id}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.featuredRow}
-              snapToInterval={FEATURED_SNAP_INTERVAL}
-              decelerationRate="fast"
               renderItem={({ item }) => (
-                <View style={styles.featuredCard}>
-                  <MenuItemCard
-                    item={item}
-                    onPress={handleItemPress}
-                    onQuickAdd={handleQuickAdd}
+                <View style={{ width: FEATURED_CARD_WIDTH }}>
+                  <MenuItemCard 
+                    item={item} 
+                    onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })} 
+                    onAddToCart={() => {
+                      addItem(item, 1, [])
+                      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                    }}
                   />
                 </View>
               )}
@@ -347,64 +252,20 @@ export default function HomeScreen() {
           )}
         </StaggerSection>
 
-        {/* ── Section 6: Locations ── */}
-        <StaggerSection
-          index={user ? 6 : 5}
-          style={{ marginTop: Spacing.lg, marginBottom: Spacing.xxl }}
-        >
-          <SectionHeader
-            title="Pick up at"
-            onSeeAll={() => router.push('/(tabs)/map')}
-          />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.locationRow}
-          >
-            {(locations ?? []).map((loc: any) => {
-              const isOpen = loc.is_open !== false
-              return (
-                <Pressable
-                  key={loc.id}
-                  style={[styles.locationCard, Shadows.card]}
-                  onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-                >
-                  <View style={styles.locationTopRow}>
-                    <View style={styles.locationHeaderLeft}>
-                      <MapPin size={13} color={Colors.primary} />
-                      <Text style={styles.locationCity}>{loc.city}</Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.openDot,
-                        { backgroundColor: isOpen ? Colors.success : Colors.error },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.locationName}>{loc.name}</Text>
-                  {loc.address ? (
-                    <Text style={styles.locationAddr} numberOfLines={1}>
-                      {loc.address}
-                    </Text>
-                  ) : null}
-                  <View
-                    style={[
-                      styles.openBadge,
-                      { backgroundColor: isOpen ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.1)' },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.openBadgeText,
-                        { color: isOpen ? Colors.success : Colors.error },
-                      ]}
-                    >
-                      {isOpen ? 'Open now' : 'Closed'}
-                    </Text>
-                  </View>
-                </Pressable>
-              )
-            })}
+        {/* ── Locations ── */}
+        <StaggerSection index={user ? 6 : 5} style={{ marginTop: Spacing.lg, marginBottom: Spacing.xxl }}>
+          <SectionHeader title="Find Us" onSeeAll={() => router.push('/(tabs)/map')} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.locationRow}>
+            {(locations ?? []).map((loc: any) => (
+              <Pressable key={loc.id} style={[styles.locationCard, { backgroundColor: theme.surface, borderColor: theme.border }, Shadows.card]}>
+                <View style={styles.locationTopRow}>
+                  <Text style={[styles.locationCity, { color: theme.primary }]}>{loc.city}</Text>
+                  <View style={[styles.openDot, { backgroundColor: loc.is_open !== false ? theme.success : theme.error }]} />
+                </View>
+                <Text style={[styles.locationName, { color: theme.text }]}>{loc.name}</Text>
+                <Text style={[styles.locationAddr, { color: theme.textSecondary }]} numberOfLines={1}>{loc.address}</Text>
+              </Pressable>
+            ))}
           </ScrollView>
         </StaggerSection>
 
@@ -414,238 +275,47 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scroll: {
-    paddingBottom: Spacing.xxl,
-  },
-
-  // Header
+  container: { flex: 1 },
+  scroll: { paddingBottom: Spacing.xxl },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
   },
-  headerLeft: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: Colors.text,
-    letterSpacing: -0.5,
-  },
-  greetingSub: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 2,
-    fontWeight: '500',
-  },
+  headerLeft: { flex: 1 },
+  greeting: { fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
+  greetingSub: { fontSize: 13, fontWeight: '600', marginTop: 2 },
   notifBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadows.card,
+    width: 44, height: 44, borderRadius: Radius.full,
+    borderWidth: 2, alignItems: 'center', justifyContent: 'center',
   },
-
-  // Hero
-  heroWrapper: {
-    position: 'relative',
-  },
+  heroWrapper: { position: 'relative' },
   liveContainer: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: Radius.full,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    position: 'absolute', bottom: 20, right: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: Radius.full,
+    paddingHorizontal: 12, paddingVertical: 6,
   },
-  livePulse: {
-    position: 'absolute',
-    left: 8,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(240, 90, 26, 0.5)',
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#F05A1A',
-    marginLeft: 2,
-  },
-  liveLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 1,
-  },
-
-  // Category pills
-  categoryRow: {
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.sm,
-  },
+  livePulse: { position: 'absolute', left: 10, width: 10, height: 10, borderRadius: 5, opacity: 0.5 },
+  liveDot: { width: 8, height: 8, borderRadius: 4, marginLeft: 2 },
+  liveLabel: { fontSize: 11, fontWeight: '900', color: '#FFF', letterSpacing: 1 },
+  categoryRow: { paddingHorizontal: Spacing.md, gap: Spacing.sm },
   categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 6,
-    borderWidth: 2,
-    borderColor: '#0D0D0D',
+    flexDirection: 'row', alignItems: 'center', borderRadius: Radius.md,
+    paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderWidth: 2,
   },
-  categoryChipActive: {
-    backgroundColor: '#0D0D0D',
-    shadowColor: '#0D0D0D',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
-  },
-  categoryChipInactive: {
-    backgroundColor: '#FFF8F0',
-    shadowColor: '#0D0D0D',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 0,
-    elevation: 4,
-  },
-  categoryEmoji: {
-    fontSize: 16,
-  },
-  categoryLabel: {
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  categoryLabelActive: {
-    color: '#FFFFFF',
-  },
-  categoryLabelInactive: {
-    color: '#0D0D0D',
-  },
-
-  // Promo cards
-  promoRow: {
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.sm,
-  },
-  promoCardWrapper: {
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    ...Shadows.cardStrong,
-  },
-  promoCard: {
-    width: 200,
-    height: 110,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    justifyContent: 'flex-end',
-    gap: 3,
-    overflow: 'hidden',
-  },
-  stripe: {
-    position: 'absolute',
-    width: 28,
-    height: 200,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    transform: [{ rotate: '25deg' }],
-  },
-  promoTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: Colors.white,
-    letterSpacing: -0.3,
-    textTransform: 'uppercase',
-  },
-  promoSub: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.8)',
-    fontWeight: '500',
-  },
-
-  // Featured items
-  featuredRow: {
-    paddingHorizontal: Spacing.md,
-    gap: 12,
-    paddingRight: Spacing.lg,
-  },
-  featuredCard: {
-    width: FEATURED_CARD_WIDTH,
-  },
-
-  // Locations
-  locationRow: {
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.sm,
-  },
-  locationCard: {
-    width: 168,
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  locationTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  locationHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  locationCity: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  openDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  locationName: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: Colors.text,
-    letterSpacing: -0.2,
-  },
-  locationAddr: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  openBadge: {
-    alignSelf: 'flex-start',
-    marginTop: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
-  openBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
+  categoryLabel: { fontSize: 13, fontWeight: '900', textTransform: 'uppercase' },
+  promoRow: { paddingHorizontal: Spacing.md, gap: Spacing.md },
+  promoCardWrapper: { borderRadius: Radius.lg, overflow: 'hidden' },
+  promoCard: { width: 220, height: 120, padding: Spacing.md, justifyContent: 'flex-end', gap: 4 },
+  promoTitle: { fontSize: 18, fontWeight: '900', color: '#FFF', textTransform: 'uppercase' },
+  promoSub: { fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
+  featuredRow: { paddingHorizontal: Spacing.md, gap: 16 },
+  locationRow: { paddingHorizontal: Spacing.md, gap: Spacing.md },
+  locationCard: { width: 180, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1.5 },
+  locationTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  locationCity: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+  openDot: { width: 8, height: 8, borderRadius: 4 },
+  locationName: { fontSize: 15, fontWeight: '900' },
+  locationAddr: { fontSize: 12, marginTop: 4 },
 })
+
