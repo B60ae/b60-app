@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics'
 import { Plus } from 'lucide-react-native'
 import { LightTheme, DarkTheme, Radius, Spacing, Shadows, Typography } from '../../utils/theme'
 import { useThemeStore } from '../../stores/themeStore'
+import { DirhamSymbol } from '../ui/DirhamSymbol'
 import type { MenuItem } from '../../types'
 
 interface MenuItemCardProps {
@@ -67,6 +68,9 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
         onPressOut={handleCardPressOut}
         style={styles.card}
         disabled={!item.is_available}
+        accessibilityRole="button"
+        accessibilityLabel={item.is_available ? `View ${item.name}` : `${item.name}, sold out`}
+        accessibilityState={{ disabled: !item.is_available }}
       >
         {/* Image block */}
         <View style={styles.imageContainer}>
@@ -102,8 +106,11 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
           </Text>
 
           {/* Price pill — bottom-right sticker */}
-          <View style={[styles.pricePill, { backgroundColor: theme.yellow, borderColor: theme.black }]}>
-            <Text style={[styles.priceText, { color: theme.black }]}>AED {Number(item.price || 0).toFixed(0)}</Text>
+          <View style={[styles.pricePill, { backgroundColor: '#1A1A1A', borderColor: '#FFFFFF' }]}>
+            <View style={styles.priceInner}>
+              <DirhamSymbol size={12} color="#FFFFFF" />
+              <Text style={[styles.priceText, { color: '#FFFFFF' }]}>{Number(item.price || 0).toFixed(0)}</Text>
+            </View>
           </View>
 
           {/* Sold out overlay */}
@@ -120,12 +127,15 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
             <Pressable
               onPress={handleAddToCart}
               style={[
-                styles.addBtn, 
+                styles.addBtn,
                 { backgroundColor: theme.primary, borderColor: theme.black },
                 !item.is_available && { backgroundColor: theme.border }
               ]}
               hitSlop={10}
               disabled={!item.is_available}
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${item.name} to cart`}
+              accessibilityState={{ disabled: !item.is_available }}
             >
               <Plus size={20} color={theme.white} strokeWidth={3} />
             </Pressable>
@@ -220,6 +230,11 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     borderWidth: 1.5,
     transform: [{ rotate: '2deg' }],
+  },
+  priceInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
   priceText: {
     fontSize: 14,

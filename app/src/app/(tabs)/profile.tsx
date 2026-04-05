@@ -132,7 +132,7 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.nameSection}>
-              <Text style={styles.greetingLabel}>Hey there,</Text>
+              <Text style={styles.greetingLabel}>Your Profile</Text>
               {editingName ? (
                 <View style={styles.editNameRow}>
                   <TextInput
@@ -243,9 +243,7 @@ export default function ProfileScreen() {
                       resizeMode="cover"
                     />
                   ) : (
-                    <View style={[styles.orderThumb, styles.orderThumbPlaceholder, { backgroundColor: theme.border }]}>
-                      <Text style={{ fontSize: 18 }}>🍔</Text>
-                    </View>
+                    <View style={[styles.orderThumb, styles.orderThumbPlaceholder, { backgroundColor: theme.border }]} />
                   )}
                   <View style={styles.orderInfo}>
                     <Text style={[styles.orderId, { color: theme.text }]}>#{order.id.slice(-6).toUpperCase()}</Text>
@@ -269,7 +267,7 @@ export default function ProfileScreen() {
         )}
 
         {/* ── Logout ── */}
-        <Pressable style={[styles.logoutBtn, { backgroundColor: theme.error }]} onPress={handleLogout}>
+        <Pressable style={[styles.logoutBtn, { backgroundColor: theme.error, borderColor: theme.black, shadowColor: theme.black }]} onPress={handleLogout}>
           <LogOut size={18} color={theme.white} />
           <Text style={[styles.logoutText, { color: theme.white }]}>Log Out</Text>
         </Pressable>
@@ -407,9 +405,8 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.md,
     padding: Spacing.md,
     borderRadius: Radius.md,
-    // Neobrutalist shadow
+    // Neobrutalist shadow — borderColor/shadowColor applied inline via theme
     borderWidth: 2,
-    borderColor: '#000000',
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,

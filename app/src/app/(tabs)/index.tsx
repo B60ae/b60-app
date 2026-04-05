@@ -16,7 +16,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Bell, MapPin, Zap, Flame, Star } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
-import { menuApi, locationsApi } from '../../services/api'
+import { menuApi, locationsApi, loyaltyApi } from '../../services/api'
+import { IMAGES } from '../../utils/constants'
 import { useAuthStore } from '../../stores/authStore'
 import { MenuItemCard } from '../../components/features/MenuItemCard'
 import { useCartStore } from '../../stores/cartStore'
@@ -116,6 +117,20 @@ export default function HomeScreen() {
     queryFn: locationsApi.getAll,
   })
 
+  const { data: balance } = useQuery({
+    queryKey: ['loyalty', 'balance'],
+    queryFn: loyaltyApi.getBalance,
+    enabled: !!user,
+    staleTime: 0,
+  })
+
+  // Sync fresh balance into auth store as soon as home tab loads
+  useEffect(() => {
+    if (balance?.total_points !== undefined) {
+      useAuthStore.getState().updatePoints(balance.total_points)
+    }
+  }, [balance?.total_points])
+
   const handleCategoryPress = (id: string) => {
     setActiveCategory(id)
     if (Platform.OS !== 'web') Haptics.selectionAsync()
@@ -148,7 +163,7 @@ export default function HomeScreen() {
         {/* ── Hero ── */}
         <StaggerSection index={1} style={styles.heroWrapper}>
           <HeroBanner
-            imageUri="https://b60.ae/images/fancy.webp"
+            imageUri={IMAGES.homeHero}
             title="SMASH IT."
             subtitle="Bold burgers. Pick up in minutes."
             ctaLabel="ORDER NOW"

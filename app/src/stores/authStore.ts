@@ -1,6 +1,14 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import * as SecureStore from 'expo-secure-store'
 import type { User } from '../types'
+
+// Custom storage adapter wrapping expo-secure-store
+const secureStorage = createJSONStorage(() => ({
+  getItem: (name: string) => SecureStore.getItemAsync(name),
+  setItem: (name: string, value: string) => SecureStore.setItemAsync(name, value),
+  removeItem: (name: string) => SecureStore.deleteItemAsync(name),
+}))
 
 interface AuthState {
   user: User | null
@@ -13,44 +21,45 @@ interface AuthState {
   updatePoints: (points: number) => void
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  token: null,
-  isLoading: true,
-  isAuthenticated: false,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      token: null,
+      isLoading: true,
+      isAuthenticated: false,
 
-  setUser: async (user, token) => {
-    await SecureStore.setItemAsync('authToken', token)
-    await SecureStore.setItemAsync('userData', JSON.stringify(user))
-    set({ user, token, isAuthenticated: true })
-  },
+      // persist middleware handles storage — just update in-memory state
+      setUser: async (user, token) => {
+        set({ user, token, isAuthenticated: true })
+      },
 
-  loadSession: async () => {
-    try {
-      const token = await SecureStore.getItemAsync('authToken')
-      const userData = await SecureStore.getItemAsync('userData')
-      if (token && userData) {
-        set({ user: JSON.parse(userData), token, isAuthenticated: true })
-      }
-    } catch {
-      // no session
-    } finally {
-      set({ isLoading: false })
+      // No-op: persist rehydrates automatically on startup
+      loadSession: async () => {},
+
+      logout: async () => {
+        set({ user: null, token: null, isAuthenticated: false })
+      },
+
+      updatePoints: (points) => {
+        const user = get().user
+        if (user) {
+          set({ user: { ...user, loyalty_points: points } })
+        }
+      },
+    }),
+    {
+      name: 'b60-auth',
+      storage: secureStorage,
+      // Only persist auth-relevant fields; isLoading is runtime state
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) state.isLoading = false
+      },
     }
-  },
-
-  logout: async () => {
-    await SecureStore.deleteItemAsync('authToken')
-    await SecureStore.deleteItemAsync('userData')
-    set({ user: null, token: null, isAuthenticated: false })
-  },
-
-  updatePoints: (points) => {
-    const user = get().user
-    if (user) {
-      const updated = { ...user, loyalty_points: points }
-      set({ user: updated })
-      SecureStore.setItemAsync('userData', JSON.stringify(updated))
-    }
-  },
-}))
+  )
+)

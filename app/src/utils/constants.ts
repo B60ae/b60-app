@@ -1,6 +1,12 @@
 import Constants from 'expo-constants'
 
 export const API_URL = Constants.expoConfig?.extra?.apiUrl ?? 'https://b60.ae/api'
+
+// ─── Image Assets ──────────────────────────────────────────────────────────
+export const IMAGES = {
+  loginHero: 'https://b60.ae/images/vegas.webp',
+  homeHero: 'https://b60.ae/images/fancy.webp',
+} as const
 export const SUPABASE_URL = Constants.expoConfig?.extra?.supabaseUrl ?? ''
 export const SUPABASE_ANON_KEY = Constants.expoConfig?.extra?.supabaseAnonKey ?? ''
 

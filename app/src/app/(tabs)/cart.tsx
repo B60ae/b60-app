@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Alert, Image,
+  View, Text, StyleSheet, ScrollView, Pressable, Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -15,6 +15,8 @@ import { useCartStore } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
 import { ordersApi, locationsApi } from '../../services/api'
 import { Button } from '../../components/ui/Button'
+import { Toast } from '../../components/ui/Toast'
+import { DirhamSymbol } from '../../components/ui/DirhamSymbol'
 import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
 import { POINTS_TO_AED, MIN_REDEEM_POINTS } from '../../utils/constants'
 import { useQuery } from '@tanstack/react-query'
@@ -68,9 +70,7 @@ function CartItem({
           resizeMode="cover"
         />
       ) : (
-        <View style={[styles.itemThumb, styles.thumbPlaceholder]}>
-          <Text style={{ fontSize: 22 }}>🍔</Text>
-        </View>
+        <View style={[styles.itemThumb, styles.thumbPlaceholder]} />
       )}
 
       <View style={styles.cartItemInfo}>
@@ -80,7 +80,10 @@ function CartItem({
             {item.selected_options.map((o: any) => o.name).join(', ')}
           </Text>
         )}
-        <Text style={styles.itemPrice}>AED {item.line_total.toFixed(0)}</Text>
+        <View style={styles.itemPriceRow}>
+          <DirhamSymbol size={12} color={Colors.primary} />
+          <Text style={styles.itemPrice}>{item.line_total.toFixed(0)}</Text>
+        </View>
       </View>
 
       <View style={styles.qtyControls}>
@@ -109,6 +112,13 @@ export default function CartScreen() {
   } = useCartStore()
   const { user } = useAuthStore()
   const [placing, setPlacing] = useState(false)
+  const [toastMsg, setToastMsg] = useState('')
+  const [toastVisible, setToastVisible] = useState(false)
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg)
+    setToastVisible(true)
+  }
 
   const { data: locations } = useQuery({
     queryKey: ['locations'],
@@ -123,13 +133,21 @@ export default function CartScreen() {
   const handlePlaceOrder = async () => {
     if (!locationId) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-      return Alert.alert('Select a pickup location first')
+      showToast('Select a pickup location first')
+      return
     }
     setPlacing(true)
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     try {
+      const formattedItems = items.map(i => ({
+        menu_item_id: i.menu_item.id,
+        quantity: i.quantity,
+        selected_options: i.selected_options,
+        line_total: i.line_total,
+      }))
+      const earned = pointsEarned()
       const order = await ordersApi.create({
-        items,
+        items: formattedItems as any,
         location_id: locationId,
         subtotal: subtotal(),
         points_redeemed: pointsToRedeem,
@@ -139,11 +157,11 @@ export default function CartScreen() {
       clearCart()
       router.push({
         pathname: '/order-success',
-        params: { orderId: order.id, pointsEarned: order.points_earned ?? pointsEarned() },
+        params: { orderId: order.id, pointsEarned: order.points_earned ?? earned },
       })
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
-      Alert.alert('Order failed', 'Please try again.')
+      showToast('Order failed. Please try again.')
     } finally {
       setPlacing(false)
     }
@@ -154,9 +172,9 @@ export default function CartScreen() {
   if (items.length === 0) {
     return (
       <SafeAreaView style={[styles.container, styles.emptyContainer]}>
-        <Text style={styles.emptyEmoji}>🍔</Text>
-        <Text style={styles.emptyTitle}>Your cart is empty</Text>
-        <Text style={styles.emptySub}>Go smash something good</Text>
+        <ShoppingBag size={64} color={Colors.textMuted} />
+        <Text style={styles.emptyTitle}>Your pickup order is empty</Text>
+        <Text style={styles.emptySub}>Add items from the menu to get started</Text>
         <Pressable
           style={styles.emptyBtn}
           onPress={() => router.push('/(tabs)/menu')}
@@ -205,7 +223,7 @@ export default function CartScreen() {
             <Text style={styles.sectionTitle}>Pickup From</Text>
           </View>
           <View style={styles.locationList}>
-            {(locations ?? []).map((loc: any) => {
+            {((locations ?? []).filter((loc: any) => !loc.name.toLowerCase().includes('ghurair'))).map((loc: any) => {
               const selected = locationId === loc.id
               return (
                 <Pressable
@@ -242,7 +260,7 @@ export default function CartScreen() {
             <Text style={styles.sectionTitle}>Redeem Points</Text>
             <Text style={styles.sectionSub}>
               You have <Text style={{ color: Colors.primary, fontWeight: '700' }}>{user.loyalty_points} pts</Text>
-              {' '}· Max AED {(maxRedeemable * POINTS_TO_AED).toFixed(0)} off
+              {' '}· Max {(maxRedeemable * POINTS_TO_AED).toFixed(0)} AED off
             </Text>
             <View style={styles.pointsRow}>
               <Pressable
@@ -270,7 +288,7 @@ export default function CartScreen() {
               {pointsToRedeem > 0 && (
                 <View style={styles.discountBadge}>
                   <Text style={styles.discountPreview}>
-                    = AED {(pointsToRedeem * POINTS_TO_AED).toFixed(0)} off
+                    = {(pointsToRedeem * POINTS_TO_AED).toFixed(0)} AED off
                   </Text>
                 </View>
               )}
@@ -284,18 +302,28 @@ export default function CartScreen() {
           <View style={styles.summaryRows}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal</Text>
-              <Text style={styles.summaryValue}>AED {subtotal().toFixed(0)}</Text>
+              <View style={styles.priceRow}>
+                <DirhamSymbol size={12} color={Colors.text} />
+                <Text style={styles.summaryValue}>{subtotal().toFixed(0)}</Text>
+              </View>
             </View>
             {discount() > 0 && (
               <View style={styles.summaryRow}>
                 <Text style={[styles.summaryLabel, { color: Colors.success }]}>Points Discount</Text>
-                <Text style={[styles.summaryValue, { color: Colors.success }]}>-AED {discount().toFixed(0)}</Text>
+                <View style={styles.priceRow}>
+                  <Text style={[styles.summaryValue, { color: Colors.success }]}>-</Text>
+                  <DirhamSymbol size={12} color={Colors.success} />
+                  <Text style={[styles.summaryValue, { color: Colors.success }]}>{discount().toFixed(0)}</Text>
+                </View>
               </View>
             )}
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>AED {total().toFixed(0)}</Text>
+              <View style={styles.priceRow}>
+                <DirhamSymbol size={18} color={Colors.primary} />
+                <Text style={styles.totalValue}>{total().toFixed(0)}</Text>
+              </View>
             </View>
             <View style={styles.earnRow}>
               <Text style={styles.earnNote}>You'll earn +{pointsEarned()} points on this order</Text>
@@ -306,6 +334,9 @@ export default function CartScreen() {
         {/* spacer for sticky checkout */}
         <View style={{ height: 112 }} />
       </ScrollView>
+
+      {/* Error Toast */}
+      <Toast message={toastMsg} visible={toastVisible} onHide={() => setToastVisible(false)} duration={3000} />
 
       {/* Sticky Checkout */}
       <View style={styles.stickyWrapper} pointerEvents="box-none">
@@ -320,9 +351,15 @@ export default function CartScreen() {
             onPress={handlePlaceOrder}
             disabled={placing}
           >
-            <Text style={styles.checkoutBtnText}>
-              {placing ? 'Placing…' : `Place Order · AED ${total().toFixed(0)}`}
-            </Text>
+            {placing ? (
+              <Text style={styles.checkoutBtnText}>Placing…</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.checkoutBtnText}>Place Order ·</Text>
+                <DirhamSymbol size={15} color={Colors.white} />
+                <Text style={styles.checkoutBtnText}>{total().toFixed(0)}</Text>
+              </View>
+            )}
           </Pressable>
         </View>
       </View>
@@ -337,7 +374,6 @@ const styles = StyleSheet.create({
 
   // Empty
   emptyContainer: { alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.xl },
-  emptyEmoji: { fontSize: 72, marginBottom: Spacing.sm },
   emptyTitle: { fontSize: 24, fontWeight: '900', color: Colors.text },
   emptySub: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center' },
   emptyBtn: {
@@ -390,6 +426,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(239,68,68,0.08)', alignItems: 'center', justifyContent: 'center',
   },
   divider: { height: 1, backgroundColor: Colors.border, marginVertical: 2 },
+
+  // Price with symbol
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  itemPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
 
   // Section
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },

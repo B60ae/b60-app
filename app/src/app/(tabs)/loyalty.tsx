@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useCallback } from 'react'
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
@@ -132,12 +132,25 @@ export default function LoyaltyScreen() {
   const theme = themeMode === 'light' ? LightTheme : DarkTheme
   const [howToOpen, setHowToOpen] = React.useState(false)
 
+  const { data: balance } = useQuery({
+    queryKey: ['loyalty', 'balance'],
+    queryFn: loyaltyApi.getBalance,
+    staleTime: 0,
+  })
+
   const { data: history } = useQuery({
     queryKey: ['loyalty', 'history'],
     queryFn: loyaltyApi.getHistory,
   })
 
-  const points = user?.loyalty_points ?? 0
+  // Sync API balance into global auth store so all screens stay in sync
+  useEffect(() => {
+    if (balance?.total_points !== undefined) {
+      useAuthStore.getState().updatePoints(balance.total_points)
+    }
+  }, [balance?.total_points])
+
+  const points = balance?.total_points ?? user?.loyalty_points ?? 0
   const tier = getTier(points)
   const nextTier = TIERS.find(t => t.min > points)
   const progress = nextTier ? (points - tier.min) / (nextTier.min - tier.min) : 1
@@ -213,15 +226,19 @@ export default function LoyaltyScreen() {
 
         {/* ── Redeem CTA ── */}
         <Pressable
-          style={styles.redeemBtn}
+          style={[styles.redeemBtn, {
+            backgroundColor: theme.yellow,
+            borderColor: theme.black,
+            shadowColor: theme.black,
+          }]}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
             router.push('/(tabs)/cart')
           }}
         >
           <View>
-            <Text style={styles.redeemBtnText}>Redeem Points →</Text>
-            <Text style={styles.redeemBtnSub}>Use in your next order</Text>
+            <Text style={[styles.redeemBtnText, { color: theme.black }]}>Redeem Points →</Text>
+            <Text style={[styles.redeemBtnSub, { color: theme.textSecondary }]}>Use in your next order</Text>
           </View>
           <ArrowRight size={20} color={theme.black} />
         </Pressable>
@@ -271,9 +288,8 @@ export default function LoyaltyScreen() {
             history.map((tx) => <TransactionRow key={tx.id} tx={tx} />)
           ) : (
             <View style={[styles.card, styles.emptyHistory, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <Text style={styles.emptyEmoji}>🍔</Text>
               <Text style={[styles.emptyText, { color: theme.text }]}>No transactions yet</Text>
-              <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>Start ordering to earn points!</Text>
+              <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>Place your first order to start earning points</Text>
             </View>
           )}
         </View>
@@ -343,24 +359,21 @@ const styles = StyleSheet.create({
   milestoneName: { fontSize: 10, fontWeight: '600', color: 'rgba(255,255,255,0.7)' },
   milestonePts: { fontSize: 9, color: 'rgba(255,255,255,0.45)' },
 
-  // Redeem CTA
+  // Redeem CTA — colors applied inline via theme
   redeemBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFE500',
-    borderRadius: 10,
+    borderRadius: Radius.md,
     padding: Spacing.md,
     borderWidth: 2,
-    borderColor: '#0D0D0D',
-    shadowColor: '#0D0D0D',
     shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 0,
     elevation: 4,
   },
-  redeemBtnText: { fontSize: 16, fontWeight: '900', color: '#0D0D0D' },
-  redeemBtnSub: { fontSize: 12, fontWeight: '600', color: '#333' },
+  redeemBtnText: { fontSize: 16, fontWeight: '900' },
+  redeemBtnSub: { fontSize: 12, fontWeight: '600' },
 
   // Card
   card: {
@@ -381,7 +394,6 @@ const styles = StyleSheet.create({
   // History
   historySection: { gap: Spacing.sm },
   emptyHistory: { padding: Spacing.xl, alignItems: 'center', gap: Spacing.sm },
-  emptyEmoji: { fontSize: 32 },
   emptyText: { fontSize: 16, fontWeight: '700' },
   emptySubtext: { fontSize: 13 },
 

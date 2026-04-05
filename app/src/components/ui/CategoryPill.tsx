@@ -36,6 +36,9 @@ export function CategoryPill({ label, emoji, isActive, onPress }: CategoryPillPr
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      accessibilityRole="tab"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: isActive }}
       style={[
         styles.pill,
         isActive ? {

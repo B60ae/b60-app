@@ -1,7 +1,8 @@
 import axios from 'axios'
 import * as SecureStore from 'expo-secure-store'
 import { API_URL } from '../utils/constants'
-import type { MenuItem, MenuCategory, Order, Cart, LoyaltyBalance, LoyaltyTransaction, Location } from '../types'
+import { useAuthStore } from '../stores/authStore'
+import type { MenuItem, MenuCategory, Order, Cart, LoyaltyBalance, LoyaltyTransaction, Location, User } from '../types'
 
 const client = axios.create({ baseURL: API_URL, timeout: 15000 })
 
@@ -10,6 +11,17 @@ client.interceptors.request.use(async (config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
+
+// Auto-logout on 401
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      useAuthStore.getState().logout()
+    }
+    return Promise.reject(error)
+  }
+)
 
 // ─── Menu ─────────────────────────────────────────────────────────────────
 export const menuApi = {
@@ -43,7 +55,7 @@ export const locationsApi = {
 export const authApi = {
   sendOtp: (email: string) => client.post('/auth/otp/send', { email }).then(r => r.data),
   verifyOtp: (email: string, otp: string) =>
-    client.post<{ token: string; user: any }>('/auth/otp/verify', { email, otp }).then(r => r.data),
+    client.post<{ token: string; user: User }>('/auth/otp/verify', { email, otp }).then(r => r.data),
   updateProfile: (data: { name?: string; email?: string }) =>
-    client.patch('/auth/profile', data).then(r => r.data),
+    client.patch<User>('/auth/profile', data).then(r => r.data),
 }
