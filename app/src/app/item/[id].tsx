@@ -3,9 +3,9 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Pressable,
   Platform,
+  Animated,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { useLocalSearchParams, router } from 'expo-router'
@@ -34,6 +34,12 @@ export default function ItemDetailScreen() {
 
   const addBtnScale = useSharedValue(1)
   const qtyScale = useSharedValue(1)
+  const scrollY = useRef(new Animated.Value(0)).current
+  const imageTranslate = scrollY.interpolate({
+    inputRange: [0, 340],
+    outputRange: [0, -170],
+    extrapolate: 'clamp',
+  })
 
   const { data: item, isLoading } = useQuery({
     queryKey: ['menu', 'item', id],
@@ -101,14 +107,16 @@ export default function ItemDetailScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Hero image — 340px */}
+      {/* Hero image — 340px with parallax */}
       <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: item.image_url }}
-          style={styles.image}
-          contentFit="cover"
-          transition={300}
-        />
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: imageTranslate }] }]}>
+          <Image
+            source={{ uri: item.image_url }}
+            style={[styles.image, { height: 400 }]}
+            contentFit="cover"
+            transition={300}
+          />
+        </Animated.View>
         {/* Gradient overlay: bottom third */}
         <LinearGradient
           colors={['transparent', 'transparent', 'rgba(0,0,0,0.72)']}
@@ -133,12 +141,16 @@ export default function ItemDetailScreen() {
         </View>
       </View>
 
-      <ScrollView
+      <Animated.ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        // Extra bottom padding for sticky CTA
         contentInset={{ bottom: 100 }}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
       >
         {/* Price row */}
         <View style={styles.priceRow}>
@@ -220,7 +232,7 @@ export default function ItemDetailScreen() {
 
         {/* Bottom spacer for sticky CTA */}
         <View style={{ height: 110 }} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Sticky add-to-cart */}
       <View style={styles.stickyCtaWrapper} pointerEvents="box-none">

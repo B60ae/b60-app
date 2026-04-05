@@ -21,9 +21,10 @@ import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
 export default function OrderHistoryScreen() {
   const [refreshing, setRefreshing] = useState(false)
 
-  const { data: orders, isLoading, refetch } = useQuery({
+  const { data: orders, isLoading, isError, refetch } = useQuery({
     queryKey: ['orders', 'history'],
     queryFn: ordersApi.getHistory,
+    retry: 1,
   })
 
   const onRefresh = useCallback(async () => {
@@ -57,7 +58,7 @@ export default function OrderHistoryScreen() {
             <SkeletonLoader key={i} variant="row" />
           ))}
         </View>
-      ) : !orders || orders.length === 0 ? (
+      ) : isError || !orders || orders.length === 0 ? (
         /* Empty state */
         <View style={styles.emptyState}>
           <View style={styles.emptyIconWrapper}>

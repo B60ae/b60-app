@@ -12,6 +12,7 @@ interface CartState {
   setLocation: (locationId: string) => void
   setPointsToRedeem: (points: number) => void
   clearCart: () => void
+  reorderItems: (orderItems: CartItem[]) => void
   subtotal: () => number
   discount: () => number
   total: () => number
@@ -56,6 +57,17 @@ export const useCartStore = create<CartState>((set, get) => ({
   setPointsToRedeem: (points) => set({ pointsToRedeem: points }),
 
   clearCart: () => set({ items: [], pointsToRedeem: 0 }),
+
+  reorderItems: (orderItems) => {
+    const newItems = orderItems.map((i) => ({
+      menu_item: i.menu_item,
+      quantity: i.quantity,
+      selected_options: i.selected_options,
+      notes: i.notes,
+      line_total: i.line_total,
+    }))
+    set({ items: newItems, pointsToRedeem: 0 })
+  },
 
   subtotal: () => get().items.reduce((sum, item) => sum + item.line_total, 0),
 

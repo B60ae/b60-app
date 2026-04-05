@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { View, Text, StyleSheet, ScrollView, Pressable, Animated } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, router } from 'expo-router'
@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { ordersApi } from '../../services/api'
 import { OrderStatusBadge } from '../../components/features/OrderStatusBadge'
 import { Button } from '../../components/ui/Button'
+import { useCartStore } from '../../stores/cartStore'
 import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
 import type { OrderStatus } from '../../types'
 
@@ -21,6 +22,7 @@ const STATUS_STEPS: { key: OrderStatus; label: string; sub: string; icon: any }[
 export default function OrderTrackingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const wasReady = useRef(false)
+  const reorderItems = useCartStore((s) => s.reorderItems)
 
   const { data: order } = useQuery({
     queryKey: ['order', id],
@@ -34,7 +36,8 @@ export default function OrderTrackingScreen() {
 
   const currentStepIdx = STATUS_STEPS.findIndex((s) => s.key === order?.status)
   const confettiAnim = useRef(new Animated.Value(0)).current
-  const lastUpdated = useRef(new Date())
+  const lastUpdatedAt = useRef(new Date())
+  const [secsSinceUpdate, setSecsSinceUpdate] = useState(0)
 
   useEffect(() => {
     if (order?.status === 'ready' && !wasReady.current) {
@@ -42,8 +45,16 @@ export default function OrderTrackingScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       Animated.spring(confettiAnim, { toValue: 1, useNativeDriver: true, tension: 40 }).start()
     }
-    lastUpdated.current = new Date()
+    lastUpdatedAt.current = new Date()
+    setSecsSinceUpdate(0)
   }, [order?.status])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSecsSinceUpdate(Math.floor((Date.now() - lastUpdatedAt.current.getTime()) / 1000))
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <SafeAreaView style={styles.container}>
@@ -131,7 +142,9 @@ export default function OrderTrackingScreen() {
             </View>
             <View style={styles.etaRight}>
               <RefreshCw size={12} color={Colors.textMuted} />
-              <Text style={styles.lastUpdated}>Live</Text>
+              <Text style={styles.lastUpdated}>
+                {secsSinceUpdate < 10 ? 'Just now' : `${secsSinceUpdate}s ago`}
+              </Text>
             </View>
           </View>
         )}
@@ -159,12 +172,18 @@ export default function OrderTrackingScreen() {
           </View>
         )}
 
-        <Button
-          title="Order Again"
-          onPress={() => router.push('/(tabs)/menu')}
-          variant="outline"
-          fullWidth
-        />
+        {order && (
+          <Button
+            title="Order Again"
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+              reorderItems(order.items)
+              router.push('/(tabs)/cart')
+            }}
+            variant="outline"
+            fullWidth
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
   )
