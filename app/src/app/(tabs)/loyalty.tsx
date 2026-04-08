@@ -161,7 +161,7 @@ export default function LoyaltyScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        <Text style={[styles.screenTitle, { color: theme.text }]}>SMASH CLUB 🏆</Text>
+        <Text style={[styles.screenTitle, { color: theme.text }]}>B60 CLUB 🏆</Text>
         <Text style={[styles.screenSub, { color: theme.textMuted }]}>Order. Earn. Flex. Repeat.</Text>
 
         {/* ── Points Card ── */}

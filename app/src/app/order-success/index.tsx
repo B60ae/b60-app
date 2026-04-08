@@ -219,7 +219,7 @@ export default function OrderSuccessScreen() {
             <Animated.Text style={[styles.coinEmoji, coinAnimStyle]}>🪙</Animated.Text>
             <View style={styles.pointsTextBlock}>
               <Text style={styles.pointsTitle}>+{pts} POINTS 🏅</Text>
-              <Text style={styles.pointsSub}>Stacking in your Smash Club</Text>
+              <Text style={styles.pointsSub}>Stacking in your B60 Club</Text>
             </View>
           </Animated.View>
         )}
