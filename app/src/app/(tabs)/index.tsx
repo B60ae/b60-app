@@ -20,7 +20,6 @@ import * as Haptics from 'expo-haptics'
 import { menuApi, locationsApi, loyaltyApi } from '../../services/api'
 import { IMAGES } from '../../utils/constants'
 import { useAuthStore } from '../../stores/authStore'
-import { MenuItemCard } from '../../components/features/MenuItemCard'
 import { useCartStore } from '../../stores/cartStore'
 import { HeroBanner } from '../../components/ui/HeroBanner'
 import { PointsBanner } from '../../components/ui/PointsBanner'
@@ -212,15 +211,10 @@ export default function HomeScreen() {
         <StaggerSection index={0} style={[styles.header, { borderBottomColor: theme.border }]}>
           {/* Brand logo block */}
           <View style={styles.headerBrand}>
-            <Image
-              source={require('../../../assets/images/icon.png')}
-              style={styles.headerIcon}
-              contentFit="contain"
-            />
-            <View>
-              <Text style={[styles.brandName, { color: theme.text }]}>B60</Text>
-              <Text style={[styles.brandTagline, { color: theme.primary }]}>SMASH BURGERS</Text>
+            <View style={[styles.logoBox, { backgroundColor: theme.primary }]}>
+              <Text style={styles.logoBoxText}>B60</Text>
             </View>
+            <Text style={[styles.brandTagline, { color: theme.textSecondary }]}>SMASH BURGERS · DUBAI</Text>
           </View>
           {/* User greeting + bell */}
           <View style={styles.headerRight}>
@@ -323,7 +317,7 @@ export default function HomeScreen() {
           <SectionHeader title="FAN FAVOURITES" onSeeAll={() => router.push('/(tabs)/menu')} />
           {loadingFeatured ? (
             <View style={[styles.featuredRow, { flexDirection: 'row' }]}>
-              {[1, 2].map(i => <SkeletonLoader key={i} variant="card" width={FEATURED_CARD_WIDTH} height={220} />)}
+              {[1, 2].map(i => <SkeletonLoader key={i} variant="card" width={FEATURED_CARD_WIDTH} height={120} />)}
             </View>
           ) : (
             <FlatList
@@ -333,16 +327,25 @@ export default function HomeScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.featuredRow}
               renderItem={({ item }) => (
-                <View style={{ width: FEATURED_CARD_WIDTH }}>
-                  <MenuItemCard 
-                    item={item} 
-                    onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })} 
-                    onAddToCart={() => {
-                      addItem(item, 1, [])
-                      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-                    }}
-                  />
-                </View>
+                <Pressable
+                  style={[styles.featuredCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                  onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })}
+                >
+                  <Image source={{ uri: item.image_url }} style={styles.featuredCardImage} contentFit="cover" />
+                  <View style={styles.featuredCardBody}>
+                    <Text style={[styles.featuredCardName, { color: theme.text }]} numberOfLines={2}>{item.name}</Text>
+                    <Text style={[styles.featuredCardPrice, { color: theme.primary }]}>AED {Number(item.price || 0).toFixed(0)}</Text>
+                    <Pressable
+                      style={styles.featuredAddBtn}
+                      onPress={() => {
+                        addItem(item, 1, [])
+                        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+                      }}
+                    >
+                      <Text style={styles.featuredAddBtnText}>+ ADD</Text>
+                    </Pressable>
+                  </View>
+                </Pressable>
               )}
             />
           )}
@@ -379,9 +382,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   headerBrand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headerIcon: { width: 40, height: 40, borderRadius: 10 },
-  brandName: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
-  brandTagline: { fontSize: 9, fontWeight: '900', letterSpacing: 2, marginTop: -2 },
+  logoBox: {
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 6,
+  },
+  logoBoxText: { fontSize: 18, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+  brandTagline: { fontSize: 9, fontWeight: '900', letterSpacing: 2 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   greeting: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   notifBtn: {
@@ -417,7 +423,19 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '3deg' }],
   },
   promoTagText: { fontSize: 9, fontWeight: '900', color: Colors.black, letterSpacing: 1 },
-  featuredRow: { paddingHorizontal: Spacing.md, gap: 16 },
+  featuredRow: { paddingHorizontal: Spacing.md, gap: 12 },
+  featuredCard: {
+    width: 200, borderRadius: Radius.lg, borderWidth: 1.5, overflow: 'hidden',
+  },
+  featuredCardImage: { width: '100%', height: 120 },
+  featuredCardBody: { padding: Spacing.sm, gap: 4 },
+  featuredCardName: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', lineHeight: 16 },
+  featuredCardPrice: { fontSize: 15, fontWeight: '900' },
+  featuredAddBtn: {
+    backgroundColor: '#F05A1A', borderRadius: Radius.sm,
+    paddingVertical: 6, alignItems: 'center', marginTop: 2,
+  },
+  featuredAddBtnText: { fontSize: 11, fontWeight: '900', color: '#fff', letterSpacing: 1 },
   locationRow: { paddingHorizontal: Spacing.md, gap: Spacing.md },
   locationCard: { width: 180, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1.5 },
   locationTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
