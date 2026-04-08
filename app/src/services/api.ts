@@ -12,11 +12,11 @@ client.interceptors.request.use(async (config) => {
   return config
 })
 
-// Auto-logout on 401
+// Auto-logout on 401 — only if user is currently authenticated (avoids hydration race)
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && useAuthStore.getState().isAuthenticated) {
       useAuthStore.getState().logout()
     }
     return Promise.reject(error)

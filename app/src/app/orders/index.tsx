@@ -14,17 +14,20 @@ import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ChevronRight, ShoppingBag } from 'lucide-react-native'
 import { ordersApi } from '../../services/api'
+import { useAuthStore } from '../../stores/authStore'
 import { OrderStatusBadge } from '../../components/features/OrderStatusBadge'
 import { SkeletonLoader } from '../../components/ui/SkeletonLoader'
 import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
 
 export default function OrderHistoryScreen() {
   const [refreshing, setRefreshing] = useState(false)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   const { data: orders, isLoading, isError, refetch } = useQuery({
     queryKey: ['orders', 'history'],
     queryFn: ordersApi.getHistory,
     retry: 1,
+    enabled: isAuthenticated,
   })
 
   const onRefresh = useCallback(async () => {

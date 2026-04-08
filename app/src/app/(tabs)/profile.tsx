@@ -70,9 +70,12 @@ export default function ProfileScreen() {
   const [nameInput, setNameInput] = useState(user?.name ?? '')
   const [savingName, setSavingName] = useState(false)
 
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
   const { data: orders } = useQuery({
     queryKey: ['orders', 'history'],
     queryFn: ordersApi.getHistory,
+    enabled: isAuthenticated,
   })
 
   const tier = getTier(user?.loyalty_points ?? 0)

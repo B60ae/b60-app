@@ -128,6 +128,7 @@ function TransactionRow({ tx }: { tx: LoyaltyTransaction }) {
 
 export default function LoyaltyScreen() {
   const user = useAuthStore((s) => s.user)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const themeMode = useThemeStore((s) => s.themeMode)
   const theme = themeMode === 'light' ? LightTheme : DarkTheme
   const [howToOpen, setHowToOpen] = React.useState(false)
@@ -136,11 +137,13 @@ export default function LoyaltyScreen() {
     queryKey: ['loyalty', 'balance'],
     queryFn: loyaltyApi.getBalance,
     staleTime: 0,
+    enabled: isAuthenticated,
   })
 
   const { data: history } = useQuery({
     queryKey: ['loyalty', 'history'],
     queryFn: loyaltyApi.getHistory,
+    enabled: isAuthenticated,
   })
 
   // Sync API balance into global auth store so all screens stay in sync
