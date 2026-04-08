@@ -161,7 +161,8 @@ export default function LoyaltyScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        <Text style={[styles.screenTitle, { color: theme.text }]}>SMASH POINTS</Text>
+        <Text style={[styles.screenTitle, { color: theme.text }]}>SMASH CLUB 🏆</Text>
+        <Text style={[styles.screenSub, { color: theme.textMuted }]}>Order. Earn. Flex. Repeat.</Text>
 
         {/* ── Points Card ── */}
         <LinearGradient
@@ -237,8 +238,8 @@ export default function LoyaltyScreen() {
           }}
         >
           <View>
-            <Text style={[styles.redeemBtnText, { color: theme.black }]}>Redeem Points →</Text>
-            <Text style={[styles.redeemBtnSub, { color: theme.textSecondary }]}>Use in your next order</Text>
+            <Text style={[styles.redeemBtnText, { color: theme.black }]}>USE YOUR POINTS →</Text>
+            <Text style={[styles.redeemBtnSub, { color: theme.textSecondary }]}>Save AED on your next smash</Text>
           </View>
           <ArrowRight size={20} color={theme.black} />
         </Pressable>
@@ -288,8 +289,8 @@ export default function LoyaltyScreen() {
             history.map((tx) => <TransactionRow key={tx.id} tx={tx} />)
           ) : (
             <View style={[styles.card, styles.emptyHistory, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <Text style={[styles.emptyText, { color: theme.text }]}>No transactions yet</Text>
-              <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>Place your first order to start earning points</Text>
+              <Text style={[styles.emptyText, { color: theme.text }]}>No history yet fam</Text>
+              <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>Place your first order and watch those points stack</Text>
             </View>
           )}
         </View>
@@ -305,6 +306,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
   screenTitle: { fontSize: 30, fontWeight: '900' },
+  screenSub: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginTop: -8 },
 
   // Points card
   pointsCard: {

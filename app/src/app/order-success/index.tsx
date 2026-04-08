@@ -201,15 +201,15 @@ export default function OrderSuccessScreen() {
 
       {/* Main content */}
       <Animated.View style={[styles.content, contentAnimStyle]}>
-        <Text style={styles.title}>Order Placed!</Text>
-        <Text style={styles.subtitle}>We're getting your order fired up.</Text>
+        <Text style={styles.title}>IT'S SMASHING!</Text>
+        <Text style={styles.subtitle}>Your order is being fired up right now 🔥</Text>
 
         {/* Order number card — dashed border, prominent */}
         {orderId && (
           <View style={styles.orderIdCard}>
-            <Text style={styles.orderIdLabel}>ORDER NUMBER</Text>
+            <Text style={styles.orderIdLabel}>YOUR ORDER</Text>
             <Text style={styles.orderIdValue}>#{orderId.slice(-6).toUpperCase()}</Text>
-            <Text style={styles.orderIdSub}>Show this at the counter</Text>
+            <Text style={styles.orderIdSub}>Flash this at the counter to collect</Text>
           </View>
         )}
 
@@ -218,8 +218,8 @@ export default function OrderSuccessScreen() {
           <Animated.View style={[styles.pointsCard, pointsAnimStyle]}>
             <Animated.Text style={[styles.coinEmoji, coinAnimStyle]}>🪙</Animated.Text>
             <View style={styles.pointsTextBlock}>
-              <Text style={styles.pointsTitle}>+{pts} Points Earned</Text>
-              <Text style={styles.pointsSub}>Added to your loyalty balance</Text>
+              <Text style={styles.pointsTitle}>+{pts} POINTS 🏅</Text>
+              <Text style={styles.pointsSub}>Stacking in your Smash Club</Text>
             </View>
           </Animated.View>
         )}
@@ -233,7 +233,7 @@ export default function OrderSuccessScreen() {
             }
           >
             <MapPin size={18} color={Colors.white} strokeWidth={2.5} />
-            <Text style={styles.trackBtnText}>Track My Order</Text>
+            <Text style={styles.trackBtnText}>TRACK MY ORDER</Text>
           </Pressable>
           <Pressable style={styles.menuBtn} onPress={() => router.replace('/(tabs)/menu')}>
             <UtensilsCrossed size={16} color={Colors.textSecondary} strokeWidth={2} />

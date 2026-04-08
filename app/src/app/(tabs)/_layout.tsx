@@ -51,43 +51,43 @@ export default function TabsLayout() {
           paddingBottom: 12,
           paddingTop: 4,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
       }}
     >
-      <Tabs.Screen 
-        name="index" 
-        options={{ 
-          title: 'Home', 
-          tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> 
-        }} 
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'HOME',
+          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />
+        }}
       />
-      <Tabs.Screen 
-        name="menu" 
-        options={{ 
-          title: 'Menu', 
-          tabBarIcon: ({ color, size }) => <UtensilsCrossed size={size} color={color} /> 
-        }} 
+      <Tabs.Screen
+        name="menu"
+        options={{
+          title: 'MENU',
+          tabBarIcon: ({ color, size }) => <UtensilsCrossed size={size} color={color} />
+        }}
       />
-      <Tabs.Screen 
-        name="cart" 
-        options={{ 
-          title: 'Cart', 
-          tabBarIcon: ({ color, size }) => <CartTabIcon color={color} size={size} theme={theme} /> 
-        }} 
+      <Tabs.Screen
+        name="cart"
+        options={{
+          title: 'CART',
+          tabBarIcon: ({ color, size }) => <CartTabIcon color={color} size={size} theme={theme} />
+        }}
       />
-      <Tabs.Screen 
-        name="loyalty" 
-        options={{ 
-          title: 'Points', 
-          tabBarIcon: ({ color, size }) => <Star size={size} color={color} /> 
-        }} 
+      <Tabs.Screen
+        name="loyalty"
+        options={{
+          title: 'POINTS',
+          tabBarIcon: ({ color, size }) => <Star size={size} color={color} />
+        }}
       />
-      <Tabs.Screen 
-        name="profile" 
-        options={{ 
-          title: 'Profile', 
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} /> 
-        }} 
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'ME',
+          tabBarIcon: ({ color, size }) => <User size={size} color={color} />
+        }}
       />
       <Tabs.Screen 
         name="vibe" 

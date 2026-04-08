@@ -263,13 +263,14 @@ export default function MenuScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Our Menu</Text>
+          <Text style={styles.title}>WHAT'S GOOD</Text>
           {totalCount > 0 && (
             <View style={styles.countBadge}>
               <Text style={styles.countBadgeText}>{totalCount} items</Text>
             </View>
           )}
         </View>
+        <Text style={styles.headerSub}>Pick. Order. Pickup. That's it.</Text>
       </View>
 
       {/* Search bar */}
@@ -328,11 +329,11 @@ export default function MenuScreen() {
           <Text style={styles.emptyEmoji}>🔍</Text>
           <Text style={styles.emptyText}>
             {search.trim()
-              ? `No results for "${search.trim()}"`
-              : 'Nothing here yet'}
+              ? `Nothing for "${search.trim()}" 👀`
+              : 'Nada here yet'}
           </Text>
           <Text style={styles.emptySubtext}>
-            {search.trim() ? 'Try something else' : 'Check back soon'}
+            {search.trim() ? 'Try a different vibe' : 'Check back soon fam'}
           </Text>
         </View>
       ) : (
@@ -374,6 +375,14 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: Colors.text,
     letterSpacing: -0.5,
+  },
+  headerSub: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textMuted,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   countBadge: {
     backgroundColor: Colors.primary,

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
   ScrollView,
   View,
@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { Bell, MapPin, Zap, Flame, Star } from 'lucide-react-native'
+import { Bell, MapPin, Zap, Flame, Star, TrendingUp, Clock } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { menuApi, locationsApi, loyaltyApi } from '../../services/api'
@@ -25,7 +25,7 @@ import { HeroBanner } from '../../components/ui/HeroBanner'
 import { PointsBanner } from '../../components/ui/PointsBanner'
 import { SectionHeader } from '../../components/ui/SectionHeader'
 import { SkeletonLoader } from '../../components/ui/SkeletonLoader'
-import { LightTheme, DarkTheme, Spacing, Radius, Shadows } from '../../utils/theme'
+import { LightTheme, DarkTheme, Spacing, Radius, Shadows, Colors } from '../../utils/theme'
 import { useThemeStore } from '../../stores/themeStore'
 import type { MenuItem } from '../../types'
 
@@ -45,9 +45,10 @@ const PROMOS = [
   {
     id: '1',
     topLabel: '2× POINTS',
-    subLabel: 'This weekend only',
+    subLabel: 'This weekend only 🔥',
     gradientColors: ['#F05A1A', '#C94400'] as const,
     icon: Zap,
+    tag: 'HOT',
   },
   {
     id: '2',
@@ -55,6 +56,7 @@ const PROMOS = [
     subLabel: 'Classic Beef just got better',
     gradientColors: ['#1B2A4A', '#0D1829'] as const,
     icon: Flame,
+    tag: 'NEW',
   },
   {
     id: '3',
@@ -62,7 +64,16 @@ const PROMOS = [
     subLabel: 'Redeem your points today',
     gradientColors: ['#16A34A', '#15803D'] as const,
     icon: Star,
+    tag: null,
   },
+]
+
+// Rotating hype lines for the live ticker
+const HYPE_LINES = [
+  'SMASHING ORDERS RIGHT NOW',
+  'PICKUP IN UNDER 10 MINS',
+  'EARN POINTS ON EVERY ORDER',
+  'NO DELIVERY. NO WAIT. JUST SMASH.',
 ]
 
 function getTimeGreeting(): string {
@@ -71,6 +82,56 @@ function getTimeGreeting(): string {
   if (h < 17) return 'Good afternoon'
   return 'Good evening'
 }
+
+// Scrolling ticker component
+function HypeTicker() {
+  const [idx, setIdx] = useState(0)
+  const fade = useRef(new Animated.Value(1)).current
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(fade, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+        setIdx(i => (i + 1) % HYPE_LINES.length)
+        Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }).start()
+      })
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <View style={tickerStyles.container}>
+      <View style={tickerStyles.dot} />
+      <Animated.Text style={[tickerStyles.text, { opacity: fade }]} numberOfLines={1}>
+        {HYPE_LINES[idx]}
+      </Animated.Text>
+    </View>
+  )
+}
+
+const tickerStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.black,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 9,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+  },
+  text: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '900',
+    color: Colors.white,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+})
 
 function StaggerSection({ index, children, style }: { index: number, children: React.ReactNode, style?: any }) {
   const fade = useRef(new Animated.Value(0)).current
@@ -149,8 +210,8 @@ export default function HomeScreen() {
         {/* ── Header ── */}
         <StaggerSection index={0} style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={[styles.greeting, { color: theme.text }]}>Hey {firstName} 👋</Text>
-            <Text style={[styles.greetingSub, { color: theme.textSecondary }]}>{greeting}</Text>
+            <Text style={[styles.greeting, { color: theme.text }]}>YO, {firstName.toUpperCase()} 👋</Text>
+            <Text style={[styles.greetingSub, { color: theme.textSecondary }]}>{greeting} — what are you smashing?</Text>
           </View>
           <Pressable
             style={[styles.notifBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
@@ -159,6 +220,9 @@ export default function HomeScreen() {
             <Bell size={20} color={theme.text} />
           </Pressable>
         </StaggerSection>
+
+        {/* ── Hype Ticker ── */}
+        <HypeTicker />
 
         {/* ── Hero ── */}
         <StaggerSection index={1} style={styles.heroWrapper}>
@@ -227,6 +291,11 @@ export default function HomeScreen() {
               return (
                 <Pressable key={promo.id} style={[styles.promoCardWrapper, Shadows.hard]}>
                   <LinearGradient colors={promo.gradientColors} style={styles.promoCard}>
+                    {promo.tag && (
+                      <View style={styles.promoTag}>
+                        <Text style={styles.promoTagText}>{promo.tag}</Text>
+                      </View>
+                    )}
                     <Icon size={18} color="rgba(255,255,255,0.85)" />
                     <Text style={styles.promoTitle}>{promo.topLabel}</Text>
                     <Text style={styles.promoSub}>{promo.subLabel}</Text>
@@ -324,6 +393,14 @@ const styles = StyleSheet.create({
   promoCard: { width: 220, height: 120, padding: Spacing.md, justifyContent: 'flex-end', gap: 4 },
   promoTitle: { fontSize: 18, fontWeight: '900', color: '#FFF', textTransform: 'uppercase' },
   promoSub: { fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
+  promoTag: {
+    position: 'absolute', top: 10, right: 10,
+    backgroundColor: Colors.yellow, borderRadius: Radius.sm,
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderWidth: 1.5, borderColor: Colors.black,
+    transform: [{ rotate: '3deg' }],
+  },
+  promoTagText: { fontSize: 9, fontWeight: '900', color: Colors.black, letterSpacing: 1 },
   featuredRow: { paddingHorizontal: Spacing.md, gap: 16 },
   locationRow: { paddingHorizontal: Spacing.md, gap: Spacing.md },
   locationCard: { width: 180, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1.5 },

@@ -96,7 +96,7 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
           {/* Featured badge — top-left sticker */}
           {item.is_featured && (
             <View style={[styles.featuredBadge, { backgroundColor: theme.primary, borderColor: theme.black }]}>
-              <Text style={[styles.featuredText, { color: theme.white }]}>🔥 HOT</Text>
+              <Text style={[styles.featuredText, { color: theme.white }]}>🔥 FAN FAV</Text>
             </View>
           )}
 
@@ -116,7 +116,8 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
           {/* Sold out overlay */}
           {!item.is_available && (
             <View style={styles.soldOutOverlay}>
-              <Text style={styles.soldOutText}>Sold Out</Text>
+              <Text style={styles.soldOutText}>SOLD OUT</Text>
+              <Text style={styles.soldOutSub}>Back soon</Text>
             </View>
           )}
         </View>
@@ -252,6 +253,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  soldOutSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 2,
   },
   footer: {
     flexDirection: 'row',

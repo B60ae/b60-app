@@ -173,13 +173,13 @@ export default function CartScreen() {
     return (
       <SafeAreaView style={[styles.container, styles.emptyContainer]}>
         <ShoppingBag size={64} color={Colors.textMuted} />
-        <Text style={styles.emptyTitle}>Your pickup order is empty</Text>
-        <Text style={styles.emptySub}>Add items from the menu to get started</Text>
+        <Text style={styles.emptyTitle}>Cart is empty rn</Text>
+        <Text style={styles.emptySub}>Go smash something from the menu 🍔</Text>
         <Pressable
           style={styles.emptyBtn}
           onPress={() => router.push('/(tabs)/menu')}
         >
-          <Text style={styles.emptyBtnText}>Browse Menu</Text>
+          <Text style={styles.emptyBtnText}>LET'S EAT</Text>
         </Pressable>
       </SafeAreaView>
     )
@@ -326,7 +326,7 @@ export default function CartScreen() {
               </View>
             </View>
             <View style={styles.earnRow}>
-              <Text style={styles.earnNote}>You'll earn +{pointsEarned()} points on this order</Text>
+              <Text style={styles.earnNote}>+{pointsEarned()} pts dropping after pickup 🔥</Text>
             </View>
           </View>
         </View>
@@ -346,16 +346,17 @@ export default function CartScreen() {
           pointerEvents="none"
         />
         <View style={styles.stickyCheckout}>
+          <Text style={styles.pickupNote}>⚡ Average pickup: under 10 mins</Text>
           <Pressable
             style={[styles.checkoutBtn, placing && styles.checkoutBtnDisabled]}
             onPress={handlePlaceOrder}
             disabled={placing}
           >
             {placing ? (
-              <Text style={styles.checkoutBtnText}>Placing…</Text>
+              <Text style={styles.checkoutBtnText}>SMASHING YOUR ORDER…</Text>
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.checkoutBtnText}>Place Order ·</Text>
+                <Text style={styles.checkoutBtnText}>SMASH IT ·</Text>
                 <DirhamSymbol size={15} color={Colors.white} />
                 <Text style={styles.checkoutBtnText}>{total().toFixed(0)}</Text>
               </View>
@@ -497,4 +498,12 @@ const styles = StyleSheet.create({
   },
   checkoutBtnDisabled: { opacity: 0.6 },
   checkoutBtnText: { fontSize: 17, fontWeight: '900', color: Colors.white, letterSpacing: 0.3 },
+  pickupNote: {
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.success,
+    marginBottom: 6,
+    letterSpacing: 0.3,
+  },
 })
