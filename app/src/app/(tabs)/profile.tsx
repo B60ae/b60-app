@@ -100,7 +100,9 @@ export default function ProfileScreen() {
     setSavingName(true)
     try {
       const updated = await authApi.updateProfile({ name: nameInput.trim() })
-      if (user) await setUser({ ...user, name: updated.name }, '')
+      // Update user in store without touching the token
+      const currentToken = useAuthStore.getState().token ?? ''
+      if (user) await setUser({ ...user, name: updated.name }, currentToken)
       setEditingName(false)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch {

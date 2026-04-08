@@ -1,28 +1,22 @@
 import { useState, useRef } from 'react'
 import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Platform,
-  Animated as RNAnimated,
+  View, Text, StyleSheet, Pressable, Platform, Animated as RNAnimated,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { useLocalSearchParams, router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { X, Minus, Plus, Check, ShoppingBag } from 'lucide-react-native'
+import { X, Minus, Plus, Check } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withSequence,
+  useSharedValue, useAnimatedStyle, withSpring, withSequence,
 } from 'react-native-reanimated'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { menuApi } from '../../services/api'
 import { useCartStore } from '../../stores/cartStore'
+import { useThemeStore } from '../../stores/themeStore'
 import { Toast } from '../../components/ui/Toast'
-import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
+import { LightTheme, DarkTheme, Spacing, Radius } from '../../utils/theme'
 import type { CustomizationOption } from '../../types'
 
 export default function ItemDetailScreen() {
@@ -31,14 +25,14 @@ export default function ItemDetailScreen() {
   const [selectedOptions, setSelectedOptions] = useState<CustomizationOption[]>([])
   const [showToast, setShowToast] = useState(false)
   const addItem = useCartStore((s) => s.addItem)
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const T = themeMode === 'light' ? LightTheme : DarkTheme
 
   const addBtnScale = useSharedValue(1)
   const qtyScale = useSharedValue(1)
   const scrollY = useRef(new RNAnimated.Value(0)).current
   const imageTranslate = scrollY.interpolate({
-    inputRange: [0, 340],
-    outputRange: [0, -170],
-    extrapolate: 'clamp',
+    inputRange: [0, 340], outputRange: [0, -80], extrapolate: 'clamp',
   })
 
   const { data: item, isLoading } = useQuery({
@@ -47,17 +41,11 @@ export default function ItemDetailScreen() {
     enabled: !!id,
   })
 
-  const toggleOption = (
-    option: CustomizationOption,
-    type: 'single' | 'multi',
-    groupId: string,
-  ) => {
+  const toggleOption = (option: CustomizationOption, type: 'single' | 'multi', groupId: string) => {
     if (type === 'single') {
       setSelectedOptions((prev) => [
         ...prev.filter((o) => {
-          const inGroup = item?.customizations
-            ?.find((c) => c.id === groupId)
-            ?.options.some((opt) => opt.id === o.id)
+          const inGroup = item?.customizations?.find((c) => c.id === groupId)?.options.some((opt) => opt.id === o.id)
           return !inGroup
         }),
         option,
@@ -95,165 +83,145 @@ export default function ItemDetailScreen() {
     setShowToast(true)
   }
 
-  const addBtnAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: addBtnScale.value }],
-  }))
-
-  const qtyAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: qtyScale.value }],
-  }))
+  const addBtnAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: addBtnScale.value }] }))
+  const qtyAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: qtyScale.value }] }))
 
   if (isLoading || !item) return null
 
+  const addons = item.customizations?.filter((g: any) => g.id === 'addons') ?? []
+
   return (
-    <View style={styles.container}>
-      {/* Hero image — 340px with parallax */}
+    <View style={[styles.container, { backgroundColor: T.background }]}>
+
+      {/* Hero image */}
       <View style={styles.imageContainer}>
         <RNAnimated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: imageTranslate }] }]}>
           <Image
             source={{ uri: item.image_url }}
-            style={[styles.image, { height: 400 }]}
+            style={styles.image}
             contentFit="cover"
             transition={300}
           />
         </RNAnimated.View>
-        {/* Gradient overlay: bottom third */}
+
         <LinearGradient
-          colors={['transparent', 'transparent', 'rgba(0,0,0,0.72)']}
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.85)']}
           style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0.35 }}
+          start={{ x: 0, y: 0.3 }}
           end={{ x: 0, y: 1 }}
         />
 
-        {/* Floating close button — blur background effect */}
+        {/* Close button */}
         <Pressable style={styles.closeBtn} onPress={() => router.back()} hitSlop={10}>
-          <X size={18} color={Colors.white} strokeWidth={2.5} />
+          <X size={18} color="#fff" strokeWidth={2.5} />
         </Pressable>
 
-        {/* Name + calories overlay */}
+        {/* Item name + price overlaid on image */}
         <View style={styles.nameOverlay}>
-          <Text style={styles.nameOnImage}>{item.name}</Text>
-          {item.calories ? (
-            <View style={styles.caloriePill}>
-              <Text style={styles.caloriesOnImage}>{item.calories} kcal</Text>
+          {item.is_featured && (
+            <View style={styles.fanFavBadge}>
+              <Text style={styles.fanFavText}>FAN FAV</Text>
             </View>
-          ) : null}
+          )}
+          <Text style={styles.nameOnImage}>{item.name.toUpperCase()}</Text>
+          <Text style={styles.priceOnImage}>AED {(Number(item.price || 0) + optionsCost).toFixed(0)}</Text>
         </View>
       </View>
 
       <RNAnimated.ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { backgroundColor: T.background }]}
         showsVerticalScrollIndicator={false}
-        contentInset={{ bottom: 100 }}
         scrollEventThrottle={16}
         onScroll={RNAnimated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: true }
         )}
       >
-        {/* Price row */}
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>AED {(Number(item.price || 0) + optionsCost).toFixed(0)}</Text>
-          {optionsCost > 0 && (
-            <Text style={styles.basePrice}>Base AED {Number(item.price || 0).toFixed(0)}</Text>
-          )}
-        </View>
-
-        {/* Description card */}
+        {/* Description */}
         {item.description ? (
-          <View style={styles.descCard}>
-            <Text style={styles.desc}>{item.description}</Text>
-          </View>
+          <Text style={[styles.desc, { color: T.textSecondary }]}>{item.description}</Text>
         ) : null}
 
-        {/* Customizations */}
-        {item.customizations?.map((group) => (
-          <View key={group.id} style={styles.customGroup}>
-            <View style={styles.groupHeader}>
-              <Text style={styles.groupTitle}>{group.name}</Text>
-              <View style={styles.groupTypePill}>
-                <Text style={styles.groupType}>
-                  {group.type === 'single' ? 'Choose one' : 'Pick all that apply'}
-                </Text>
-              </View>
+        {/* Add-ons only — no Heat Level */}
+        {addons.map((group: any) => (
+          <View key={group.id} style={[styles.addonsCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <Text style={[styles.addonsTitle, { color: T.text }]}>ADD-ONS</Text>
+            <Text style={[styles.addonsSub, { color: T.textMuted }]}>Pick all that apply</Text>
+            <View style={styles.addonsList}>
+              {group.options.map((option: any) => {
+                const isSelected = selectedOptions.some((o) => o.id === option.id)
+                return (
+                  <Pressable
+                    key={option.id}
+                    style={[
+                      styles.addonRow,
+                      { borderColor: isSelected ? '#F05A1A' : T.border },
+                      isSelected && { backgroundColor: 'rgba(240,90,26,0.07)' },
+                    ]}
+                    onPress={() => {
+                      Haptics.selectionAsync()
+                      toggleOption(option, 'multi', group.id)
+                    }}
+                  >
+                    <View style={[
+                      styles.addonCheck,
+                      { borderColor: isSelected ? '#F05A1A' : T.border },
+                      isSelected && { backgroundColor: '#F05A1A', borderColor: '#F05A1A' },
+                    ]}>
+                      {isSelected && <Check size={11} color="#fff" strokeWidth={3} />}
+                    </View>
+                    <Text style={[styles.addonName, { color: isSelected ? '#F05A1A' : T.text }]}>
+                      {option.name}
+                    </Text>
+                    <Text style={[styles.addonPrice, { color: T.textMuted }]}>+AED {option.price_delta}</Text>
+                  </Pressable>
+                )
+              })}
             </View>
-            {group.options.map((option) => {
-              const isSelected = selectedOptions.some((o) => o.id === option.id)
-              const isSingle = group.type === 'single'
-              return (
-                <Pressable
-                  key={option.id}
-                  style={[styles.option, isSelected && styles.optionSelected]}
-                  onPress={() => {
-                    Haptics.selectionAsync()
-                    toggleOption(option, group.type, group.id)
-                  }}
-                >
-                  {/* Custom radio (single) or checkbox (multi) */}
-                  {isSingle ? (
-                    <View style={[styles.radioOuter, isSelected && styles.radioOuterActive]}>
-                      {isSelected && <View style={styles.radioInner} />}
-                    </View>
-                  ) : (
-                    <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
-                      {isSelected && <Check size={12} color={Colors.white} strokeWidth={3} />}
-                    </View>
-                  )}
-                  <Text style={[styles.optionName, isSelected && { color: Colors.primary }]}>
-                    {option.name}
-                  </Text>
-                  {option.price_delta > 0 && (
-                    <Text style={styles.optionPrice}>+AED {option.price_delta}</Text>
-                  )}
-                </Pressable>
-              )
-            })}
           </View>
         ))}
 
-        {/* Quantity section */}
-        <View style={styles.qtySection}>
-          <Text style={styles.qtyLabel}>Quantity</Text>
+        {/* Quantity */}
+        <View style={[styles.qtySection, { backgroundColor: T.surface, borderColor: T.border }]}>
+          <Text style={[styles.qtyLabel, { color: T.text }]}>QTY</Text>
           <View style={styles.qtyRow}>
             <Pressable
-              style={[styles.qtyBtn, quantity <= 1 && styles.qtyBtnDisabled]}
+              style={[styles.qtyBtn, { backgroundColor: T.background, borderColor: T.border }, quantity <= 1 && { opacity: 0.35 }]}
               onPress={() => changeQty(-1)}
               hitSlop={8}
+              disabled={quantity <= 1}
             >
-              <Minus size={20} color={quantity <= 1 ? Colors.textMuted : Colors.text} strokeWidth={2.5} />
+              <Minus size={18} color={T.text} strokeWidth={2.5} />
             </Pressable>
-            <Animated.Text style={[styles.qty, qtyAnimStyle]}>{quantity}</Animated.Text>
-            <Pressable style={styles.qtyBtn} onPress={() => changeQty(1)} hitSlop={8}>
-              <Plus size={20} color={Colors.text} strokeWidth={2.5} />
+            <Animated.Text style={[styles.qty, { color: T.text }, qtyAnimStyle]}>{quantity}</Animated.Text>
+            <Pressable
+              style={[styles.qtyBtn, { backgroundColor: T.background, borderColor: T.border }]}
+              onPress={() => changeQty(1)}
+              hitSlop={8}
+            >
+              <Plus size={18} color={T.text} strokeWidth={2.5} />
             </Pressable>
           </View>
         </View>
 
-        {/* Bottom spacer for sticky CTA */}
         <View style={{ height: 110 }} />
       </RNAnimated.ScrollView>
 
-      {/* Sticky add-to-cart */}
+      {/* Sticky Add to Cart */}
       <View style={styles.stickyCtaWrapper} pointerEvents="box-none">
-        {/* White fade above button */}
         <LinearGradient
-          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.96)', Colors.white]}
+          colors={[`${T.background}00`, `${T.background}EE`, T.background]}
           style={styles.ctaFade}
           pointerEvents="none"
         />
-        <View style={styles.ctaContainer}>
+        <View style={[styles.ctaContainer, { backgroundColor: T.background }]}>
           <Animated.View style={[{ flex: 1 }, addBtnAnimStyle]}>
             <Pressable style={styles.addBtn} onPress={handleAddToCart}>
-              <View style={styles.addBtnLeft}>
-                <View style={styles.qtyBadge}>
-                  <Text style={styles.qtyBadgeText}>{quantity}</Text>
-                </View>
-                <ShoppingBag size={18} color={Colors.white} strokeWidth={2.5} />
+              <View style={styles.qtyBadge}>
+                <Text style={styles.qtyBadgeText}>{quantity}</Text>
               </View>
-              <Text style={styles.addBtnText}>
-                Add {quantity > 1 ? `${quantity}× ` : ''}to Cart
-              </Text>
+              <Text style={styles.addBtnText}>ADD TO CART</Text>
               <Text style={styles.addBtnPrice}>AED {lineTotal.toFixed(0)}</Text>
             </Pressable>
           </Animated.View>
@@ -262,7 +230,7 @@ export default function ItemDetailScreen() {
 
       <Toast
         visible={showToast}
-        message={`${item.name} added to your cart!`}
+        message={`${item.name} added to cart`}
         onHide={() => setShowToast(false)}
         actionLabel="View Cart"
         onAction={() => {
@@ -275,259 +243,107 @@ export default function ItemDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1 },
 
-  // Hero
-  imageContainer: {
-    width: '100%',
-    height: 340,
-  },
+  imageContainer: { width: '100%', height: 320 },
   image: { width: '100%', height: '100%' },
   closeBtn: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 56 : 40,
     right: 16,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     borderRadius: Radius.full,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    // backdrop blur approximation via semi-transparent overlay
+    width: 38, height: 38,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
   },
   nameOverlay: {
-    position: 'absolute',
-    bottom: 20,
-    left: Spacing.lg,
-    right: Spacing.lg,
-    gap: 6,
+    position: 'absolute', bottom: 20,
+    left: Spacing.lg, right: Spacing.lg, gap: 6,
   },
+  fanFavBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F05A1A',
+    borderRadius: Radius.sm,
+    paddingHorizontal: 8, paddingVertical: 3,
+    marginBottom: 4,
+  },
+  fanFavText: { fontSize: 10, fontWeight: '900', color: '#fff', letterSpacing: 1 },
   nameOnImage: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: Colors.white,
+    fontSize: 32, fontWeight: '900', color: '#fff',
+    letterSpacing: -0.5, lineHeight: 36,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
-    lineHeight: 34,
   },
-  caloriePill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderRadius: Radius.full,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  caloriesOnImage: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '700',
-    letterSpacing: 0.5,
+  priceOnImage: {
+    fontSize: 22, fontWeight: '900', color: '#F05A1A',
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
 
-  // Scroll
   scroll: { flex: 1 },
   scrollContent: { padding: Spacing.lg, gap: Spacing.md },
 
-  // Price
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.sm },
-  price: { fontSize: 32, fontWeight: '900', color: Colors.primary },
-  basePrice: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    textDecorationLine: 'line-through',
-    marginBottom: 2,
-  },
+  desc: { fontSize: 14, lineHeight: 22 },
 
-  // Description card
-  descCard: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.card,
+  // Add-ons card
+  addonsCard: {
+    borderRadius: Radius.lg, padding: Spacing.md,
+    borderWidth: 1, gap: Spacing.sm,
   },
-  desc: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 22,
+  addonsTitle: { fontSize: 13, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
+  addonsSub: { fontSize: 12, fontWeight: '500', marginTop: -4 },
+  addonsList: { gap: 8 },
+  addonRow: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    padding: 12, borderRadius: Radius.md, borderWidth: 1.5,
   },
+  addonCheck: {
+    width: 20, height: 20, borderRadius: 4, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  addonName: { flex: 1, fontSize: 14, fontWeight: '600' },
+  addonPrice: { fontSize: 13, fontWeight: '700' },
 
-  // Customization groups
-  customGroup: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: Spacing.sm,
-    ...Shadows.card,
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  groupTitle: { fontSize: 16, fontWeight: '800', color: Colors.text },
-  groupTypePill: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.full,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  groupType: { fontSize: 11, color: Colors.textMuted, fontWeight: '600' },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: Radius.md,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    gap: Spacing.sm,
-    backgroundColor: Colors.white,
-  },
-  optionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(240,90,26,0.06)',
-  },
-  // Radio (single select) — circular 20px
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioOuterActive: {
-    borderColor: Colors.primary,
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-  },
-  // Checkbox (multi) — square 20px, borderRadius 4
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: Colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  optionName: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.text },
-  optionPrice: { fontSize: 13, fontWeight: '700', color: Colors.primary },
-
-  // Quantity section
+  // Quantity
   qtySection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.card,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1,
   },
-  qtyLabel: { fontSize: 15, fontWeight: '700', color: Colors.text },
-  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  qtyLabel: { fontSize: 13, fontWeight: '900', letterSpacing: 1.5 },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   qtyBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    width: 44, height: 44, borderRadius: Radius.full,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5,
   },
-  qtyBtnDisabled: {
-    opacity: 0.4,
-  },
-  qty: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: Colors.text,
-    minWidth: 36,
-    textAlign: 'center',
-  },
+  qty: { fontSize: 26, fontWeight: '900', minWidth: 32, textAlign: 'center' },
 
   // Sticky CTA
-  stickyCtaWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  ctaFade: {
-    height: 60,
-  },
+  stickyCtaWrapper: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  ctaFade: { height: 40 },
   ctaContainer: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.lg,
     paddingBottom: Platform.OS === 'ios' ? 32 : 20,
     paddingTop: 8,
-    backgroundColor: Colors.white,
     gap: Spacing.sm,
   },
   addBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.xl,
-    paddingVertical: 16,
-    paddingHorizontal: Spacing.lg,
-    ...Shadows.glowStrong,
-  },
-  addBtnLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginRight: 'auto' as any,
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#F05A1A', borderRadius: Radius.xl,
+    paddingVertical: 16, paddingHorizontal: Spacing.lg,
+    shadowColor: '#F05A1A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45, shadowRadius: 16, elevation: 8,
   },
   qtyBadge: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: Radius.full,
-    minWidth: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
+    backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: Radius.full,
+    minWidth: 26, height: 26, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 6, marginRight: 10,
   },
-  qtyBadgeText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: Colors.white,
-  },
-  addBtnText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: Colors.white,
-    flex: 1,
-    textAlign: 'center',
-  },
-  addBtnPrice: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: Colors.white,
-    marginLeft: 'auto' as any,
-  },
+  qtyBadgeText: { fontSize: 13, fontWeight: '900', color: '#fff' },
+  addBtnText: { flex: 1, fontSize: 16, fontWeight: '900', color: '#fff', letterSpacing: 0.3 },
+  addBtnPrice: { fontSize: 17, fontWeight: '900', color: '#fff' },
 })

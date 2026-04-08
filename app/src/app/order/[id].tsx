@@ -10,7 +10,8 @@ import { ordersApi } from '../../services/api'
 import { OrderStatusBadge } from '../../components/features/OrderStatusBadge'
 import { Button } from '../../components/ui/Button'
 import { useCartStore } from '../../stores/cartStore'
-import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
+import { useThemeStore } from '../../stores/themeStore'
+import { LightTheme, DarkTheme, Spacing, Radius, Shadows } from '../../utils/theme'
 import type { OrderStatus } from '../../types'
 
 const STATUS_STEPS: { key: OrderStatus; label: string; sub: string; icon: any }[] = [
@@ -23,6 +24,8 @@ export default function OrderTrackingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const wasReady = useRef(false)
   const reorderItems = useCartStore((s) => s.reorderItems)
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const T = themeMode === 'light' ? LightTheme : DarkTheme
 
   const { data: order } = useQuery({
     queryKey: ['order', id],
@@ -57,34 +60,39 @@ export default function OrderTrackingScreen() {
   }, [])
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: T.background }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.replace('/(tabs)')} style={styles.backBtn}>
-            <ArrowLeft size={20} color={Colors.text} />
+          <Pressable
+            onPress={() => router.replace('/(tabs)')}
+            style={[styles.backBtn, { backgroundColor: T.surface, borderColor: T.border }]}
+          >
+            <ArrowLeft size={20} color={T.text} />
           </Pressable>
           <View style={styles.headerText}>
-            <Text style={styles.title}>Tracking Order</Text>
-            <Text style={styles.orderId}>#{id?.slice(-6).toUpperCase()}</Text>
+            <Text style={[styles.title, { color: T.text }]}>Tracking Order</Text>
+            <Text style={[styles.orderId, { color: T.textMuted }]}>#{id?.slice(-6).toUpperCase()}</Text>
           </View>
           {order && <OrderStatusBadge status={order.status} />}
         </View>
 
         {/* Ready Banner */}
         {order?.status === 'ready' && (
-          <Animated.View style={[styles.readyBanner, { transform: [{ scale: confettiAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] }]}>
-            <LinearGradient colors={[Colors.success, '#16A34A']} style={styles.readyGradient}>
-              <Text style={styles.readyEmoji}>🎉</Text>
-              <Text style={styles.readyTitle}>Your order is ready!</Text>
-              <Text style={styles.readySub}>Head to the counter and pick it up</Text>
+          <Animated.View style={[
+            styles.readyBanner,
+            { transform: [{ scale: confettiAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] }
+          ]}>
+            <LinearGradient colors={['#22C55E', '#16A34A']} style={styles.readyGradient}>
+              <Text style={styles.readyTitle}>YOUR ORDER IS READY!</Text>
+              <Text style={styles.readySub}>Head to the counter and collect</Text>
             </LinearGradient>
           </Animated.View>
         )}
 
         {/* Vertical Timeline */}
-        <View style={[styles.timelineCard, Shadows.card]}>
+        <View style={[styles.timelineCard, { backgroundColor: T.surface, borderColor: T.border }]}>
           {STATUS_STEPS.map((step, idx) => {
             const Icon = step.icon
             const isDone = currentStepIdx > idx
@@ -95,34 +103,45 @@ export default function OrderTrackingScreen() {
               <View key={step.key} style={styles.timelineItem}>
                 {/* Connector line above (except first) */}
                 {idx > 0 && (
-                  <View style={[styles.connectorLine, isDone && styles.connectorLineDone]} />
+                  <View style={[
+                    styles.connectorLine,
+                    { backgroundColor: isDone ? '#F05A1A' : T.border }
+                  ]} />
                 )}
 
                 <View style={styles.timelineRow}>
-                  {/* Step icon with pulse for active */}
                   <View style={styles.iconWrapper}>
                     {isActive && (
-                      <View style={styles.pulseRing} />
+                      <View style={[styles.pulseRing, { borderColor: '#F05A1A' }]} />
                     )}
                     <View style={[
                       styles.stepIcon,
+                      { backgroundColor: T.background, borderColor: T.border },
                       isDone && styles.stepIconDone,
                       isActive && styles.stepIconActive,
-                      isUpcoming && styles.stepIconUpcoming,
+                      isUpcoming && { opacity: 0.4 },
                     ]}>
                       <Icon
                         size={20}
-                        color={isDone || isActive ? Colors.white : Colors.textMuted}
+                        color={isDone ? '#fff' : isActive ? '#fff' : T.textMuted}
                       />
                     </View>
                   </View>
 
                   <View style={styles.stepContent}>
-                    <Text style={[styles.stepLabel, (isDone || isActive) && styles.stepLabelActive]}>
+                    <Text style={[
+                      styles.stepLabel,
+                      { color: (isDone || isActive) ? T.text : T.textMuted },
+                      (isDone || isActive) && { fontWeight: '700' },
+                    ]}>
                       {step.label}
                     </Text>
-                    {isActive && <Text style={styles.stepSub}>{step.sub}</Text>}
-                    {isDone && <Text style={styles.stepDone}>✓ Completed</Text>}
+                    {isActive && (
+                      <Text style={[styles.stepSub, { color: T.textSecondary }]}>{step.sub}</Text>
+                    )}
+                    {isDone && (
+                      <Text style={styles.stepDone}>Completed</Text>
+                    )}
                   </View>
                 </View>
               </View>
@@ -132,17 +151,19 @@ export default function OrderTrackingScreen() {
 
         {/* ETA Card */}
         {order?.estimated_ready_at && order.status !== 'ready' && order.status !== 'completed' && (
-          <View style={[styles.etaCard, Shadows.card]}>
-            <Clock size={22} color={Colors.primary} />
+          <View style={[styles.etaCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <View style={styles.etaIconWrap}>
+              <Clock size={22} color="#F05A1A" />
+            </View>
             <View style={styles.etaContent}>
-              <Text style={styles.etaLabel}>Estimated Ready At</Text>
-              <Text style={styles.etaTime}>
+              <Text style={[styles.etaLabel, { color: T.textMuted }]}>Estimated Ready At</Text>
+              <Text style={[styles.etaTime, { color: T.text }]}>
                 {new Date(order.estimated_ready_at).toLocaleTimeString('en-AE', { hour: '2-digit', minute: '2-digit' })}
               </Text>
             </View>
             <View style={styles.etaRight}>
-              <RefreshCw size={12} color={Colors.textMuted} />
-              <Text style={styles.lastUpdated}>
+              <RefreshCw size={12} color={T.textMuted} />
+              <Text style={[styles.lastUpdated, { color: T.textMuted }]}>
                 {secsSinceUpdate < 10 ? 'Just now' : `${secsSinceUpdate}s ago`}
               </Text>
             </View>
@@ -151,22 +172,26 @@ export default function OrderTrackingScreen() {
 
         {/* Order Summary */}
         {order && (
-          <View style={[styles.summaryCard, Shadows.card]}>
-            <Text style={styles.sectionTitle}>Order Summary</Text>
+          <View style={[styles.summaryCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <Text style={[styles.sectionTitle, { color: T.text }]}>Order Summary</Text>
             {order.items.map((item, idx) => (
               <View key={idx} style={styles.summaryItem}>
-                <Text style={styles.summaryItemName}>{item.quantity}× {item.menu_item.name}</Text>
-                <Text style={styles.summaryItemPrice}>AED {item.line_total.toFixed(0)}</Text>
+                <Text style={[styles.summaryItemName, { color: T.textSecondary }]}>
+                  {item.quantity}x {item.menu_item.name}
+                </Text>
+                <Text style={[styles.summaryItemPrice, { color: T.text }]}>
+                  AED {item.line_total.toFixed(0)}
+                </Text>
               </View>
             ))}
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: T.border }]} />
             <View style={styles.summaryItem}>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={[styles.totalLabel, { color: T.text }]}>Total</Text>
               <Text style={styles.totalValue}>AED {order.total.toFixed(0)}</Text>
             </View>
             {order.points_earned > 0 && (
               <View style={styles.pointsEarnedRow}>
-                <Text style={styles.pointsEarned}>🏅 +{order.points_earned} points earned</Text>
+                <Text style={styles.pointsEarned}>+{order.points_earned} points earned</Text>
               </View>
             )}
           </View>
@@ -190,36 +215,37 @@ export default function OrderTrackingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1 },
   scroll: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
   },
   backBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: Colors.border,
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
   },
   headerText: { flex: 1 },
-  title: { fontSize: 18, fontWeight: '800', color: Colors.text },
-  orderId: { fontSize: 12, color: Colors.textMuted },
+  title: { fontSize: 20, fontWeight: '800' },
+  orderId: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5 },
+
   readyBanner: { borderRadius: Radius.xl, overflow: 'hidden' },
   readyGradient: {
     padding: Spacing.lg,
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  readyEmoji: { fontSize: 48 },
-  readyTitle: { fontSize: 22, fontWeight: '900', color: Colors.white },
+  readyTitle: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
   readySub: { fontSize: 14, color: 'rgba(255,255,255,0.85)', textAlign: 'center' },
+
   timelineCard: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.lg,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    gap: 4,
   },
   timelineItem: { position: 'relative' },
   connectorLine: {
@@ -228,10 +254,8 @@ const styles = StyleSheet.create({
     top: -24,
     width: 2,
     height: 28,
-    backgroundColor: Colors.border,
     zIndex: 0,
   },
-  connectorLineDone: { backgroundColor: Colors.primary },
   timelineRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -249,7 +273,6 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     borderWidth: 2,
-    borderColor: Colors.primary,
     opacity: 0.3,
     top: -5,
     left: -5,
@@ -257,47 +280,47 @@ const styles = StyleSheet.create({
   stepIcon: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: Colors.border,
-    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
   },
-  stepIconDone: { backgroundColor: Colors.success, borderColor: Colors.success },
-  stepIconActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  stepIconUpcoming: { opacity: 0.5 },
+  stepIconDone: { backgroundColor: '#22C55E', borderColor: '#22C55E' },
+  stepIconActive: { backgroundColor: '#F05A1A', borderColor: '#F05A1A' },
   stepContent: { flex: 1, paddingTop: 8 },
-  stepLabel: { fontSize: 14, fontWeight: '600', color: Colors.textMuted },
-  stepLabelActive: { color: Colors.text, fontWeight: '700' },
-  stepSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  stepDone: { fontSize: 11, color: Colors.success, fontWeight: '600', marginTop: 2 },
+  stepLabel: { fontSize: 15, fontWeight: '600' },
+  stepSub: { fontSize: 12, marginTop: 2 },
+  stepDone: { fontSize: 11, color: '#22C55E', fontWeight: '700', marginTop: 2 },
+
   etaCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: Colors.white,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.primaryTint,
+  },
+  etaIconWrap: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(240,90,26,0.1)',
+    alignItems: 'center', justifyContent: 'center',
   },
   etaContent: { flex: 1 },
-  etaLabel: { fontSize: 11, color: Colors.textMuted, fontWeight: '600' },
-  etaTime: { fontSize: 22, fontWeight: '900', color: Colors.text },
-  etaRight: { alignItems: 'center', gap: 2 },
-  lastUpdated: { fontSize: 10, color: Colors.success, fontWeight: '600' },
+  etaLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  etaTime: { fontSize: 28, fontWeight: '900', letterSpacing: -0.5 },
+  etaRight: { alignItems: 'center', gap: 4 },
+  lastUpdated: { fontSize: 10, fontWeight: '600' },
+
   summaryCard: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     gap: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: Colors.text, marginBottom: 4 },
-  summaryItem: { flexDirection: 'row', justifyContent: 'space-between' },
-  summaryItemName: { fontSize: 14, color: Colors.textSecondary },
-  summaryItemPrice: { fontSize: 14, fontWeight: '600', color: Colors.text },
-  divider: { height: 1, backgroundColor: Colors.border },
-  totalLabel: { fontSize: 16, fontWeight: '800', color: Colors.text },
-  totalValue: { fontSize: 18, fontWeight: '900', color: Colors.primary },
+  sectionTitle: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
+  summaryItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  summaryItemName: { fontSize: 14 },
+  summaryItemPrice: { fontSize: 14, fontWeight: '700' },
+  divider: { height: 1 },
+  totalLabel: { fontSize: 16, fontWeight: '800' },
+  totalValue: { fontSize: 18, fontWeight: '900', color: '#F05A1A' },
   pointsEarnedRow: { alignItems: 'flex-end' },
-  pointsEarned: { fontSize: 12, color: Colors.success, fontWeight: '600' },
+  pointsEarned: { fontSize: 12, color: '#22C55E', fontWeight: '700' },
 })

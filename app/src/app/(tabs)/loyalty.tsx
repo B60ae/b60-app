@@ -164,8 +164,8 @@ export default function LoyaltyScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        <Text style={[styles.screenTitle, { color: theme.text }]}>B60 CLUB 🏆</Text>
-        <Text style={[styles.screenSub, { color: theme.textMuted }]}>Order. Earn. Flex. Repeat.</Text>
+        <Text style={[styles.screenTitle, { color: theme.text }]}>B60 CLUB</Text>
+        <Text style={[styles.screenSub, { color: theme.textMuted }]}>ORDER. EARN. FLEX. REPEAT.</Text>
 
         {/* ── Points Card ── */}
         <LinearGradient
@@ -292,8 +292,8 @@ export default function LoyaltyScreen() {
             history.map((tx) => <TransactionRow key={tx.id} tx={tx} />)
           ) : (
             <View style={[styles.card, styles.emptyHistory, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <Text style={[styles.emptyText, { color: theme.text }]}>No history yet fam</Text>
-              <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>Place your first order and watch those points stack</Text>
+              <Text style={[styles.emptyText, { color: theme.text }]}>No History Yet</Text>
+              <Text style={[styles.emptySubtext, { color: theme.textMuted }]}>Place your first order and watch those points stack.</Text>
             </View>
           )}
         </View>

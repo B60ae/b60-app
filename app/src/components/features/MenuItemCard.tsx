@@ -9,7 +9,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
-import { Plus } from 'lucide-react-native'
+import { Plus, Star } from 'lucide-react-native'
 import { LightTheme, DarkTheme, Radius, Spacing, Shadows, Typography } from '../../utils/theme'
 import { useThemeStore } from '../../stores/themeStore'
 import { DirhamSymbol } from '../ui/DirhamSymbol'
@@ -83,7 +83,7 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
             />
           ) : (
             <View style={[styles.image, styles.imagePlaceholder]}>
-              <Text style={styles.placeholderEmoji}>🍔</Text>
+              <View style={styles.placeholderIcon}><Star size={28} color="#444" /></View>
             </View>
           )}
 
@@ -96,7 +96,7 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
           {/* Featured badge — top-left sticker */}
           {item.is_featured && (
             <View style={[styles.featuredBadge, { backgroundColor: theme.primary, borderColor: theme.black }]}>
-              <Text style={[styles.featuredText, { color: theme.white }]}>🔥 FAN FAV</Text>
+              <Text style={[styles.featuredText, { color: theme.white }]}>FAN FAV</Text>
             </View>
           )}
 
@@ -183,8 +183,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  placeholderEmoji: {
-    fontSize: 40,
+  placeholderIcon: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: '#E5E5E5',
+    alignItems: 'center', justifyContent: 'center',
   },
   gradient: {
     position: 'absolute',

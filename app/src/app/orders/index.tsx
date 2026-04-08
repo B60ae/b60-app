@@ -1,27 +1,24 @@
 import React, { useState, useCallback } from 'react'
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  Platform,
+  View, Text, StyleSheet, FlatList, Pressable, RefreshControl, Platform,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ChevronRight, ShoppingBag } from 'lucide-react-native'
+import { ArrowLeft, ChevronRight, UtensilsCrossed } from 'lucide-react-native'
 import { ordersApi } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
+import { useThemeStore } from '../../stores/themeStore'
 import { OrderStatusBadge } from '../../components/features/OrderStatusBadge'
 import { SkeletonLoader } from '../../components/ui/SkeletonLoader'
-import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
+import { LightTheme, DarkTheme, Spacing, Radius } from '../../utils/theme'
 
 export default function OrderHistoryScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const T = themeMode === 'light' ? LightTheme : DarkTheme
 
   const { data: orders, isLoading, isError, refetch } = useQuery({
     queryKey: ['orders', 'history'],
@@ -39,14 +36,19 @@ export default function OrderHistoryScreen() {
   const orderCount = orders?.length ?? 0
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: T.background }]} edges={['top']}>
+
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <ArrowLeft size={20} color={Colors.text} strokeWidth={2.5} />
+      <View style={[styles.header, { backgroundColor: T.background, borderBottomColor: T.border }]}>
+        <Pressable
+          onPress={() => router.back()}
+          style={[styles.backBtn, { backgroundColor: T.surface, borderColor: T.border }]}
+          hitSlop={8}
+        >
+          <ArrowLeft size={20} color={T.text} strokeWidth={2.5} />
         </Pressable>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>My Orders</Text>
+          <Text style={[styles.title, { color: T.text }]}>MY ORDERS</Text>
           {orderCount > 0 && (
             <View style={styles.countBadge}>
               <Text style={styles.countBadgeText}>{orderCount}</Text>
@@ -57,26 +59,19 @@ export default function OrderHistoryScreen() {
 
       {isLoading ? (
         <View style={styles.skeletonList}>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <SkeletonLoader key={i} variant="row" />
-          ))}
+          {[0, 1, 2, 3, 4].map((i) => <SkeletonLoader key={i} variant="row" />)}
         </View>
       ) : isError || !orders || orders.length === 0 ? (
-        /* Empty state */
         <View style={styles.emptyState}>
-          <View style={styles.emptyIconWrapper}>
-            <Text style={styles.emptyEmoji}>🍔</Text>
+          <View style={[styles.emptyIconWrapper, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <UtensilsCrossed size={40} color={T.textMuted} />
           </View>
-          <Text style={styles.emptyTitle}>No orders yet</Text>
-          <Text style={styles.emptySub}>
+          <Text style={[styles.emptyTitle, { color: T.text }]}>No orders yet</Text>
+          <Text style={[styles.emptySub, { color: T.textSecondary }]}>
             You haven't placed any orders.{'\n'}Time to smash something!
           </Text>
-          <Pressable
-            style={styles.browseBtn}
-            onPress={() => router.push('/(tabs)/menu')}
-          >
-            <ShoppingBag size={16} color={Colors.white} strokeWidth={2.5} />
-            <Text style={styles.browseBtnText}>Browse Menu</Text>
+          <Pressable style={styles.browseBtn} onPress={() => router.push('/(tabs)/menu')}>
+            <Text style={styles.browseBtnText}>BROWSE MENU</Text>
           </Pressable>
         </View>
       ) : (
@@ -89,8 +84,8 @@ export default function OrderHistoryScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={Colors.primary}
-              colors={[Colors.primary]}
+              tintColor="#F05A1A"
+              colors={['#F05A1A']}
             />
           }
           renderItem={({ item: order }) => {
@@ -99,22 +94,21 @@ export default function OrderHistoryScreen() {
             const firstName = firstItem?.menu_item?.name ?? 'Unknown item'
             const extraCount = order.items.length - 1
             const formattedDate = new Date(order.created_at).toLocaleDateString('en-AE', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
+              day: 'numeric', month: 'short', year: 'numeric',
             })
 
             return (
               <Pressable
                 style={({ pressed }) => [
                   styles.orderCard,
-                  Shadows.card,
-                  pressed && styles.orderCardPressed,
+                  { backgroundColor: T.surfaceElevated, borderColor: T.border },
+                  pressed && { opacity: 0.75 },
                 ]}
-                onPress={() =>
-                  router.push({ pathname: '/order/[id]', params: { id: order.id } })
-                }
+                onPress={() => router.push({ pathname: '/order/[id]', params: { id: order.id } })}
               >
+                {/* Orange left accent */}
+                <View style={styles.cardAccent} />
+
                 {/* Thumbnail */}
                 {imageUrl ? (
                   <Image
@@ -124,33 +118,29 @@ export default function OrderHistoryScreen() {
                     transition={200}
                   />
                 ) : (
-                  <View style={[styles.thumb, styles.thumbPlaceholder]}>
-                    <Text style={styles.thumbEmoji}>🍔</Text>
+                  <View style={[styles.thumb, styles.thumbPlaceholder, { backgroundColor: T.border }]}>
+                    <UtensilsCrossed size={20} color={T.textMuted} />
                   </View>
                 )}
 
                 {/* Order info */}
                 <View style={styles.info}>
-                  {/* Top row: order # + status badge */}
                   <View style={styles.infoTop}>
-                    <Text style={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</Text>
+                    <Text style={[styles.orderId, { color: T.text }]}>
+                      #{order.id.slice(-6).toUpperCase()}
+                    </Text>
                     <OrderStatusBadge status={order.status} />
                   </View>
-
-                  {/* Item name */}
-                  <Text style={styles.itemName} numberOfLines={1}>
-                    {firstName}
-                    {extraCount > 0 ? ` +${extraCount} more` : ''}
+                  <Text style={[styles.itemName, { color: T.textSecondary }]} numberOfLines={1}>
+                    {firstName}{extraCount > 0 ? ` +${extraCount} more` : ''}
                   </Text>
-
-                  {/* Bottom row: date + total */}
                   <View style={styles.infoBottom}>
-                    <Text style={styles.date}>{formattedDate}</Text>
-                    <Text style={styles.total}>AED {order.total.toFixed(0)}</Text>
+                    <Text style={[styles.date, { color: T.textMuted }]}>{formattedDate}</Text>
+                    <Text style={styles.total}>AED {Number(order.total).toFixed(0)}</Text>
                   </View>
                 </View>
 
-                <ChevronRight size={16} color={Colors.textMuted} />
+                <ChevronRight size={16} color={T.textMuted} />
               </Pressable>
             )
           }}
@@ -161,9 +151,8 @@ export default function OrderHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1 },
 
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -171,133 +160,93 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.white,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  title: { fontSize: 22, fontWeight: '900', color: Colors.text },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  title: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
   countBadge: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#F05A1A',
     borderRadius: Radius.full,
-    minWidth: 24,
-    height: 24,
+    minWidth: 24, height: 24,
     paddingHorizontal: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  countBadgeText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.white,
-  },
+  countBadgeText: { fontSize: 12, fontWeight: '800', color: '#fff' },
 
-  // Loading skeletons
   skeletonList: { padding: Spacing.md, gap: Spacing.sm },
 
-  // List
   list: {
     padding: Spacing.md,
     gap: Spacing.sm,
     paddingBottom: Platform.OS === 'ios' ? 48 : Spacing.xxl,
   },
 
-  // Order card
   orderCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: Colors.white,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.border,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  orderCardPressed: {
-    opacity: 0.75,
-    transform: [{ scale: 0.99 }],
+  cardAccent: {
+    position: 'absolute',
+    left: 0, top: 0, bottom: 0,
+    width: 4,
+    backgroundColor: '#F05A1A',
+    borderTopLeftRadius: Radius.lg,
+    borderBottomLeftRadius: Radius.lg,
   },
 
-  // Thumbnail — 60×60
-  thumb: {
-    width: 60,
-    height: 60,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
-  },
+  thumb: { width: 60, height: 60, borderRadius: Radius.md },
   thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  thumbEmoji: { fontSize: 24 },
 
-  // Info block
   info: { flex: 1, gap: 4 },
   infoTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', gap: Spacing.sm,
   },
-  orderId: { fontSize: 15, fontWeight: '800', color: Colors.text },
-  itemName: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
+  orderId: { fontSize: 15, fontWeight: '800' },
+  itemName: { fontSize: 13, fontWeight: '500' },
   infoBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 2,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginTop: 2,
   },
-  date: { fontSize: 11, color: Colors.textMuted, fontWeight: '500' },
-  total: { fontSize: 15, fontWeight: '800', color: Colors.primary },
+  date: { fontSize: 11, fontWeight: '500' },
+  total: { fontSize: 15, fontWeight: '800', color: '#F05A1A' },
 
-  // Empty state
   emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
-    paddingHorizontal: Spacing.xl,
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.md, paddingHorizontal: Spacing.xl,
   },
   emptyIconWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.border,
-    marginBottom: Spacing.sm,
+    width: 96, height: 96, borderRadius: 48,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, marginBottom: Spacing.sm,
   },
-  emptyEmoji: { fontSize: 48 },
-  emptyTitle: { fontSize: 24, fontWeight: '800', color: Colors.text },
-  emptySub: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginTop: -4,
-  },
+  emptyTitle: { fontSize: 24, fontWeight: '800' },
+  emptySub: { fontSize: 14, textAlign: 'center', lineHeight: 22, marginTop: -4 },
   browseBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
     marginTop: Spacing.sm,
-    backgroundColor: Colors.primary,
+    backgroundColor: '#F05A1A',
     borderRadius: Radius.lg,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
-    ...Shadows.glowStrong,
+    shadowColor: '#F05A1A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  browseBtnText: { fontSize: 15, fontWeight: '800', color: Colors.white },
+  browseBtnText: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
 })

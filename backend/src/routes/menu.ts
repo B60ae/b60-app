@@ -34,15 +34,37 @@ menuRouter.get('/items', async (req, res) => {
 })
 
 // ─── Single Item ──────────────────────────────────────────────────────────────
+
+// Add-ons only available for burger/chicken items (not drinks, sides, desserts)
+const BURGER_ADDONS = {
+  id: 'addons',
+  name: 'Add-ons',
+  type: 'multi' as const,
+  options: [
+    { id: 'extra-cheese', name: 'Extra Cheese', price_delta: 2 },
+    { id: 'extra-bacon', name: 'Extra Beef Bacon', price_delta: 3 },
+    { id: 'extra-jalapeno', name: 'Extra Jalapeños', price_delta: 2 },
+  ],
+}
+
+const ADDON_CATEGORY_SLUGS = ['burgers', 'chicken']
+
 menuRouter.get('/items/:id', async (req, res) => {
-  const { data, error } = await supabase
+  const { data: item, error } = await supabase
     .from('menu_items')
-    .select('*')
+    .select('*, menu_categories(slug)')
     .eq('id', req.params.id)
     .single()
 
-  if (error) return res.status(404).json({ error: 'Item not found' })
-  res.json(data)
+  if (error || !item) return res.status(404).json({ error: 'Item not found' })
+
+  const categorySlug = (item as any).menu_categories?.slug?.toLowerCase() ?? ''
+  const hasAddons = ADDON_CATEGORY_SLUGS.some(s => categorySlug.includes(s))
+
+  // Only expose add-ons group — strip any existing customizations (removes Heat Level etc.)
+  const customizations = hasAddons ? [BURGER_ADDONS] : []
+
+  res.json({ ...item, customizations })
 })
 
 // ─── Featured ─────────────────────────────────────────────────────────────────

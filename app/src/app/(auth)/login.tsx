@@ -19,44 +19,22 @@ const OTP_LENGTH = 6
 const C = {
   bg: '#000000',
   surface: '#0D0D0D',
-  card: '#141414',
-  input: '#1C1C1C',
+  card: '#111111',
+  input: '#1A1A1A',
   border: '#2A2A2A',
   borderActive: '#F05A1A',
   text: '#FFFFFF',
-  textSub: '#666666',
+  textSub: '#888888',
   textMuted: '#444444',
   primary: '#F05A1A',
   primaryDark: '#C94400',
   error: '#EF4444',
   success: '#22C55E',
   white: '#FFFFFF',
+  yellow: '#FFE500',
 }
 
-// ─── Step indicator ──────────────────────────────────────────────────────────
-
-function StepDots({ step }: { step: 'email' | 'otp' }) {
-  return (
-    <View style={dotStyles.row}>
-      <View style={[dotStyles.dot, dotStyles.dotActive]} />
-      <View style={[dotStyles.line, step === 'otp' && dotStyles.lineActive]} />
-      <View style={[dotStyles.dot, step === 'otp' && dotStyles.dotActive]} />
-    </View>
-  )
-}
-
-const dotStyles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 0 },
-  dot: {
-    width: 8, height: 8, borderRadius: 4,
-    backgroundColor: C.border,
-  },
-  dotActive: { backgroundColor: C.primary },
-  line: { width: 32, height: 2, backgroundColor: C.border },
-  lineActive: { backgroundColor: C.primary },
-})
-
-// ─── OTP Box ─────────────────────────────────────────────────────────────────
+// ─── OTP Box Display ──────────────────────────────────────────────────────────
 
 function OtpDisplay({ otp, error }: { otp: string; error: boolean }) {
   const digits = otp.split('').concat(Array(OTP_LENGTH).fill('')).slice(0, OTP_LENGTH)
@@ -75,7 +53,7 @@ function OtpDisplay({ otp, error }: { otp: string; error: boolean }) {
               error && otpStyles.boxError,
             ]}
           >
-            <Text style={otpStyles.digit}>{d}</Text>
+            <Text style={otpStyles.digit}>{d ? '•' : ''}</Text>
             {isActive && <View style={otpStyles.cursor} />}
           </View>
         )
@@ -85,9 +63,9 @@ function OtpDisplay({ otp, error }: { otp: string; error: boolean }) {
 }
 
 const otpStyles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 10, justifyContent: 'center' },
+  row: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
   box: {
-    width: 48, height: 60,
+    width: 46, height: 56,
     borderRadius: Radius.md,
     borderWidth: 1.5,
     borderColor: C.border,
@@ -98,15 +76,34 @@ const otpStyles = StyleSheet.create({
   boxActive: { borderColor: C.primary, borderWidth: 2 },
   boxFilled: { borderColor: '#333', backgroundColor: '#1A0A00' },
   boxError: { borderColor: C.error },
-  digit: { fontSize: 24, fontWeight: '800', color: C.text },
+  digit: { fontSize: 28, fontWeight: '900', color: C.primary, lineHeight: 34 },
   cursor: {
-    position: 'absolute', bottom: 10,
-    width: 16, height: 2, borderRadius: 1,
+    position: 'absolute', bottom: 8,
+    width: 18, height: 2.5, borderRadius: 2,
     backgroundColor: C.primary,
   },
 })
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
+// ─── Step Dots ────────────────────────────────────────────────────────────────
+
+function StepDots({ step }: { step: 'email' | 'otp' }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 0 }}>
+      <View style={[stepStyles.dot, stepStyles.dotActive]} />
+      <View style={[stepStyles.line, step === 'otp' && stepStyles.lineActive]} />
+      <View style={[stepStyles.dot, step === 'otp' && stepStyles.dotActive]} />
+    </View>
+  )
+}
+
+const stepStyles = StyleSheet.create({
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.border },
+  dotActive: { backgroundColor: C.primary },
+  line: { width: 28, height: 2, backgroundColor: C.border },
+  lineActive: { backgroundColor: C.primary },
+})
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
@@ -116,30 +113,30 @@ export default function LoginScreen() {
   const [error, setError] = useState('')
   const setUser = useAuthStore((s) => s.setUser)
 
-  const formY = useRef(new Animated.Value(60)).current
-  const formOpacity = useRef(new Animated.Value(0)).current
-  const stepAnim = useRef(new Animated.Value(0)).current
+  const cardY = useRef(new Animated.Value(60)).current
+  const cardOpacity = useRef(new Animated.Value(0)).current
   const shakeAnim = useRef(new Animated.Value(0)).current
+  const stepAnim = useRef(new Animated.Value(0)).current
+  const logoScale = useRef(new Animated.Value(0.8)).current
+  const logoOpacity = useRef(new Animated.Value(0)).current
   const otpRef = useRef<TextInput>(null)
 
   useEffect(() => {
     StatusBar.setBarStyle('light-content')
     Animated.parallel([
-      Animated.spring(formY, { toValue: 0, useNativeDriver: true, tension: 55, friction: 10 }),
-      Animated.timing(formOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(logoScale, { toValue: 1, useNativeDriver: true, tension: 60, friction: 8 }),
+      Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(cardY, { toValue: 0, useNativeDriver: true, tension: 55, friction: 10, delay: 200 }),
+      Animated.timing(cardOpacity, { toValue: 1, duration: 500, useNativeDriver: true, delay: 200 }),
     ]).start()
   }, [])
 
-  const goToOtp = () => {
-    Animated.timing(stepAnim, { toValue: 1, duration: 280, useNativeDriver: true }).start()
-  }
-
   const shake = () => {
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 6, duration: 60, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 10, duration: 55, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 55, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 55, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 55, useNativeDriver: true }),
     ]).start()
   }
 
@@ -157,7 +154,7 @@ export default function LoginScreen() {
       await authApi.sendOtp(trimmed)
       setEmail(trimmed)
       setStep('otp')
-      goToOtp()
+      Animated.timing(stepAnim, { toValue: 1, duration: 280, useNativeDriver: true }).start()
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       setTimeout(() => otpRef.current?.focus(), 350)
     } catch {
@@ -184,7 +181,7 @@ export default function LoginScreen() {
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       router.replace('/(tabs)')
     } catch {
-      setError('Wrong code. Check and try again.')
+      setError('Wrong code. Try again.')
       setOtp('')
       shake()
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
@@ -201,55 +198,49 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
 
-      {/* ── Background image ── */}
-      <Image
-        source={{ uri: IMAGES.loginHero }}
-        style={styles.bgImage}
-        contentFit="cover"
-      />
+      {/* Full-bleed hero background */}
+      <Image source={{ uri: IMAGES.loginHero }} style={styles.bgImage} contentFit="cover" />
       <LinearGradient
-        colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.7)', C.bg]}
+        colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.92)', C.bg]}
         style={styles.bgGradient}
+        locations={[0, 0.35, 0.65, 1]}
       />
 
-      {/* ── Logo ── */}
-      <View style={styles.logoArea}>
-        <Text style={styles.logoText}>B60</Text>
+      {/* ── Logo + Brand ── */}
+      <Animated.View style={[styles.logoArea, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
+        {/* App icon */}
+        <Image
+          source={require('../../../assets/images/icon.png')}
+          style={styles.appIcon}
+          contentFit="contain"
+        />
         <View style={styles.logoDivider} />
-        <Text style={styles.logoSub}>SMASH BURGERS</Text>
-      </View>
+        <Text style={styles.logoSub}>SMASH BURGERS · DUBAI</Text>
+      </Animated.View>
 
-      {/* ── Form Card ── */}
+      {/* ── Card ── */}
       <Animated.View
         style={[
           styles.card,
           {
-            transform: [
-              { translateY: formY },
-              { translateX: shakeAnim },
-            ],
-            opacity: formOpacity,
+            transform: [{ translateY: cardY }, { translateX: shakeAnim }],
+            opacity: cardOpacity,
           },
         ]}
       >
-        {/* Step dots */}
+        {/* Step indicator row */}
         <View style={styles.stepRow}>
           <StepDots step={step} />
-          <Text style={styles.stepLabel}>
-            {step === 'email' ? 'Step 1 of 2' : 'Step 2 of 2'}
-          </Text>
+          <Text style={styles.stepLabel}>{step === 'email' ? 'Step 1 of 2' : 'Step 2 of 2'}</Text>
         </View>
 
         {/* Headline */}
         <View style={styles.headlineRow}>
           <Text style={styles.headline}>
-            {step === 'email' ? 'GET IN.' : 'CHECK YOUR EMAIL.'}
+            {step === 'email' ? 'GET IN.' : 'CHECK EMAIL.'}
           </Text>
           {step === 'otp' && (
             <Pressable onPress={handleBack} hitSlop={12}>
@@ -260,27 +251,25 @@ export default function LoginScreen() {
         <Text style={styles.sub}>
           {step === 'email'
             ? 'Enter your email to get a login code.'
-            : `We sent a 6-digit code to\n${email}`}
+            : `Code sent to\n${email}`}
         </Text>
 
         {/* Input */}
         {step === 'email' ? (
-          <View>
-            <TextInput
-              style={[styles.input, !!error && styles.inputError]}
-              placeholder="you@email.com"
-              placeholderTextColor={C.textMuted}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="email"
-              returnKeyType="go"
-              value={email}
-              onChangeText={(t) => { setEmail(t); setError('') }}
-              onSubmitEditing={handleSendOtp}
-              editable={!loading}
-            />
-          </View>
+          <TextInput
+            style={[styles.input, !!error && styles.inputError]}
+            placeholder="you@email.com"
+            placeholderTextColor={C.textMuted}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            returnKeyType="go"
+            value={email}
+            onChangeText={(t) => { setEmail(t); setError('') }}
+            onSubmitEditing={handleSendOtp}
+            editable={!loading}
+          />
         ) : (
           <Pressable onPress={() => otpRef.current?.focus()} style={{ position: 'relative' }}>
             <TextInput
@@ -321,11 +310,7 @@ export default function LoginScreen() {
         {/* Resend */}
         {step === 'otp' && (
           <Pressable
-            onPress={() => {
-              setOtp('')
-              setError('')
-              handleSendOtp()
-            }}
+            onPress={() => { setOtp(''); setError(''); handleSendOtp() }}
             style={styles.resendBtn}
             disabled={loading}
           >
@@ -347,37 +332,43 @@ const styles = StyleSheet.create({
 
   bgImage: {
     position: 'absolute', top: 0, left: 0, right: 0,
-    height: H * 0.55,
+    height: H * 0.58,
   },
   bgGradient: {
     position: 'absolute', top: 0, left: 0, right: 0,
-    height: H * 0.65,
+    height: H * 0.72,
   },
 
+  // Logo area
   logoArea: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: H * 0.06,
+    paddingTop: H * 0.05,
+    gap: 12,
   },
-  logoText: {
-    fontSize: 100,
-    fontWeight: '900',
-    color: C.primary,
-    letterSpacing: -6,
-    lineHeight: 96,
-    textShadowColor: 'rgba(240,90,26,0.4)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 20,
+  appIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
   },
-  logoDivider: { width: 52, height: 3, backgroundColor: C.primary, marginVertical: 10 },
+  logoDivider: {
+    width: 40, height: 2.5,
+    backgroundColor: C.primary,
+    borderRadius: 2,
+  },
   logoSub: {
-    fontSize: 12, fontWeight: '900', color: C.white,
-    letterSpacing: 7, textTransform: 'uppercase', opacity: 0.85,
+    fontSize: 11, fontWeight: '900', color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 4, textTransform: 'uppercase',
   },
 
+  // Card
   card: {
-    backgroundColor: C.surface,
+    backgroundColor: C.card,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderTopWidth: 1,
@@ -390,28 +381,17 @@ const styles = StyleSheet.create({
   },
 
   stepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: 4,
   },
   stepLabel: { fontSize: 11, fontWeight: '700', color: C.textSub, letterSpacing: 0.5 },
 
   headlineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  headline: {
-    fontSize: 26, fontWeight: '900', color: C.text,
-    letterSpacing: -0.5,
-  },
-  changeLink: {
-    fontSize: 13, fontWeight: '700', color: C.primary,
-  },
-  sub: {
-    fontSize: 13, color: C.textSub, lineHeight: 20, marginTop: -4,
-  },
+  headline: { fontSize: 28, fontWeight: '900', color: C.text, letterSpacing: -0.5 },
+  changeLink: { fontSize: 13, fontWeight: '700', color: C.primary },
+  sub: { fontSize: 13, color: C.textSub, lineHeight: 20, marginTop: -4 },
 
   input: {
     backgroundColor: C.input,
@@ -425,10 +405,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   inputError: { borderColor: C.error },
-
-  hiddenInput: {
-    position: 'absolute', opacity: 0, width: 1, height: 1, top: 0,
-  },
+  hiddenInput: { position: 'absolute', opacity: 0, width: 1, height: 1, top: 0 },
 
   errorRow: {
     backgroundColor: 'rgba(239,68,68,0.1)',
@@ -442,10 +419,10 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 13, color: C.error, fontWeight: '600' },
 
   resendBtn: { alignItems: 'center', paddingVertical: 4 },
-  resendText: { fontSize: 13, color: C.textSub, fontWeight: '600', textDecorationLine: 'underline' },
-
+  resendText: {
+    fontSize: 13, color: C.textSub, fontWeight: '600', textDecorationLine: 'underline',
+  },
   terms: {
-    fontSize: 11, color: C.textMuted,
-    textAlign: 'center', lineHeight: 16, marginTop: 4,
+    fontSize: 10, color: C.textMuted, textAlign: 'center', lineHeight: 15, marginTop: 4,
   },
 })

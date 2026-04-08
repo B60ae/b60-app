@@ -14,7 +14,7 @@ import Animated, {
   withDelay,
   Easing,
 } from 'react-native-reanimated'
-import { MapPin, UtensilsCrossed } from 'lucide-react-native'
+import { MapPin, UtensilsCrossed, Star } from 'lucide-react-native'
 import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
 
 // Confetti dot config
@@ -30,17 +30,9 @@ const DOTS = [
 ]
 
 function ConfettiDot({
-  color,
-  dx,
-  dy,
-  size,
-  delay,
+  color, dx, dy, size, delay,
 }: {
-  color: string
-  dx: number
-  dy: number
-  size: number
-  delay: number
+  color: string; dx: number; dy: number; size: number; delay: number
 }) {
   const x = useSharedValue(0)
   const y = useSharedValue(0)
@@ -56,11 +48,7 @@ function ConfettiDot({
         withDelay(600, withTiming(dy + 80, { duration: 600, easing: Easing.in(Easing.quad) })),
       ),
     )
-    // Fade out after scatter
-    opacity.value = withDelay(
-      delay + 400,
-      withTiming(0, { duration: 500 }),
-    )
+    opacity.value = withDelay(delay + 400, withTiming(0, { duration: 500 }))
   }, [])
 
   const style = useAnimatedStyle(() => ({
@@ -71,13 +59,7 @@ function ConfettiDot({
   return (
     <Animated.View
       style={[
-        {
-          position: 'absolute',
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: color,
-        },
+        { position: 'absolute', width: size, height: size, borderRadius: size / 2, backgroundColor: color },
         style,
       ]}
     />
@@ -85,27 +67,15 @@ function ConfettiDot({
 }
 
 export default function OrderSuccessScreen() {
-  const { orderId, pointsEarned } = useLocalSearchParams<{
-    orderId: string
-    pointsEarned: string
-  }>()
+  const { orderId, pointsEarned } = useLocalSearchParams<{ orderId: string; pointsEarned: string }>()
 
-  // Check circle entrance
   const checkScale = useSharedValue(0)
   const checkOpacity = useSharedValue(0)
-
-  // Outer ring pulse
   const ringScale = useSharedValue(1)
-
-  // Content slide
   const contentY = useSharedValue(40)
   const contentOpacity = useSharedValue(0)
-
-  // Points card slide
   const pointsY = useSharedValue(40)
   const pointsOpacity = useSharedValue(0)
-
-  // Coin spin
   const coinRotate = useSharedValue(0)
 
   const pts = Number(pointsEarned ?? 0)
@@ -113,11 +83,9 @@ export default function OrderSuccessScreen() {
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
-    // 1. Check circle pops in
     checkScale.value = withSpring(1, { damping: 8, stiffness: 60 })
     checkOpacity.value = withTiming(1, { duration: 250 })
 
-    // 2. Ring pulse loop (scale 1 → 1.1 → 1)
     ringScale.value = withDelay(
       300,
       withRepeat(
@@ -130,20 +98,13 @@ export default function OrderSuccessScreen() {
       ),
     )
 
-    // 3. Content slides in
     contentY.value = withDelay(350, withSpring(0, { damping: 14, stiffness: 100 }))
     contentOpacity.value = withDelay(350, withTiming(1, { duration: 350 }))
 
-    // 4. Points card slides in
     if (pts > 0) {
       pointsY.value = withDelay(600, withSpring(0, { damping: 14, stiffness: 100 }))
       pointsOpacity.value = withDelay(600, withTiming(1, { duration: 350 }))
-
-      // Coin spins 360
-      coinRotate.value = withDelay(
-        700,
-        withTiming(360, { duration: 800, easing: Easing.out(Easing.cubic) }),
-      )
+      coinRotate.value = withDelay(700, withTiming(360, { duration: 800, easing: Easing.out(Easing.cubic) }))
     }
   }, [])
 
@@ -173,7 +134,7 @@ export default function OrderSuccessScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={[Colors.background, '#FFF8F5', Colors.surface]}
+        colors={['#000000', '#FFF8F5', '#F8F9FA']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -181,14 +142,11 @@ export default function OrderSuccessScreen() {
 
       {/* Check + confetti zone */}
       <View style={styles.heroZone}>
-        {/* Confetti dots scattered from center */}
         {DOTS.map((dot, i) => (
           <ConfettiDot key={i} {...dot} />
         ))}
 
-        {/* Pulsing outer ring */}
         <Animated.View style={[styles.ringOuter, ringAnimStyle]}>
-          {/* Check circle entrance */}
           <Animated.View style={[styles.checkWrapper, checkAnimStyle]}>
             <View style={styles.checkCircleOuter}>
               <View style={styles.checkCircleInner}>
@@ -202,9 +160,9 @@ export default function OrderSuccessScreen() {
       {/* Main content */}
       <Animated.View style={[styles.content, contentAnimStyle]}>
         <Text style={styles.title}>IT'S SMASHING!</Text>
-        <Text style={styles.subtitle}>Your order is being fired up right now 🔥</Text>
+        <Text style={styles.subtitle}>Your order is being fired up right now.</Text>
 
-        {/* Order number card — dashed border, prominent */}
+        {/* Order number card */}
         {orderId && (
           <View style={styles.orderIdCard}>
             <Text style={styles.orderIdLabel}>YOUR ORDER</Text>
@@ -213,12 +171,14 @@ export default function OrderSuccessScreen() {
           </View>
         )}
 
-        {/* Points card — animated slide from bottom */}
+        {/* Points card */}
         {pts > 0 && (
           <Animated.View style={[styles.pointsCard, pointsAnimStyle]}>
-            <Animated.Text style={[styles.coinEmoji, coinAnimStyle]}>🪙</Animated.Text>
+            <Animated.View style={[styles.coinWrapper, coinAnimStyle]}>
+              <Star size={28} color="#22C55E" fill="#22C55E" />
+            </Animated.View>
             <View style={styles.pointsTextBlock}>
-              <Text style={styles.pointsTitle}>+{pts} POINTS 🏅</Text>
+              <Text style={styles.pointsTitle}>+{pts} POINTS EARNED</Text>
               <Text style={styles.pointsSub}>Stacking in your B60 Club</Text>
             </View>
           </Animated.View>
@@ -228,15 +188,13 @@ export default function OrderSuccessScreen() {
         <View style={styles.ctaGroup}>
           <Pressable
             style={styles.trackBtn}
-            onPress={() =>
-              router.replace({ pathname: '/order/[id]', params: { id: orderId ?? '' } })
-            }
+            onPress={() => router.replace({ pathname: '/order/[id]', params: { id: orderId ?? '' } })}
           >
-            <MapPin size={18} color={Colors.white} strokeWidth={2.5} />
+            <MapPin size={18} color="#fff" strokeWidth={2.5} />
             <Text style={styles.trackBtnText}>TRACK MY ORDER</Text>
           </Pressable>
           <Pressable style={styles.menuBtn} onPress={() => router.replace('/(tabs)/menu')}>
-            <UtensilsCrossed size={16} color={Colors.textSecondary} strokeWidth={2} />
+            <UtensilsCrossed size={16} color="#444444" strokeWidth={2} />
             <Text style={styles.menuBtnText}>Back to Menu</Text>
           </Pressable>
         </View>
@@ -250,10 +208,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: '#000000',
   },
 
-  // Hero zone (check + confetti)
   heroZone: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -299,7 +256,6 @@ const styles = StyleSheet.create({
     lineHeight: 50,
   },
 
-  // Content
   content: {
     width: '100%',
     alignItems: 'center',
@@ -309,26 +265,25 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 36,
     fontWeight: '900',
-    color: Colors.text,
+    color: '#1B2A4A',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: Colors.textSecondary,
+    color: '#444444',
     textAlign: 'center',
     marginTop: -6,
   },
 
-  // Order ID card — dashed border
   orderIdCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: Radius.xl,
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.xl,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    borderStyle: 'dashed',
+    borderWidth: 0,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
     width: '100%',
     gap: 4,
     ...Shadows.glow,
@@ -336,22 +291,21 @@ const styles = StyleSheet.create({
   orderIdLabel: {
     fontSize: 10,
     fontWeight: '800',
-    color: Colors.textMuted,
+    color: '#888888',
     letterSpacing: 2,
   },
   orderIdValue: {
     fontSize: 36,
     fontWeight: '900',
-    color: Colors.text,
+    color: '#1B2A4A',
     letterSpacing: 3,
   },
   orderIdSub: {
     fontSize: 12,
-    color: Colors.textMuted,
+    color: '#888888',
     fontWeight: '500',
   },
 
-  // Points card
   pointsCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -363,12 +317,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(34,197,94,0.22)',
     width: '100%',
   },
-  coinEmoji: { fontSize: 38 },
+  coinWrapper: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   pointsTextBlock: { flex: 1 },
-  pointsTitle: { fontSize: 18, fontWeight: '800', color: Colors.text },
-  pointsSub: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  pointsTitle: { fontSize: 18, fontWeight: '800', color: '#1B2A4A' },
+  pointsSub: { fontSize: 13, color: '#444444', marginTop: 2 },
 
-  // CTAs
   ctaGroup: { width: '100%', gap: Spacing.sm, marginTop: Spacing.sm },
   trackBtn: {
     flexDirection: 'row',
@@ -380,17 +333,17 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md + 2,
     ...Shadows.glowStrong,
   },
-  trackBtnText: { fontSize: 16, fontWeight: '800', color: Colors.white },
+  trackBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
   menuBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    backgroundColor: Colors.surface,
+    backgroundColor: '#F8F9FA',
     borderRadius: Radius.lg,
     paddingVertical: Spacing.md,
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: '#EEEEEE',
   },
-  menuBtnText: { fontSize: 15, fontWeight: '700', color: Colors.textSecondary },
+  menuBtnText: { fontSize: 15, fontWeight: '700', color: '#444444' },
 })

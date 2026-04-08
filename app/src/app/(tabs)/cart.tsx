@@ -13,11 +13,12 @@ import * as Haptics from 'expo-haptics'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useCartStore } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
+import { useThemeStore } from '../../stores/themeStore'
 import { ordersApi, locationsApi } from '../../services/api'
 import { Button } from '../../components/ui/Button'
 import { Toast } from '../../components/ui/Toast'
 import { DirhamSymbol } from '../../components/ui/DirhamSymbol'
-import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
+import { LightTheme, DarkTheme, Spacing, Radius, Shadows } from '../../utils/theme'
 import { POINTS_TO_AED, MIN_REDEEM_POINTS } from '../../utils/constants'
 import { useQuery } from '@tanstack/react-query'
 
@@ -31,9 +32,11 @@ function CartItem({
   onUpdate: (idx: number, qty: number) => void
   onRemove: (idx: number) => void
 }) {
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const T = themeMode === 'light' ? LightTheme : DarkTheme
+
   const scale = useSharedValue(1)
   const removeScale = useSharedValue(1)
-
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }))
 
   const handleQtyPress = (newQty: number) => {
@@ -64,38 +67,42 @@ function CartItem({
       style={[styles.cartItemWrapper, removeAnimStyle]}
     >
       {item.menu_item.image_url ? (
-        <Image
-          source={{ uri: item.menu_item.image_url }}
-          style={styles.itemThumb}
-          resizeMode="cover"
-        />
+        <Image source={{ uri: item.menu_item.image_url }} style={styles.itemThumb} resizeMode="cover" />
       ) : (
-        <View style={[styles.itemThumb, styles.thumbPlaceholder]} />
+        <View style={[styles.itemThumb, { backgroundColor: T.border }]} />
       )}
 
       <View style={styles.cartItemInfo}>
-        <Text style={styles.itemName} numberOfLines={1}>{item.menu_item.name}</Text>
+        <Text style={[styles.itemName, { color: T.text }]} numberOfLines={1}>
+          {item.menu_item.name}
+        </Text>
         {item.selected_options.length > 0 && (
-          <Text style={styles.itemOptions} numberOfLines={1}>
+          <Text style={[styles.itemOptions, { color: T.textMuted }]} numberOfLines={1}>
             {item.selected_options.map((o: any) => o.name).join(', ')}
           </Text>
         )}
         <View style={styles.itemPriceRow}>
-          <DirhamSymbol size={12} color={Colors.primary} />
-          <Text style={styles.itemPrice}>{item.line_total.toFixed(0)}</Text>
+          <DirhamSymbol size={12} color="#F05A1A" />
+          <Text style={[styles.itemPrice, { color: '#F05A1A' }]}>{item.line_total.toFixed(0)}</Text>
         </View>
       </View>
 
       <View style={styles.qtyControls}>
-        <Pressable onPress={() => handleQtyPress(item.quantity - 1)} style={styles.qtyBtn}>
-          <Minus size={12} color={Colors.text} />
+        <Pressable
+          onPress={() => handleQtyPress(item.quantity - 1)}
+          style={[styles.qtyBtn, { backgroundColor: T.surface, borderColor: T.border }]}
+        >
+          <Minus size={12} color={T.text} />
         </Pressable>
-        <Animated.Text style={[styles.qty, animatedStyle]}>{item.quantity}</Animated.Text>
-        <Pressable onPress={() => handleQtyPress(item.quantity + 1)} style={styles.qtyBtn}>
-          <Plus size={12} color={Colors.text} />
+        <Animated.Text style={[styles.qty, { color: T.text }, animatedStyle]}>{item.quantity}</Animated.Text>
+        <Pressable
+          onPress={() => handleQtyPress(item.quantity + 1)}
+          style={[styles.qtyBtn, { backgroundColor: T.surface, borderColor: T.border }]}
+        >
+          <Plus size={12} color={T.text} />
         </Pressable>
         <Pressable onPress={handleRemove} hitSlop={8} style={styles.trashBtn}>
-          <Trash2 size={15} color={Colors.error} />
+          <Trash2 size={15} color="#EF4444" />
         </Pressable>
       </View>
     </Animated.View>
@@ -111,6 +118,9 @@ export default function CartScreen() {
     clearCart, subtotal, discount, total, pointsEarned,
   } = useCartStore()
   const { user } = useAuthStore()
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const T = themeMode === 'light' ? LightTheme : DarkTheme
+
   const [placing, setPlacing] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
@@ -125,8 +135,6 @@ export default function CartScreen() {
     queryFn: locationsApi.getAll,
   })
 
-  // Max points = min(user balance, points equivalent of full subtotal discount)
-  // POINTS_TO_AED = 0.05 → 1 pt = AED 0.05 → to cover subtotal: subtotal / 0.05 pts
   const maxRedeemable = Math.min(
     user?.loyalty_points ?? 0,
     Math.floor(subtotal() / POINTS_TO_AED),
@@ -163,60 +171,52 @@ export default function CartScreen() {
     }
   }
 
-  // ─── Empty State ───────────────────────────────────────────────────────────
+  // ─── Empty State ─────────────────────────────────────────────────────────────
 
   if (items.length === 0) {
     return (
-      <SafeAreaView style={[styles.container, styles.emptyContainer]}>
-        <ShoppingBag size={64} color={Colors.textMuted} />
-        <Text style={styles.emptyTitle}>Cart is empty rn</Text>
-        <Text style={styles.emptySub}>Go smash something from the menu 🍔</Text>
-        <Pressable
-          style={styles.emptyBtn}
-          onPress={() => router.push('/(tabs)/menu')}
-        >
+      <SafeAreaView style={[styles.container, styles.emptyContainer, { backgroundColor: T.background }]}>
+        <View style={[styles.emptyIconWrap, { backgroundColor: T.surface, borderColor: T.border }]}>
+          <ShoppingBag size={52} color={T.textMuted} />
+        </View>
+        <Text style={[styles.emptyTitle, { color: T.text }]}>Cart is Empty</Text>
+        <Text style={[styles.emptySub, { color: T.textSecondary }]}>Go smash something from the menu</Text>
+        <Pressable style={styles.emptyBtn} onPress={() => router.push('/(tabs)/menu')}>
           <Text style={styles.emptyBtnText}>LET'S EAT</Text>
         </Pressable>
       </SafeAreaView>
     )
   }
 
-  // ─── Full Cart ─────────────────────────────────────────────────────────────
+  // ─── Full Cart ───────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Title row */}
+    <SafeAreaView style={[styles.container, { backgroundColor: T.background }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+
+        {/* Title */}
         <View style={styles.titleRow}>
-          <Text style={styles.title}>Your Cart</Text>
+          <Text style={[styles.title, { color: T.text }]}>Your Cart</Text>
           <View style={styles.countPill}>
             <Text style={styles.countPillText}>{items.length} item{items.length !== 1 ? 's' : ''}</Text>
           </View>
         </View>
 
-        {/* Cart Items Card */}
-        <View style={styles.card}>
+        {/* Cart Items */}
+        <View style={[styles.card, { backgroundColor: T.surfaceElevated, borderColor: T.border }]}>
           {items.map((item, idx) => (
             <View key={`${item.menu_item.id}-${idx}`}>
-              {idx > 0 && <View style={styles.divider} />}
-              <CartItem
-                item={item}
-                idx={idx}
-                onUpdate={updateQuantity}
-                onRemove={removeItem}
-              />
+              {idx > 0 && <View style={[styles.divider, { backgroundColor: T.border }]} />}
+              <CartItem item={item} idx={idx} onUpdate={updateQuantity} onRemove={removeItem} />
             </View>
           ))}
         </View>
 
         {/* Pickup Location */}
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: T.surfaceElevated, borderColor: T.border }]}>
           <View style={styles.sectionHeader}>
-            <MapPin size={16} color={Colors.primary} />
-            <Text style={styles.sectionTitle}>Pickup From</Text>
+            <MapPin size={16} color="#F05A1A" />
+            <Text style={[styles.sectionTitle, { color: T.text }]}>Pickup From</Text>
           </View>
           <View style={styles.locationList}>
             {((locations ?? []).filter((loc: any) => !loc.name.toLowerCase().includes('ghurair'))).map((loc: any) => {
@@ -224,24 +224,26 @@ export default function CartScreen() {
               return (
                 <Pressable
                   key={loc.id}
-                  style={[styles.locationOption, selected && styles.locationSelected]}
+                  style={[
+                    styles.locationOption,
+                    { borderColor: T.border },
+                    selected && { borderColor: '#F05A1A', backgroundColor: 'rgba(240,90,26,0.07)' },
+                  ]}
                   onPress={() => {
                     Haptics.selectionAsync()
                     setLocation(loc.id)
                   }}
                 >
                   <View style={styles.locationLeft}>
-                    {/* Green / grey open indicator */}
-                    <View style={[styles.openDot, { backgroundColor: loc.is_open ? Colors.success : Colors.textMuted }]} />
+                    <View style={[styles.openDot, { backgroundColor: loc.is_open ? '#22C55E' : T.textMuted }]} />
                     <View>
-                      <Text style={[styles.locationName, selected && { color: Colors.primary }]}>
+                      <Text style={[styles.locationName, { color: selected ? '#F05A1A' : T.text }]}>
                         {loc.name}
                       </Text>
-                      <Text style={styles.locationCity}>{loc.city}</Text>
+                      <Text style={[styles.locationCity, { color: T.textMuted }]}>{loc.city}</Text>
                     </View>
                   </View>
-                  {/* Radio circle */}
-                  <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
+                  <View style={[styles.radioOuter, { borderColor: selected ? '#F05A1A' : T.border }]}>
                     {selected && <View style={styles.radioInner} />}
                   </View>
                 </Pressable>
@@ -250,39 +252,39 @@ export default function CartScreen() {
           </View>
         </View>
 
-        {/* Points Redemption — only if ≥100 pts */}
+        {/* Points Redemption */}
         {user && (user.loyalty_points ?? 0) >= MIN_REDEEM_POINTS && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Redeem Points</Text>
-            <Text style={styles.sectionSub}>
-              You have <Text style={{ color: Colors.primary, fontWeight: '700' }}>{user.loyalty_points} pts</Text>
+          <View style={[styles.card, { backgroundColor: T.surfaceElevated, borderColor: T.border }]}>
+            <Text style={[styles.sectionTitle, { color: T.text }]}>Redeem Points</Text>
+            <Text style={[styles.sectionSub, { color: T.textSecondary }]}>
+              You have <Text style={{ color: '#F05A1A', fontWeight: '700' }}>{user.loyalty_points} pts</Text>
               {' '}· Max {(maxRedeemable * POINTS_TO_AED).toFixed(0)} AED off
             </Text>
             <View style={styles.pointsRow}>
               <Pressable
-                style={styles.qtyBtn}
+                style={[styles.qtyBtn, { backgroundColor: T.surface, borderColor: T.border }]}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                   setPointsToRedeem(Math.max(0, pointsToRedeem - 100))
                 }}
               >
-                <Minus size={13} color={Colors.text} />
+                <Minus size={13} color={T.text} />
               </Pressable>
               <View style={styles.pointsValueBox}>
-                <Text style={styles.pointsValue}>{pointsToRedeem}</Text>
-                <Text style={styles.pointsLabel}>pts</Text>
+                <Text style={[styles.pointsValue, { color: '#F05A1A' }]}>{pointsToRedeem}</Text>
+                <Text style={[styles.pointsLabel, { color: T.textMuted }]}>pts</Text>
               </View>
               <Pressable
-                style={styles.qtyBtn}
+                style={[styles.qtyBtn, { backgroundColor: T.surface, borderColor: T.border }]}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
                   setPointsToRedeem(Math.min(maxRedeemable, pointsToRedeem + 100))
                 }}
               >
-                <Plus size={13} color={Colors.text} />
+                <Plus size={13} color={T.text} />
               </Pressable>
               {pointsToRedeem > 0 && (
-                <View style={styles.discountBadge}>
+                <View style={[styles.discountBadge, { backgroundColor: 'rgba(34,197,94,0.1)' }]}>
                   <Text style={styles.discountPreview}>
                     = {(pointsToRedeem * POINTS_TO_AED).toFixed(0)} AED off
                   </Text>
@@ -293,56 +295,54 @@ export default function CartScreen() {
         )}
 
         {/* Order Summary */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Order Summary</Text>
+        <View style={[styles.card, { backgroundColor: T.surfaceElevated, borderColor: T.border }]}>
+          <Text style={[styles.sectionTitle, { color: T.text }]}>Order Summary</Text>
           <View style={styles.summaryRows}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={[styles.summaryLabel, { color: T.textSecondary }]}>Subtotal</Text>
               <View style={styles.priceRow}>
-                <DirhamSymbol size={12} color={Colors.text} />
-                <Text style={styles.summaryValue}>{subtotal().toFixed(0)}</Text>
+                <DirhamSymbol size={12} color={T.text} />
+                <Text style={[styles.summaryValue, { color: T.text }]}>{subtotal().toFixed(0)}</Text>
               </View>
             </View>
             {discount() > 0 && (
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: Colors.success }]}>Points Discount</Text>
+                <Text style={[styles.summaryLabel, { color: '#22C55E' }]}>Points Discount</Text>
                 <View style={styles.priceRow}>
-                  <Text style={[styles.summaryValue, { color: Colors.success }]}>-</Text>
-                  <DirhamSymbol size={12} color={Colors.success} />
-                  <Text style={[styles.summaryValue, { color: Colors.success }]}>{discount().toFixed(0)}</Text>
+                  <Text style={[styles.summaryValue, { color: '#22C55E' }]}>-</Text>
+                  <DirhamSymbol size={12} color="#22C55E" />
+                  <Text style={[styles.summaryValue, { color: '#22C55E' }]}>{discount().toFixed(0)}</Text>
                 </View>
               </View>
             )}
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: T.border }]} />
             <View style={styles.summaryRow}>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={[styles.totalLabel, { color: T.text }]}>Total</Text>
               <View style={styles.priceRow}>
-                <DirhamSymbol size={18} color={Colors.primary} />
+                <DirhamSymbol size={18} color="#F05A1A" />
                 <Text style={styles.totalValue}>{total().toFixed(0)}</Text>
               </View>
             </View>
             <View style={styles.earnRow}>
-              <Text style={styles.earnNote}>+{pointsEarned()} pts dropping after pickup 🔥</Text>
+              <Text style={styles.earnNote}>+{pointsEarned()} pts dropping after pickup</Text>
             </View>
           </View>
         </View>
 
-        {/* spacer for sticky checkout */}
         <View style={{ height: 112 }} />
       </ScrollView>
 
-      {/* Error Toast */}
       <Toast message={toastMsg} visible={toastVisible} onHide={() => setToastVisible(false)} duration={3000} />
 
       {/* Sticky Checkout */}
       <View style={styles.stickyWrapper} pointerEvents="box-none">
         <LinearGradient
-          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.96)', '#FFFFFF']}
+          colors={[`${T.background}00`, `${T.background}F5`, T.background]}
           style={styles.fadeGradient}
           pointerEvents="none"
         />
-        <View style={styles.stickyCheckout}>
-          <Text style={styles.pickupNote}>⚡ Average pickup: under 10 mins</Text>
+        <View style={[styles.stickyCheckout, { backgroundColor: T.background }]}>
+          <Text style={styles.pickupNote}>Average pickup: under 10 mins</Text>
           <Pressable
             style={[styles.checkoutBtn, placing && styles.checkoutBtnDisabled]}
             onPress={handlePlaceOrder}
@@ -353,7 +353,7 @@ export default function CartScreen() {
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={styles.checkoutBtnText}>SMASH IT ·</Text>
-                <DirhamSymbol size={15} color={Colors.white} />
+                <DirhamSymbol size={15} color="#fff" />
                 <Text style={styles.checkoutBtnText}>{total().toFixed(0)}</Text>
               </View>
             )}
@@ -367,139 +367,141 @@ export default function CartScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1 },
 
   // Empty
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.xl },
-  emptyTitle: { fontSize: 24, fontWeight: '900', color: Colors.text },
-  emptySub: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center' },
-  emptyBtn: {
-    marginTop: Spacing.md, backgroundColor: Colors.primary, borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
-    ...Shadows.glow,
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', gap: Spacing.md, paddingHorizontal: Spacing.xl },
+  emptyIconWrap: {
+    width: 96, height: 96, borderRadius: 48,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, marginBottom: Spacing.sm,
   },
-  emptyBtnText: { fontSize: 16, fontWeight: '800', color: Colors.white },
+  emptyTitle: { fontSize: 24, fontWeight: '900' },
+  emptySub: { fontSize: 15, textAlign: 'center' },
+  emptyBtn: {
+    marginTop: Spacing.sm,
+    backgroundColor: '#F05A1A',
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    shadowColor: '#F05A1A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  emptyBtnText: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
 
   // Scroll
   scrollContent: { padding: Spacing.md, gap: Spacing.md },
 
-  // Title row
+  // Title
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  title: { fontSize: 30, fontWeight: '900', color: Colors.text },
+  title: { fontSize: 30, fontWeight: '900' },
   countPill: {
-    backgroundColor: Colors.primary, borderRadius: Radius.full,
+    backgroundColor: '#F05A1A', borderRadius: Radius.full,
     paddingHorizontal: 10, paddingVertical: 3,
   },
-  countPillText: { fontSize: 12, fontWeight: '800', color: Colors.white },
+  countPillText: { fontSize: 12, fontWeight: '800', color: '#fff' },
 
   // Card
   card: {
-    backgroundColor: Colors.white,
     borderRadius: Radius.lg,
     padding: Spacing.md,
-    ...Shadows.card,
     borderWidth: 1,
-    borderColor: Colors.border,
     gap: Spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
   // Cart item
   cartItemWrapper: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: 4 },
-  itemThumb: { width: 60, height: 60, borderRadius: Radius.md, backgroundColor: Colors.surface },
-  thumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  itemThumb: { width: 60, height: 60, borderRadius: Radius.md },
   cartItemInfo: { flex: 1 },
-  itemName: { fontSize: 14, fontWeight: '700', color: Colors.text },
-  itemOptions: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
-  itemPrice: { fontSize: 14, fontWeight: '700', color: Colors.primary, marginTop: 3 },
+  itemName: { fontSize: 14, fontWeight: '700' },
+  itemOptions: { fontSize: 11, marginTop: 2 },
+  itemPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
+  itemPrice: { fontSize: 14, fontWeight: '700' },
   qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   qtyBtn: {
     width: 30, height: 30, borderRadius: Radius.full,
-    backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: Colors.border,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
   },
-  qty: { fontSize: 15, fontWeight: '700', color: Colors.text, minWidth: 18, textAlign: 'center' },
+  qty: { fontSize: 15, fontWeight: '700', minWidth: 18, textAlign: 'center' },
   trashBtn: {
     width: 30, height: 30, borderRadius: Radius.full,
     backgroundColor: 'rgba(239,68,68,0.08)', alignItems: 'center', justifyContent: 'center',
   },
-  divider: { height: 1, backgroundColor: Colors.border, marginVertical: 2 },
+  divider: { height: 1, marginVertical: 2 },
 
-  // Price with symbol
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  itemPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
 
   // Section
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.text },
-  sectionSub: { fontSize: 13, color: Colors.textSecondary },
+  sectionTitle: { fontSize: 15, fontWeight: '700' },
+  sectionSub: { fontSize: 13 },
 
   // Location
   locationList: { gap: Spacing.sm },
   locationOption: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: Spacing.sm + 2, borderRadius: Radius.md,
-    borderWidth: 1.5, borderColor: Colors.border,
+    padding: Spacing.sm + 2, borderRadius: Radius.md, borderWidth: 1.5,
   },
-  locationSelected: { borderColor: Colors.primary, backgroundColor: Colors.primaryTint },
   locationLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   openDot: { width: 8, height: 8, borderRadius: 4 },
-  locationName: { fontSize: 14, fontWeight: '700', color: Colors.text },
-  locationCity: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
+  locationName: { fontSize: 14, fontWeight: '700' },
+  locationCity: { fontSize: 11, marginTop: 1 },
   radioOuter: {
     width: 20, height: 20, borderRadius: 10,
-    borderWidth: 2, borderColor: Colors.border,
-    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, alignItems: 'center', justifyContent: 'center',
   },
-  radioOuterSelected: { borderColor: Colors.primary },
-  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#F05A1A' },
 
   // Points
   pointsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flexWrap: 'wrap' },
   pointsValueBox: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
-  pointsValue: { fontSize: 22, fontWeight: '900', color: Colors.primary },
-  pointsLabel: { fontSize: 12, color: Colors.textMuted },
-  discountBadge: {
-    backgroundColor: Colors.successTint, borderRadius: Radius.full,
-    paddingHorizontal: 10, paddingVertical: 4,
-  },
-  discountPreview: { fontSize: 13, fontWeight: '700', color: Colors.success },
+  pointsValue: { fontSize: 22, fontWeight: '900' },
+  pointsLabel: { fontSize: 12 },
+  discountBadge: { borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4 },
+  discountPreview: { fontSize: 13, fontWeight: '700', color: '#22C55E' },
 
   // Summary
   summaryRows: { gap: 8 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  summaryLabel: { fontSize: 14, color: Colors.textSecondary },
-  summaryValue: { fontSize: 14, fontWeight: '600', color: Colors.text },
-  totalLabel: { fontSize: 17, fontWeight: '800', color: Colors.text },
-  totalValue: { fontSize: 22, fontWeight: '900', color: Colors.primary },
+  summaryLabel: { fontSize: 14 },
+  summaryValue: { fontSize: 14, fontWeight: '600' },
+  totalLabel: { fontSize: 17, fontWeight: '800' },
+  totalValue: { fontSize: 22, fontWeight: '900', color: '#F05A1A' },
   earnRow: { alignItems: 'flex-end', marginTop: 2 },
-  earnNote: { fontSize: 12, color: Colors.success, fontWeight: '600' },
+  earnNote: { fontSize: 12, color: '#22C55E', fontWeight: '600' },
 
   // Sticky checkout
-  stickyWrapper: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-  },
+  stickyWrapper: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   fadeGradient: { height: 32, width: '100%' },
   stickyCheckout: {
-    backgroundColor: Colors.white,
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.lg,
     paddingTop: Spacing.sm,
   },
   checkoutBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#F05A1A',
     borderRadius: Radius.lg,
     padding: Spacing.md + 2,
     alignItems: 'center',
-    ...Shadows.glowStrong,
+    shadowColor: '#F05A1A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   checkoutBtnDisabled: { opacity: 0.6 },
-  checkoutBtnText: { fontSize: 17, fontWeight: '900', color: Colors.white, letterSpacing: 0.3 },
+  checkoutBtnText: { fontSize: 17, fontWeight: '900', color: '#fff', letterSpacing: 0.3 },
   pickupNote: {
-    textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.success,
-    marginBottom: 6,
-    letterSpacing: 0.3,
+    textAlign: 'center', fontSize: 12, fontWeight: '700',
+    color: '#22C55E', marginBottom: 6, letterSpacing: 0.3,
   },
 })

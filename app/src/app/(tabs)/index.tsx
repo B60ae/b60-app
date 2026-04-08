@@ -10,10 +10,11 @@ import {
   Dimensions,
   Platform,
 } from 'react-native'
+import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { Bell, MapPin, Zap, Flame, Star, TrendingUp, Clock } from 'lucide-react-native'
+import { Bell, Zap, Flame, Star } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { menuApi, locationsApi, loyaltyApi } from '../../services/api'
@@ -45,7 +46,7 @@ const PROMOS = [
   {
     id: '1',
     topLabel: '2× POINTS',
-    subLabel: 'This weekend only 🔥',
+    subLabel: 'This weekend only',
     gradientColors: ['#F05A1A', '#C94400'] as const,
     icon: Zap,
     tag: 'HOT',
@@ -208,17 +209,29 @@ export default function HomeScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
         {/* ── Header ── */}
-        <StaggerSection index={0} style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={[styles.greeting, { color: theme.text }]}>YO, {firstName.toUpperCase()} 👋</Text>
-            <Text style={[styles.greetingSub, { color: theme.textSecondary }]}>{greeting} — what are you smashing?</Text>
+        <StaggerSection index={0} style={[styles.header, { borderBottomColor: theme.border }]}>
+          {/* Brand logo block */}
+          <View style={styles.headerBrand}>
+            <Image
+              source={require('../../../assets/images/icon.png')}
+              style={styles.headerIcon}
+              contentFit="contain"
+            />
+            <View>
+              <Text style={[styles.brandName, { color: theme.text }]}>B60</Text>
+              <Text style={[styles.brandTagline, { color: theme.primary }]}>SMASH BURGERS</Text>
+            </View>
           </View>
-          <Pressable
-            style={[styles.notifBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-            onPress={() => Platform.OS !== 'web' && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-          >
-            <Bell size={20} color={theme.text} />
-          </Pressable>
+          {/* User greeting + bell */}
+          <View style={styles.headerRight}>
+            <Text style={[styles.greeting, { color: theme.textSecondary }]}>{greeting.toUpperCase()}, {firstName.toUpperCase()}</Text>
+            <Pressable
+              style={[styles.notifBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              onPress={() => Platform.OS !== 'web' && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+            >
+              <Bell size={18} color={theme.text} />
+            </Pressable>
+          </View>
         </StaggerSection>
 
         {/* ── Hype Ticker ── */}
@@ -363,13 +376,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
   },
-  headerLeft: { flex: 1 },
-  greeting: { fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
-  greetingSub: { fontSize: 13, fontWeight: '600', marginTop: 2 },
+  headerBrand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerIcon: { width: 40, height: 40, borderRadius: 10 },
+  brandName: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
+  brandTagline: { fontSize: 9, fontWeight: '900', letterSpacing: 2, marginTop: -2 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  greeting: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   notifBtn: {
-    width: 44, height: 44, borderRadius: Radius.full,
-    borderWidth: 2, alignItems: 'center', justifyContent: 'center',
+    width: 40, height: 40, borderRadius: Radius.full,
+    borderWidth: 1.5, alignItems: 'center', justifyContent: 'center',
   },
   heroWrapper: { position: 'relative' },
   liveContainer: {

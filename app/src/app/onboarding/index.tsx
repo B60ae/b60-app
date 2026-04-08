@@ -12,7 +12,7 @@ export const ONBOARDING_KEY = 'b60_onboarding_done'
 const SLIDES = [
   {
     key: 'smash',
-    emoji: '🍔',
+    step: '01',
     title: 'SMASH IT.',
     body: 'Hand-smashed burgers made fresh to order. No shortcuts. All flavour.',
     image: 'https://b60.ae/images/fancy.webp',
@@ -20,16 +20,16 @@ const SLIDES = [
   },
   {
     key: 'earn',
-    emoji: '🏅',
-    title: 'Earn Points',
+    step: '02',
+    title: 'EARN POINTS',
     body: 'Every dirham you spend earns you loyalty points. Redeem them for free food.',
     image: 'https://b60.ae/images/vegas.webp',
     gradient: ['#1B2A4A', '#2D3E6A'] as [string, string],
   },
   {
     key: 'pickup',
-    emoji: '⚡',
-    title: 'Pick Up Fast',
+    step: '03',
+    title: 'PICK UP FAST',
     body: 'Order ahead, skip the wait. Your smash burger will be ready when you are.',
     image: 'https://b60.ae/images/classic-beef.webp',
     gradient: [Colors.success, '#166534'] as [string, string],
@@ -93,7 +93,7 @@ export default function OnboardingScreen() {
 
             {/* Content */}
             <View style={styles.slideContent}>
-              <Text style={styles.slideEmoji}>{slide.emoji}</Text>
+              <Text style={styles.slideStep}>{slide.step}</Text>
               <Text style={styles.slideTitle}>{slide.title}</Text>
               <Text style={styles.slideBody}>{slide.body}</Text>
             </View>
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     paddingBottom: 160,
     gap: Spacing.md,
   },
-  slideEmoji: { fontSize: 56 },
+  slideStep: { fontSize: 13, fontWeight: '900', color: Colors.primary, letterSpacing: 4 },
   slideTitle: { fontSize: 44, fontWeight: '900', color: Colors.white, lineHeight: 48 },
   slideBody: { fontSize: 17, color: 'rgba(255,255,255,0.85)', lineHeight: 26, maxWidth: 300 },
   controls: {
