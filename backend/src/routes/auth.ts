@@ -60,7 +60,7 @@ authRouter.post('/otp/send',
 // ─── Verify OTP ───────────────────────────────────────────────────────────────
 authRouter.post('/otp/verify',
   body('email').isEmail(),
-  body('otp').isLength({ min: 4, max: 6 }),
+  body('otp').isLength({ min: 6, max: 6 }),
   async (req, res) => {
     const errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })

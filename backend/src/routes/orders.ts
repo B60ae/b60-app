@@ -21,10 +21,15 @@ ordersRouter.post('/',
     const userId = req.userId!
 
     try {
-      // Validate and apply points redemption
-      let finalDiscount = discount ?? 0
+      const finalDiscount = discount ?? 0
+
+      // Validate points balance before creating order
       if (points_redeemed > 0) {
-        await redeemPoints(userId, 'pending', points_redeemed)
+        const { data: balanceUser } = await supabase
+          .from('users').select('loyalty_points').eq('id', userId).single()
+        if (!balanceUser || balanceUser.loyalty_points < points_redeemed) {
+          return res.status(400).json({ error: 'Insufficient points' })
+        }
       }
 
       // Create order in Supabase
@@ -45,6 +50,11 @@ ordersRouter.post('/',
 
       if (error) throw error
 
+      // Redeem points now that we have a real order id
+      if (points_redeemed > 0) {
+        await redeemPoints(userId, order.id, points_redeemed)
+      }
+
       // Push to Dart POS
       const dartPayload = {
         external_id: order.id,
@@ -54,7 +64,7 @@ ordersRouter.post('/',
           name: i.menu_item.name,
           quantity: i.quantity,
           unit_price: i.menu_item.price,
-          modifiers: i.selected_options.map((o: any) => ({ name: o.name, price: o.price_delta })),
+          modifiers: (i.selected_options ?? []).map((o: any) => ({ name: o.name, price: o.price_delta })),
         })),
         total,
         customer_name: req.user?.name,
@@ -74,22 +84,22 @@ ordersRouter.post('/',
         ? new Date(Date.now() + dartResponse.estimated_ready_minutes * 60000).toISOString()
         : new Date(Date.now() + 15 * 60000).toISOString()
 
+      // Award points (net of redemption)
+      const pointsEarned = await awardPoints(userId, order.id, total)
+
       const { data: updatedOrder } = await supabase
         .from('orders')
         .update({
           dart_pos_order_id: dartResponse?.pos_order_id,
           status: 'confirmed',
           estimated_ready_at: estimatedReadyAt,
+          points_earned: pointsEarned,
         })
         .eq('id', order.id)
         .select()
         .single()
 
-      // Award points (net of redemption)
-      const pointsEarned = await awardPoints(userId, order.id, total)
-      await supabase.from('orders').update({ points_earned: pointsEarned }).eq('id', order.id)
-
-      res.status(201).json({ ...updatedOrder, points_earned: pointsEarned })
+      res.status(201).json({ ...(updatedOrder ?? order), points_earned: pointsEarned })
 
     } catch (err: any) {
       console.error('[Orders] Error:', err.message)

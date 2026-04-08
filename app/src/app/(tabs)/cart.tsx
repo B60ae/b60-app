@@ -125,9 +125,11 @@ export default function CartScreen() {
     queryFn: locationsApi.getAll,
   })
 
+  // Max points = min(user balance, points equivalent of full subtotal discount)
+  // POINTS_TO_AED = 0.05 → 1 pt = AED 0.05 → to cover subtotal: subtotal / 0.05 pts
   const maxRedeemable = Math.min(
     user?.loyalty_points ?? 0,
-    Math.floor(subtotal() / POINTS_TO_AED) * 20, // points, not AED
+    Math.floor(subtotal() / POINTS_TO_AED),
   )
 
   const handlePlaceOrder = async () => {
@@ -139,15 +141,9 @@ export default function CartScreen() {
     setPlacing(true)
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     try {
-      const formattedItems = items.map(i => ({
-        menu_item_id: i.menu_item.id,
-        quantity: i.quantity,
-        selected_options: i.selected_options,
-        line_total: i.line_total,
-      }))
       const earned = pointsEarned()
       const order = await ordersApi.create({
-        items: formattedItems as any,
+        items: items as any,
         location_id: locationId,
         subtotal: subtotal(),
         points_redeemed: pointsToRedeem,

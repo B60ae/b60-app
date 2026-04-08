@@ -29,8 +29,9 @@ export const useAuthStore = create<AuthState>()(
       isLoading: true,
       isAuthenticated: false,
 
-      // persist middleware handles storage — just update in-memory state
+      // persist middleware handles storage + save token for axios interceptor
       setUser: async (user, token) => {
+        await SecureStore.setItemAsync('authToken', token)
         set({ user, token, isAuthenticated: true })
       },
 
@@ -38,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
       loadSession: async () => {},
 
       logout: async () => {
+        await SecureStore.deleteItemAsync('authToken')
         set({ user: null, token: null, isAuthenticated: false })
       },
 
