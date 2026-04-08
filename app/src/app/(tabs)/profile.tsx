@@ -272,9 +272,12 @@ export default function ProfileScreen() {
         )}
 
         {/* ── Logout ── */}
-        <Pressable style={[styles.logoutBtn, { backgroundColor: theme.error, borderColor: theme.black, shadowColor: theme.black }]} onPress={handleLogout}>
-          <LogOut size={18} color={theme.white} />
-          <Text style={[styles.logoutText, { color: theme.white }]}>Log Out</Text>
+        <Pressable
+          style={[styles.logoutBtn, { borderColor: theme.error }]}
+          onPress={handleLogout}
+        >
+          <Text style={[styles.logoutText, { color: theme.error }]}>LOG OUT</Text>
+          <LogOut size={16} color={theme.error} strokeWidth={2.5} />
         </Pressable>
 
       </ScrollView>
@@ -406,16 +409,13 @@ const styles = StyleSheet.create({
   // Logout
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: Spacing.sm,
+    gap: 8,
     marginHorizontal: Spacing.md,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-    // Neobrutalist shadow — borderColor/shadowColor applied inline via theme
-    borderWidth: 2,
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
+    marginBottom: Spacing.lg,
+    height: 52,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    backgroundColor: 'transparent',
   },
-  logoutText: { fontSize: 15, fontWeight: '900', textTransform: 'uppercase' },
+  logoutText: { fontSize: 14, fontWeight: '700', letterSpacing: 1 },
 })
