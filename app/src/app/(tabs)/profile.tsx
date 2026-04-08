@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   menuRowIcon: {
-    width: 38, height: 38, borderRadius: 10,
+    width: 44, height: 44, borderRadius: 12,
     backgroundColor: 'rgba(240, 90, 26, 0.1)',
     alignItems: 'center', justifyContent: 'center',
   },

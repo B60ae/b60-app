@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   greeting: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   notifBtn: {
-    width: 40, height: 40, borderRadius: Radius.full,
+    width: 44, height: 44, borderRadius: Radius.full,
     borderWidth: 1.5, alignItems: 'center', justifyContent: 'center',
   },
   heroWrapper: { position: 'relative' },
@@ -434,7 +434,8 @@ const styles = StyleSheet.create({
   categoryRow: { paddingHorizontal: Spacing.md, gap: Spacing.sm },
   categoryChip: {
     flexDirection: 'row', alignItems: 'center', borderRadius: Radius.md,
-    paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderWidth: 2,
+    paddingHorizontal: 16, paddingVertical: 13, gap: 8, borderWidth: 2,
+    minHeight: 44,
   },
   categoryLabel: { fontSize: 13, fontWeight: '900', textTransform: 'uppercase' },
   promoRow: { paddingHorizontal: Spacing.md, gap: Spacing.md },
@@ -460,9 +461,11 @@ const styles = StyleSheet.create({
   featuredCardPrice: { fontSize: 15, fontWeight: '900' },
   featuredAddBtn: {
     backgroundColor: '#F05A1A', borderRadius: Radius.sm,
-    paddingVertical: 6, alignItems: 'center', marginTop: 2,
+    paddingVertical: 10, alignItems: 'center', marginTop: 4,
+    minHeight: 44,
+    justifyContent: 'center',
   },
-  featuredAddBtnText: { fontSize: 11, fontWeight: '900', color: '#fff', letterSpacing: 1 },
+  featuredAddBtnText: { fontSize: 12, fontWeight: '900', color: '#fff', letterSpacing: 1 },
   locationList: { paddingHorizontal: Spacing.md, gap: Spacing.sm },
   locationCard: {
     flexDirection: 'row', alignItems: 'center',
