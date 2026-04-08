@@ -5,7 +5,7 @@ import {
   StyleSheet,
   Pressable,
   Platform,
-  Animated,
+  Animated as RNAnimated,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { useLocalSearchParams, router } from 'expo-router'
@@ -34,7 +34,7 @@ export default function ItemDetailScreen() {
 
   const addBtnScale = useSharedValue(1)
   const qtyScale = useSharedValue(1)
-  const scrollY = useRef(new Animated.Value(0)).current
+  const scrollY = useRef(new RNAnimated.Value(0)).current
   const imageTranslate = scrollY.interpolate({
     inputRange: [0, 340],
     outputRange: [0, -170],
@@ -109,14 +109,14 @@ export default function ItemDetailScreen() {
     <View style={styles.container}>
       {/* Hero image — 340px with parallax */}
       <View style={styles.imageContainer}>
-        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: imageTranslate }] }]}>
+        <RNAnimated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: imageTranslate }] }]}>
           <Image
             source={{ uri: item.image_url }}
             style={[styles.image, { height: 400 }]}
             contentFit="cover"
             transition={300}
           />
-        </Animated.View>
+        </RNAnimated.View>
         {/* Gradient overlay: bottom third */}
         <LinearGradient
           colors={['transparent', 'transparent', 'rgba(0,0,0,0.72)']}
@@ -141,13 +141,13 @@ export default function ItemDetailScreen() {
         </View>
       </View>
 
-      <Animated.ScrollView
+      <RNAnimated.ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         contentInset={{ bottom: 100 }}
         scrollEventThrottle={16}
-        onScroll={Animated.event(
+        onScroll={RNAnimated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: true }
         )}
@@ -232,7 +232,7 @@ export default function ItemDetailScreen() {
 
         {/* Bottom spacer for sticky CTA */}
         <View style={{ height: 110 }} />
-      </Animated.ScrollView>
+      </RNAnimated.ScrollView>
 
       {/* Sticky add-to-cart */}
       <View style={styles.stickyCtaWrapper} pointerEvents="box-none">
