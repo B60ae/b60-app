@@ -11,6 +11,7 @@ menuRouter.get('/categories', async (_, res) => {
     .order('sort_order')
 
   if (error) return res.status(500).json({ error: 'Failed to fetch categories' })
+  res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60')
   res.json(data)
 })
 
@@ -28,6 +29,7 @@ menuRouter.get('/items', async (req, res) => {
 
   const { data, error } = await query
   if (error) return res.status(500).json({ error: 'Failed to fetch items' })
+  res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30')
   res.json(data)
 })
 
@@ -53,5 +55,6 @@ menuRouter.get('/featured', async (_, res) => {
     .order('sort_order')
 
   if (error) return res.status(500).json({ error: 'Failed to fetch featured' })
+  res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30')
   res.json(data)
 })

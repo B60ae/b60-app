@@ -1,9 +1,9 @@
 // ─── User ───────────────────────────────────────────────────────────────────
 export interface User {
   id: string
-  phone: string
+  phone?: string        // nullable — email-only OTP auth, phone not collected
   name: string
-  email?: string
+  email: string
   avatar_url?: string
   loyalty_points: number
   created_at: string

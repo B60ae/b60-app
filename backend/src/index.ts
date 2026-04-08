@@ -36,8 +36,17 @@ app.use('/api/orders', ordersRouter)
 app.use('/api/loyalty', loyaltyRouter)
 app.use('/api/locations', locationsRouter)
 
-// Health check
-app.get('/health', (_, res) => res.json({ status: 'ok', service: 'b60-api', ts: new Date() }))
+// Health check — includes DB ping
+app.get('/health', async (_, res) => {
+  try {
+    const { error } = await (await import('./config/supabase')).supabase
+      .from('locations').select('id').limit(1)
+    if (error) throw error
+    res.json({ status: 'ok', service: 'b60-api', db: 'ok', ts: new Date() })
+  } catch {
+    res.status(503).json({ status: 'degraded', service: 'b60-api', db: 'error', ts: new Date() })
+  }
+})
 
 // 404
 app.use((_, res) => res.status(404).json({ error: 'Not found' }))

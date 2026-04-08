@@ -34,11 +34,11 @@ const FEATURED_CARD_WIDTH = 180
 const FEATURED_SNAP_INTERVAL = 194
 
 const CATEGORY_QUICK = [
-  { id: 'burgers', label: 'Burgers', emoji: '🍔' },
-  { id: 'chicken', label: 'Chicken', emoji: '🍗' },
-  { id: 'fries', label: 'Fries', emoji: '🍟' },
-  { id: 'dessert', label: 'Dessert', emoji: '🍫' },
-  { id: 'extras', label: 'Extras', emoji: '🥤' },
+  { id: 'burgers', label: 'Burgers' },
+  { id: 'chicken', label: 'Chicken' },
+  { id: 'fries', label: 'Fries' },
+  { id: 'dessert', label: 'Dessert' },
+  { id: 'extras', label: 'Extras' },
 ]
 
 const PROMOS = [
@@ -255,12 +255,11 @@ export default function HomeScreen() {
                   onPress={() => handleCategoryPress(cat.id)}
                   style={[
                     styles.categoryChip,
-                    active ? { backgroundColor: theme.black, borderColor: theme.black, ...Shadows.hard } 
+                    active ? { backgroundColor: theme.primary, borderColor: theme.primary, ...Shadows.hard }
                            : { backgroundColor: theme.surface, borderColor: theme.border },
                     { transform: [{ rotate: idx % 2 === 0 ? '-1.5deg' : '1.5deg' }] }
                   ]}
                 >
-                  <Text style={{ fontSize: 16 }}>{cat.emoji}</Text>
                   <Text style={[styles.categoryLabel, { color: active ? theme.white : theme.textSecondary }]}>
                     {cat.label}
                   </Text>
@@ -338,7 +337,7 @@ export default function HomeScreen() {
 
         {/* ── Locations ── */}
         <StaggerSection index={user ? 6 : 5} style={{ marginTop: Spacing.lg, marginBottom: Spacing.xxl }}>
-          <SectionHeader title="Find Us" onSeeAll={() => router.push('/(tabs)/map')} />
+          <SectionHeader title="Find Us" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.locationRow}>
             {(locations ?? []).map((loc: any) => (
               <Pressable key={loc.id} style={[styles.locationCard, { backgroundColor: theme.surface, borderColor: theme.border }, Shadows.card]}>

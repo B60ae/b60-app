@@ -55,7 +55,7 @@ interface PillProps {
   pillWidth: number
 }
 
-function CategoryPill({ label, emoji, isActive, onPress, pillWidth }: PillProps) {
+function CategoryPill({ label, isActive, onPress, pillWidth }: Omit<PillProps, 'emoji'>) {
   return (
     <Pressable
       onPress={onPress}
@@ -65,7 +65,6 @@ function CategoryPill({ label, emoji, isActive, onPress, pillWidth }: PillProps)
         isActive ? styles.pillActive : styles.pillInactive,
       ]}
     >
-      <Text style={styles.pillEmoji}>{emoji}</Text>
       <Text
         style={[styles.pillLabel, isActive ? styles.pillLabelActive : styles.pillLabelInactive]}
         numberOfLines={1}
@@ -311,7 +310,6 @@ export default function MenuScreen() {
           renderItem={({ item: cat }) => (
             <CategoryPill
               label={cat.label}
-              emoji={cat.emoji}
               isActive={activeCategoryId === cat.id}
               onPress={() => handleCategoryPress(cat.id)}
               pillWidth={PILL_WIDTH}
@@ -326,14 +324,13 @@ export default function MenuScreen() {
         <SkeletonGrid count={4} />
       ) : filtered.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>🔍</Text>
           <Text style={styles.emptyText}>
             {search.trim()
-              ? `Nothing for "${search.trim()}" 👀`
-              : 'Nada here yet'}
+              ? `Nothing for "${search.trim()}"`
+              : 'Nothing here yet'}
           </Text>
           <Text style={styles.emptySubtext}>
-            {search.trim() ? 'Try a different vibe' : 'Check back soon fam'}
+            {search.trim() ? 'Try a different search' : 'Check back soon'}
           </Text>
         </View>
       ) : (

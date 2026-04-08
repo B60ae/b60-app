@@ -11,8 +11,12 @@ ordersRouter.use(requireAuth)
 // ─── Create Order ─────────────────────────────────────────────────────────────
 ordersRouter.post('/',
   body('items').isArray({ min: 1 }),
+  body('items.*.menu_item.id').notEmpty().withMessage('Each item must have menu_item.id'),
+  body('items.*.menu_item.price').isNumeric().withMessage('Each item must have menu_item.price'),
+  body('items.*.quantity').isInt({ min: 1 }).withMessage('Each item quantity must be >= 1'),
   body('location_id').notEmpty(),
   body('total').isNumeric(),
+  body('subtotal').isNumeric(),
   async (req: AuthRequest, res) => {
     const errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })
