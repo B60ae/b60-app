@@ -211,9 +211,11 @@ export default function HomeScreen() {
         <StaggerSection index={0} style={[styles.header, { borderBottomColor: theme.border }]}>
           {/* Brand logo block */}
           <View style={styles.headerBrand}>
-            <View style={[styles.logoBox, { backgroundColor: theme.primary }]}>
-              <Text style={styles.logoBoxText}>B60</Text>
-            </View>
+            <Image
+              source={require('../../../assets/images/icon.png')}
+              style={styles.headerLogo}
+              contentFit="contain"
+            />
             <Text style={[styles.brandTagline, { color: theme.textSecondary }]}>SMASH BURGERS · DUBAI</Text>
           </View>
           {/* User greeting + bell */}
@@ -362,10 +364,12 @@ export default function HomeScreen() {
                   {/* Left accent bar */}
                   <View style={[styles.locationAccent, { backgroundColor: isOpen ? theme.primary : theme.textMuted }]} />
 
-                  {/* B60 logo box */}
-                  <View style={[styles.locationLogo, { backgroundColor: isOpen ? theme.primary : theme.textMuted }]}>
-                    <Text style={styles.locationLogoText}>B60</Text>
-                  </View>
+                  {/* B60 logo */}
+                  <Image
+                    source={require('../../../assets/images/icon.png')}
+                    style={[styles.locationLogo, !isOpen && { opacity: 0.4 }]}
+                    contentFit="contain"
+                  />
 
                   {/* Info */}
                   <View style={styles.locationInfo}>
@@ -408,12 +412,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
     borderBottomWidth: 1,
   },
-  headerBrand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logoBox: {
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 6,
-  },
-  logoBoxText: { fontSize: 18, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+  headerBrand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerLogo: { width: 48, height: 48 },
   brandTagline: { fontSize: 9, fontWeight: '900', letterSpacing: 2 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   greeting: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
@@ -472,11 +472,9 @@ const styles = StyleSheet.create({
   },
   locationAccent: { width: 4, alignSelf: 'stretch' },
   locationLogo: {
-    width: 48, height: 48, borderRadius: Radius.sm,
-    alignItems: 'center', justifyContent: 'center',
+    width: 52, height: 52,
     margin: Spacing.sm,
   },
-  locationLogoText: { fontSize: 12, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
   locationInfo: { flex: 1, gap: 3 },
   locationName: { fontSize: 14, fontWeight: '900' },
   locationAddrRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
