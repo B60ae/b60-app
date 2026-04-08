@@ -14,7 +14,7 @@ import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { Bell, Zap, Flame, Star } from 'lucide-react-native'
+import { Bell, Zap, Flame, Star, MapPin, Clock } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { menuApi, locationsApi, loyaltyApi } from '../../services/api'
@@ -354,18 +354,45 @@ export default function HomeScreen() {
         {/* ── Locations ── */}
         <StaggerSection index={user ? 6 : 5} style={{ marginTop: Spacing.lg, marginBottom: Spacing.xxl }}>
           <SectionHeader title="Find Us" />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.locationRow}>
-            {(locations ?? []).map((loc: any) => (
-              <Pressable key={loc.id} style={[styles.locationCard, { backgroundColor: theme.surface, borderColor: theme.border }, Shadows.card]}>
-                <View style={styles.locationTopRow}>
-                  <Text style={[styles.locationCity, { color: theme.primary }]}>{loc.city}</Text>
-                  <View style={[styles.openDot, { backgroundColor: loc.is_open !== false ? theme.success : theme.error }]} />
+          <View style={styles.locationList}>
+            {(locations ?? []).map((loc: any) => {
+              const isOpen = loc.is_open !== false
+              return (
+                <View key={loc.id} style={[styles.locationCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  {/* Left accent bar */}
+                  <View style={[styles.locationAccent, { backgroundColor: isOpen ? theme.primary : theme.textMuted }]} />
+
+                  {/* B60 logo box */}
+                  <View style={[styles.locationLogo, { backgroundColor: isOpen ? theme.primary : theme.textMuted }]}>
+                    <Text style={styles.locationLogoText}>B60</Text>
+                  </View>
+
+                  {/* Info */}
+                  <View style={styles.locationInfo}>
+                    <Text style={[styles.locationName, { color: theme.text }]}>{loc.name}</Text>
+                    <View style={styles.locationAddrRow}>
+                      <MapPin size={11} color={theme.textMuted} />
+                      <Text style={[styles.locationAddr, { color: theme.textSecondary }]} numberOfLines={1}>{loc.address}</Text>
+                    </View>
+                    {loc.hours && (
+                      <View style={styles.locationAddrRow}>
+                        <Clock size={11} color={theme.textMuted} />
+                        <Text style={[styles.locationAddr, { color: theme.textSecondary }]}>{loc.hours}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Open/Closed pill */}
+                  <View style={[styles.openPill, { backgroundColor: isOpen ? 'rgba(34,197,94,0.12)' : 'rgba(100,100,100,0.12)' }]}>
+                    <View style={[styles.openDot, { backgroundColor: isOpen ? theme.success : theme.textMuted }]} />
+                    <Text style={[styles.openPillText, { color: isOpen ? theme.success : theme.textMuted }]}>
+                      {isOpen ? 'OPEN' : 'CLOSED'}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={[styles.locationName, { color: theme.text }]}>{loc.name}</Text>
-                <Text style={[styles.locationAddr, { color: theme.textSecondary }]} numberOfLines={1}>{loc.address}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+              )
+            })}
+          </View>
         </StaggerSection>
 
       </ScrollView>
@@ -436,12 +463,29 @@ const styles = StyleSheet.create({
     paddingVertical: 6, alignItems: 'center', marginTop: 2,
   },
   featuredAddBtnText: { fontSize: 11, fontWeight: '900', color: '#fff', letterSpacing: 1 },
-  locationRow: { paddingHorizontal: Spacing.md, gap: Spacing.md },
-  locationCard: { width: 180, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1.5 },
-  locationTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  locationCity: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
-  openDot: { width: 8, height: 8, borderRadius: 4 },
-  locationName: { fontSize: 15, fontWeight: '900' },
-  locationAddr: { fontSize: 12, marginTop: 4 },
+  locationList: { paddingHorizontal: Spacing.md, gap: Spacing.sm },
+  locationCard: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: Radius.lg, borderWidth: 1.5,
+    overflow: 'hidden', gap: Spacing.sm,
+    paddingRight: Spacing.sm,
+  },
+  locationAccent: { width: 4, alignSelf: 'stretch' },
+  locationLogo: {
+    width: 48, height: 48, borderRadius: Radius.sm,
+    alignItems: 'center', justifyContent: 'center',
+    margin: Spacing.sm,
+  },
+  locationLogoText: { fontSize: 12, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
+  locationInfo: { flex: 1, gap: 3 },
+  locationName: { fontSize: 14, fontWeight: '900' },
+  locationAddrRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  locationAddr: { fontSize: 11, flex: 1 },
+  openPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 8, paddingVertical: 5, borderRadius: Radius.full,
+  },
+  openDot: { width: 6, height: 6, borderRadius: 3 },
+  openPillText: { fontSize: 9, fontWeight: '900', letterSpacing: 1 },
 })
 

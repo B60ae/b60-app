@@ -1,10 +1,29 @@
 import { useRef, useEffect } from 'react'
 import { Tabs } from 'expo-router'
-import { Home, UtensilsCrossed, ShoppingCart, Star, User } from 'lucide-react-native'
+import { UtensilsCrossed, ShoppingCart, Star, User } from 'lucide-react-native'
 import { View, Text, StyleSheet, Animated } from 'react-native'
 import { LightTheme, DarkTheme } from '../../utils/theme'
 import { useCartStore } from '../../stores/cartStore'
 import { useThemeStore } from '../../stores/themeStore'
+
+function B60TabIcon({ color }: { color: string }) {
+  const isActive = color !== '#888888' && color !== '#444444' && color !== '#999999'
+  return (
+    <View style={[b60IconStyles.box, isActive && b60IconStyles.boxActive]}>
+      <Text style={[b60IconStyles.text, isActive && b60IconStyles.textActive]}>B60</Text>
+    </View>
+  )
+}
+
+const b60IconStyles = StyleSheet.create({
+  box: {
+    paddingHorizontal: 7, paddingVertical: 2,
+    borderRadius: 5, borderWidth: 1.5, borderColor: 'transparent',
+  },
+  boxActive: { backgroundColor: '#F05A1A', borderColor: '#F05A1A' },
+  text: { fontSize: 11, fontWeight: '900', color: '#888888', letterSpacing: -0.5 },
+  textActive: { color: '#ffffff' },
+})
 
 function CartTabIcon({ color, size, theme }: { color: string; size: number; theme: any }) {
   const count = useCartStore((s) => s.items.length)
@@ -58,7 +77,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'HOME',
-          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />
+          tabBarIcon: ({ color }) => <B60TabIcon color={color} />
         }}
       />
       <Tabs.Screen
