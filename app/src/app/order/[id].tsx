@@ -30,7 +30,7 @@ export default function OrderTrackingScreen() {
   const queryClient = useQueryClient()
   const [cancelling, setCancelling] = useState(false)
 
-  const { data: order } = useQuery({
+  const { data: order, isError, refetch } = useQuery({
     queryKey: ['order', id],
     queryFn: () => ordersApi.get(id!),
     enabled: !!id,
@@ -62,6 +62,19 @@ export default function OrderTrackingScreen() {
     }, 5000)
     return () => clearInterval(interval)
   }, [])
+
+  if (isError) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: T.background }]}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 }}>
+          <Text style={{ color: T.text, fontSize: 16, fontWeight: '700' }}>Failed to load order</Text>
+          <Pressable onPress={() => refetch()} style={{ backgroundColor: T.primary, borderRadius: 8, paddingHorizontal: 24, paddingVertical: 12 }}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>Try Again</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    )
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: T.background }]}>

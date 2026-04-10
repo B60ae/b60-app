@@ -76,9 +76,9 @@ function CartItem({
         <Text style={[styles.itemName, { color: T.text }]} numberOfLines={1}>
           {item.menu_item.name}
         </Text>
-        {item.selected_options.length > 0 && (
+        {(item.selected_options?.length ?? 0) > 0 && (
           <Text style={[styles.itemOptions, { color: T.textMuted }]} numberOfLines={1}>
-            {item.selected_options.map((o: any) => o.name).join(', ')}
+            {item.selected_options?.map((o: any) => o.name).join(', ')}
           </Text>
         )}
         <View style={styles.itemPriceRow}>

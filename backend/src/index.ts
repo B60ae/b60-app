@@ -13,9 +13,22 @@ for (const key of REQUIRED_ENVS) {
     process.exit(1)
   }
 }
+if ((process.env.JWT_SECRET ?? '').length < 32) {
+  console.error('[STARTUP] JWT_SECRET must be at least 32 characters')
+  process.exit(1)
+}
 if (!process.env.DART_POS_EXCLUDED_LOCATIONS) {
   console.warn('[STARTUP] DART_POS_EXCLUDED_LOCATIONS not set — all locations will push to DartPOS')
 }
+
+// ─── Global Error Handlers ────────────────────────────────────────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[UNHANDLED REJECTION]', reason)
+})
+process.on('uncaughtException', (error) => {
+  console.error('[UNCAUGHT EXCEPTION]', error)
+  process.exit(1)
+})
 
 import { authRouter } from './routes/auth'
 import { menuRouter } from './routes/menu'
@@ -66,4 +79,20 @@ app.get('/health', async (_, res) => {
 // 404
 app.use((_, res) => res.status(404).json({ error: 'Not found' }))
 
-app.listen(PORT, () => console.log(`🍔 B60 API running on port ${PORT}`))
+const server = app.listen(PORT, () => console.log(`🍔 B60 API running on port ${PORT}`))
+
+// Request timeout — prevent hung connections
+server.setTimeout(30000)
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('[SIGTERM] Graceful shutdown...')
+  server.close(() => {
+    console.log('[SIGTERM] Server closed')
+    process.exit(0)
+  })
+  setTimeout(() => {
+    console.error('[SIGTERM] Forced shutdown after timeout')
+    process.exit(1)
+  }, 10000)
+})

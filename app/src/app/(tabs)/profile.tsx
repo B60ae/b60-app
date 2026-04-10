@@ -162,6 +162,7 @@ export default function ProfileScreen() {
                     onChangeText={setNameInput}
                     style={[styles.nameInput, { color: theme.white, borderBottomColor: 'rgba(255,255,255,0.5)' }]}
                     autoFocus
+                    editable={!savingName}
                     returnKeyType="done"
                     onSubmitEditing={handleSaveName}
                     placeholderTextColor="rgba(255,255,255,0.5)"
@@ -195,6 +196,7 @@ export default function ProfileScreen() {
                     onChangeText={setPhoneInput}
                     style={[styles.nameInput, { color: 'rgba(255,255,255,0.9)', borderBottomColor: 'rgba(255,255,255,0.5)', fontSize: 14 }]}
                     autoFocus
+                    editable={!savingPhone}
                     keyboardType="phone-pad"
                     returnKeyType="done"
                     onSubmitEditing={handleSavePhone}

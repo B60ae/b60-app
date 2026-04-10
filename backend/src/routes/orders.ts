@@ -1,5 +1,6 @@
 import { Router } from 'express'
-import { body, validationResult } from 'express-validator'
+import { body, param, validationResult } from 'express-validator'
+import rateLimit from 'express-rate-limit'
 import { supabase } from '../config/supabase'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { pushOrderToDart, getOrderStatusFromDart, isLocationExcludedFromDart } from '../services/dartPos'
@@ -8,8 +9,16 @@ import { awardPoints, redeemPoints } from '../services/loyalty'
 export const ordersRouter = Router()
 ordersRouter.use(requireAuth)
 
+// Per-user order rate limit: max 5 orders per minute
+const orderLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  keyGenerator: (req: any) => req.userId ?? req.ip,
+  message: { error: 'Too many orders placed. Please wait a moment.' },
+})
+
 // ─── Create Order ─────────────────────────────────────────────────────────────
-ordersRouter.post('/',
+ordersRouter.post('/', orderLimiter,
   body('items').isArray({ min: 1 }),
   body('items.*.menu_item.id').notEmpty().withMessage('Each item must have menu_item.id'),
   body('items.*.menu_item.price').isNumeric().withMessage('Each item must have menu_item.price'),
@@ -42,7 +51,7 @@ ordersRouter.post('/',
             return res.status(400).json({ error: `Unknown item: ${item.menu_item.id}` })
           }
           const submittedPrice = Number(item.menu_item.price)
-          if (Math.abs(submittedPrice - realPrice) > 0.5) {
+          if (Math.abs(submittedPrice - realPrice) > 0.01) {
             return res.status(400).json({ error: 'Price mismatch detected. Please refresh and try again.' })
           }
         }
@@ -107,9 +116,10 @@ ordersRouter.post('/',
       }
 
       // Update with POS data
-      const estimatedReadyAt = dartResponse
-        ? new Date(Date.now() + dartResponse.estimated_ready_minutes * 60000).toISOString()
-        : new Date(Date.now() + 15 * 60000).toISOString()
+      const readyMinutes = Number.isFinite(dartResponse?.estimated_ready_minutes) && dartResponse!.estimated_ready_minutes > 0
+        ? dartResponse!.estimated_ready_minutes
+        : 15
+      const estimatedReadyAt = new Date(Date.now() + readyMinutes * 60000).toISOString()
 
       // Award points (net of redemption)
       const pointsEarned = await awardPoints(userId, order.id, total)
