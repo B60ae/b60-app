@@ -52,7 +52,7 @@ function ConfettiDot({
   }, [])
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }, { translateY: y.value }],
+    transform: [{ translateX: x.value }, { translateY: y.value }] as any,
     opacity: opacity.value,
   }))
 
@@ -187,8 +187,9 @@ export default function OrderSuccessScreen() {
         {/* CTAs */}
         <View style={styles.ctaGroup}>
           <Pressable
-            style={styles.trackBtn}
-            onPress={() => router.replace({ pathname: '/order/[id]', params: { id: orderId ?? '' } })}
+            style={[styles.trackBtn, !orderId && { opacity: 0.4 }]}
+            disabled={!orderId}
+            onPress={() => orderId && router.replace({ pathname: '/order/[id]', params: { id: orderId } })}
           >
             <MapPin size={18} color="#fff" strokeWidth={2.5} />
             <Text style={styles.trackBtnText}>TRACK MY ORDER</Text>

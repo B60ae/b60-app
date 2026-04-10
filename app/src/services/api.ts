@@ -38,6 +38,7 @@ export const ordersApi = {
   get: (id: string) => client.get<Order>(`/orders/${id}`).then(r => r.data),
   getHistory: () => client.get<Order[]>('/orders/history').then(r => r.data),
   track: (id: string) => client.get<{ status: string; estimated_ready_at: string }>(`/orders/${id}/track`).then(r => r.data),
+  cancel: (id: string) => client.post(`/orders/${id}/cancel`).then(r => r.data),
 }
 
 // ─── Loyalty ──────────────────────────────────────────────────────────────
@@ -56,6 +57,6 @@ export const authApi = {
   sendOtp: (email: string) => client.post('/auth/otp/send', { email }).then(r => r.data),
   verifyOtp: (email: string, otp: string) =>
     client.post<{ token: string; user: User }>('/auth/otp/verify', { email, otp }).then(r => r.data),
-  updateProfile: (data: { name?: string; email?: string }) =>
+  updateProfile: (data: { name?: string; email?: string; phone?: string }) =>
     client.patch<User>('/auth/profile', data).then(r => r.data),
 }

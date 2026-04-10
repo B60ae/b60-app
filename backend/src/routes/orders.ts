@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { body, validationResult } from 'express-validator'
 import { supabase } from '../config/supabase'
 import { requireAuth, AuthRequest } from '../middleware/auth'
-import { pushOrderToDart, getOrderStatusFromDart } from '../services/dartPos'
+import { pushOrderToDart, getOrderStatusFromDart, isLocationExcludedFromDart } from '../services/dartPos'
 import { awardPoints, redeemPoints } from '../services/loyalty'
 
 export const ordersRouter = Router()
@@ -26,6 +26,27 @@ ordersRouter.post('/',
 
     try {
       const finalDiscount = discount ?? 0
+
+      // Validate that submitted item prices match the menu (prevents price injection)
+      const itemIds = items.map((i: any) => i.menu_item.id)
+      const { data: menuItems } = await supabase
+        .from('menu_items')
+        .select('id, price')
+        .in('id', itemIds)
+
+      if (menuItems) {
+        const priceMap = new Map(menuItems.map((m: any) => [m.id, Number(m.price)]))
+        for (const item of items) {
+          const realPrice = priceMap.get(item.menu_item.id)
+          if (realPrice === undefined) {
+            return res.status(400).json({ error: `Unknown item: ${item.menu_item.id}` })
+          }
+          const submittedPrice = Number(item.menu_item.price)
+          if (Math.abs(submittedPrice - realPrice) > 0.5) {
+            return res.status(400).json({ error: 'Price mismatch detected. Please refresh and try again.' })
+          }
+        }
+      }
 
       // Validate points balance before creating order
       if (points_redeemed > 0) {
@@ -59,28 +80,30 @@ ordersRouter.post('/',
         await redeemPoints(userId, order.id, points_redeemed)
       }
 
-      // Push to Dart POS
-      const dartPayload = {
-        external_id: order.id,
-        location_id,
-        items: items.map((i: any) => ({
-          sku: i.menu_item.id,
-          name: i.menu_item.name,
-          quantity: i.quantity,
-          unit_price: i.menu_item.price,
-          modifiers: (i.selected_options ?? []).map((o: any) => ({ name: o.name, price: o.price_delta })),
-        })),
-        total,
-        customer_name: req.user?.name,
-        customer_phone: req.user?.phone,
-      }
-
+      // Push to Dart POS (skip excluded locations e.g. Ghurair)
       let dartResponse
-      try {
-        dartResponse = await pushOrderToDart(dartPayload)
-      } catch {
-        // Log but don't fail — order is in DB, can retry
-        console.error(`[Orders] Dart POS push failed for order ${order.id}`)
+      if (!isLocationExcludedFromDart(location_id)) {
+        const dartPayload = {
+          external_id: order.id,
+          location_id,
+          items: items.map((i: any) => ({
+            sku: i.menu_item.id,
+            name: i.menu_item.name,
+            quantity: i.quantity,
+            unit_price: i.menu_item.price,
+            modifiers: (i.selected_options ?? []).map((o: any) => ({ name: o.name, price: o.price_delta })),
+          })),
+          total,
+          customer_name: req.user?.name,
+          customer_phone: req.user?.phone,
+        }
+        try {
+          dartResponse = await pushOrderToDart(dartPayload)
+        } catch {
+          console.error(`[Orders] Dart POS push failed for order ${order.id}`)
+        }
+      } else {
+        console.log(`[Orders] Skipping Dart POS for excluded location ${location_id} (order ${order.id})`)
       }
 
       // Update with POS data
@@ -159,4 +182,41 @@ ordersRouter.get('/:id/track', async (req: AuthRequest, res) => {
   }
 
   res.json({ status: order.status, estimated_ready_at: order.estimated_ready_at })
+})
+
+// ─── Cancel Order ─────────────────────────────────────────────────────────────
+ordersRouter.post('/:id/cancel', async (req: AuthRequest, res) => {
+  const { data: order } = await supabase
+    .from('orders')
+    .select('status, points_earned')
+    .eq('id', req.params.id)
+    .eq('user_id', req.userId!)
+    .single()
+
+  if (!order) return res.status(404).json({ error: 'Order not found' })
+  if (!['pending', 'confirmed'].includes(order.status)) {
+    return res.status(400).json({ error: 'Order cannot be cancelled at this stage' })
+  }
+
+  await supabase
+    .from('orders')
+    .update({ status: 'cancelled' })
+    .eq('id', req.params.id)
+
+  // Reverse points earned on this order
+  if (order.points_earned > 0) {
+    await supabase.rpc('increment_loyalty_points', {
+      user_id_input: req.userId!,
+      delta: -order.points_earned,
+    })
+    await supabase.from('loyalty_transactions').insert({
+      user_id: req.userId!,
+      order_id: req.params.id,
+      type: 'cancelled',
+      points: -order.points_earned,
+      description: `Points reversed for cancelled order`,
+    })
+  }
+
+  res.json({ success: true })
 })

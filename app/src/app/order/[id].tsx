@@ -7,6 +7,7 @@ import { CheckCircle, Clock, ChefHat, Package, ArrowLeft, RefreshCw } from 'luci
 import * as Haptics from 'expo-haptics'
 import { LinearGradient } from 'expo-linear-gradient'
 import { ordersApi } from '../../services/api'
+import { useQueryClient } from '@tanstack/react-query'
 import { OrderStatusBadge } from '../../components/features/OrderStatusBadge'
 import { Button } from '../../components/ui/Button'
 import { useCartStore } from '../../stores/cartStore'
@@ -26,6 +27,8 @@ export default function OrderTrackingScreen() {
   const reorderItems = useCartStore((s) => s.reorderItems)
   const themeMode = useThemeStore((s) => s.themeMode)
   const T = themeMode === 'light' ? LightTheme : DarkTheme
+  const queryClient = useQueryClient()
+  const [cancelling, setCancelling] = useState(false)
 
   const { data: order } = useQuery({
     queryKey: ['order', id],
@@ -37,7 +40,8 @@ export default function OrderTrackingScreen() {
     },
   })
 
-  const currentStepIdx = STATUS_STEPS.findIndex((s) => s.key === order?.status)
+  const rawStepIdx = STATUS_STEPS.findIndex((s) => s.key === order?.status)
+  const currentStepIdx = rawStepIdx === -1 ? (order?.status === 'cancelled' ? -1 : 0) : rawStepIdx
   const confettiAnim = useRef(new Animated.Value(0)).current
   const lastUpdatedAt = useRef(new Date())
   const [secsSinceUpdate, setSecsSinceUpdate] = useState(0)
@@ -209,6 +213,28 @@ export default function OrderTrackingScreen() {
             fullWidth
           />
         )}
+
+        {order && ['pending', 'confirmed'].includes(order.status) && (
+          <Pressable
+            style={[cancelStyles.btn, cancelling && { opacity: 0.5 }]}
+            disabled={cancelling}
+            onPress={async () => {
+              setCancelling(true)
+              try {
+                await ordersApi.cancel(id!)
+                queryClient.invalidateQueries({ queryKey: ['order', id] })
+                queryClient.invalidateQueries({ queryKey: ['orders', 'history'] })
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+              } catch {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+              } finally {
+                setCancelling(false)
+              }
+            }}
+          >
+            <Text style={cancelStyles.text}>{cancelling ? 'Cancelling…' : 'Cancel Order'}</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   )
@@ -323,4 +349,16 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 18, fontWeight: '900', color: '#F05A1A' },
   pointsEarnedRow: { alignItems: 'flex-end' },
   pointsEarned: { fontSize: 12, color: '#22C55E', fontWeight: '700' },
+})
+
+const cancelStyles = StyleSheet.create({
+  btn: {
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: '#EF4444',
+    marginTop: 4,
+  },
+  text: { fontSize: 14, fontWeight: '700', color: '#EF4444' },
 })

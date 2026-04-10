@@ -16,17 +16,8 @@ export async function awardPoints(userId: string, orderId: string, orderTotal: n
     description: `Points earned on order #${orderId.slice(-6).toUpperCase()}`,
   })
 
-  // Update user balance
-  const { data: user } = await supabase
-    .from('users')
-    .select('loyalty_points')
-    .eq('id', userId)
-    .single()
-
-  await supabase
-    .from('users')
-    .update({ loyalty_points: (user?.loyalty_points ?? 0) + pointsToAward })
-    .eq('id', userId)
+  // Atomic increment — avoids race condition
+  await supabase.rpc('increment_loyalty_points', { user_id_input: userId, delta: pointsToAward })
 
   return pointsToAward
 }
@@ -55,11 +46,8 @@ export async function redeemPoints(userId: string, orderId: string, pointsToRede
     description: `${pointsToRedeem} points redeemed for AED ${discountAmount.toFixed(0)} off`,
   })
 
-  // Deduct from balance
-  await supabase
-    .from('users')
-    .update({ loyalty_points: user.loyalty_points - pointsToRedeem })
-    .eq('id', userId)
+  // Atomic decrement — avoids race condition
+  await supabase.rpc('increment_loyalty_points', { user_id_input: userId, delta: -pointsToRedeem })
 
   return discountAmount
 }

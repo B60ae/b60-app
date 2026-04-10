@@ -8,7 +8,7 @@ export default function Index() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     )

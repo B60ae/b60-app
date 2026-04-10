@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { body, validationResult } from 'express-validator'
 import jwt from 'jsonwebtoken'
+import { randomInt } from 'crypto'
 import { supabase } from '../config/supabase'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 
@@ -8,6 +9,12 @@ export const authRouter = Router()
 
 // Temp OTP store (use Redis in production)
 const otpStore = new Map<string, { otp: string; expires: number }>()
+
+// Clean expired OTPs every 60s to prevent unbounded memory growth
+setInterval(() => {
+  const now = Date.now()
+  otpStore.forEach((v, k) => { if (v.expires < now) otpStore.delete(k) })
+}, 60_000)
 
 async function sendOtpEmail(email: string, otp: string): Promise<void> {
   const resendApiKey = process.env.RESEND_API_KEY
@@ -43,7 +50,7 @@ authRouter.post('/otp/send',
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })
 
     const { email } = req.body
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const otp = randomInt(100000, 999999).toString()
     otpStore.set(email, { otp, expires: Date.now() + 5 * 60 * 1000 })
 
     try {
@@ -94,7 +101,8 @@ authRouter.post('/otp/verify',
 
     if (error || !user) {
       console.error('[DB ERROR]', error)
-      return res.status(500).json({ error: 'Failed to create user', detail: error?.message })
+      console.error('[Auth] Failed to create user:', error?.message)
+      return res.status(500).json({ error: 'Failed to create user' })
     }
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '30d' })
@@ -105,10 +113,16 @@ authRouter.post('/otp/verify',
 
 // ─── Update Profile ───────────────────────────────────────────────────────────
 authRouter.patch('/profile', requireAuth, async (req: AuthRequest, res) => {
-  const { name, email } = req.body
+  const { name, email, phone } = req.body
   const updates: any = {}
-  if (name) updates.name = name
-  if (email) updates.email = email
+  if (name && typeof name === 'string') updates.name = name.trim().slice(0, 100)
+  if (email && typeof email === 'string') updates.email = email.trim().toLowerCase()
+  if (phone !== undefined) {
+    if (phone !== null && !/^\+?[0-9\s\-()]{8,20}$/.test(phone)) {
+      return res.status(400).json({ error: 'Invalid phone number format' })
+    }
+    updates.phone = phone
+  }
 
   const { data, error } = await supabase
     .from('users')

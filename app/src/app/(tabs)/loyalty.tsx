@@ -9,10 +9,7 @@ import {
   Star, TrendingUp, Gift, ArrowUpRight, ArrowDownLeft,
   ChevronDown, ChevronUp, ArrowRight,
 } from 'lucide-react-native'
-import Animated, {
-  useSharedValue, useAnimatedStyle, withTiming, useDerivedValue,
-  useAnimatedProps, interpolate, Extrapolation,
-} from 'react-native-reanimated'
+
 import { loyaltyApi } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
 import { useThemeStore } from '../../stores/themeStore'
@@ -35,24 +32,9 @@ function getTier(points: number) {
 // ─── Animated Points Number ──────────────────────────────────────────────────
 
 function AnimatedPointsText({ target }: { target: number }) {
-  const animatedPoints = useSharedValue(0)
-  
-  useEffect(() => {
-    animatedPoints.value = withTiming(target, { duration: 1200 })
-  }, [target])
-
-  const derivedPoints = useDerivedValue(() => {
-    return Math.floor(animatedPoints.value).toLocaleString()
-  })
-
-  // Use a TextInput for better performance with frequent updates if needed, 
-  // but for a simple count, a Text with a derived value is fine if we use useAnimatedProps or similar.
-  // Actually, easiest is using a Reanimated text component or just letting it re-render.
-  // For now, I'll keep it simple but actually make it count.
   const [displayPoints, setDisplayPoints] = React.useState(0)
 
   useEffect(() => {
-    let start = 0
     const duration = 1200
     const frameDuration = 1000 / 60
     const totalFrames = Math.round(duration / frameDuration)
@@ -61,13 +43,9 @@ function AnimatedPointsText({ target }: { target: number }) {
     const timer = setInterval(() => {
       frame++
       const progress = frame / totalFrames
-      // Ease out quad
       const eased = 1 - (1 - progress) * (1 - progress)
       setDisplayPoints(Math.floor(eased * target))
-
-      if (frame === totalFrames) {
-        clearInterval(timer)
-      }
+      if (frame >= totalFrames) clearInterval(timer)
     }, frameDuration)
 
     return () => clearInterval(timer)

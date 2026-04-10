@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import {
   ScrollView,
   View,
@@ -86,9 +86,11 @@ function getTimeGreeting(): string {
 // Scrolling ticker component
 function HypeTicker() {
   const [idx, setIdx] = useState(0)
-  const fade = useRef(new Animated.Value(1)).current
+  const fade = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
+    // Show first message immediately
+    Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }).start()
     const interval = setInterval(() => {
       Animated.timing(fade, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
         setIdx(i => (i + 1) % HYPE_LINES.length)
@@ -191,6 +193,11 @@ export default function HomeScreen() {
       useAuthStore.getState().updatePoints(balance.total_points)
     }
   }, [balance?.total_points])
+
+  const handleAddFeatured = useCallback((item: MenuItem) => {
+    addItem(item, 1, [])
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+  }, [addItem])
 
   const handleCategoryPress = (id: string) => {
     setActiveCategory(id)
@@ -339,10 +346,7 @@ export default function HomeScreen() {
                     <Text style={[styles.featuredCardPrice, { color: theme.primary }]}>AED {Number(item.price || 0).toFixed(0)}</Text>
                     <Pressable
                       style={styles.featuredAddBtn}
-                      onPress={() => {
-                        addItem(item, 1, [])
-                        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
-                      }}
+                      onPress={() => handleAddFeatured(item)}
                     >
                       <Text style={styles.featuredAddBtnText}>+ ADD</Text>
                     </Pressable>

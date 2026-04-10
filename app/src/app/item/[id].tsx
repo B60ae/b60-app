@@ -88,7 +88,8 @@ export default function ItemDetailScreen() {
 
   if (isLoading || !item) return null
 
-  const addons = item.customizations?.filter((g: any) => g.id === 'addons') ?? []
+  // Render all customization groups — don't filter by hardcoded ID
+  const addons = item.customizations ?? []
 
   return (
     <View style={[styles.container, { backgroundColor: T.background }]}>
@@ -146,8 +147,8 @@ export default function ItemDetailScreen() {
         {/* Add-ons only — no Heat Level */}
         {addons.map((group: any) => (
           <View key={group.id} style={[styles.addonsCard, { backgroundColor: T.surface, borderColor: T.border }]}>
-            <Text style={[styles.addonsTitle, { color: T.text }]}>ADD-ONS</Text>
-            <Text style={[styles.addonsSub, { color: T.textMuted }]}>Pick all that apply</Text>
+            <Text style={[styles.addonsTitle, { color: T.text }]}>{(group.name ?? 'ADD-ONS').toUpperCase()}</Text>
+            <Text style={[styles.addonsSub, { color: T.textMuted }]}>{group.type === 'single' ? 'Pick one' : 'Pick all that apply'}</Text>
             <View style={styles.addonsList}>
               {group.options.map((option: any) => {
                 const isSelected = selectedOptions.some((o) => o.id === option.id)

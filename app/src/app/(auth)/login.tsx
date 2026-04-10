@@ -111,7 +111,15 @@ export default function LoginScreen() {
   const [step, setStep] = useState<'email' | 'otp'>('email')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [resendCooldown, setResendCooldown] = useState(0)
   const setUser = useAuthStore((s) => s.setUser)
+
+  // Resend cooldown countdown
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const t = setTimeout(() => setResendCooldown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [resendCooldown])
 
   const cardY = useRef(new Animated.Value(60)).current
   const cardOpacity = useRef(new Animated.Value(0)).current
@@ -154,6 +162,7 @@ export default function LoginScreen() {
       await authApi.sendOtp(trimmed)
       setEmail(trimmed)
       setStep('otp')
+      setResendCooldown(60)
       Animated.timing(stepAnim, { toValue: 1, duration: 280, useNativeDriver: true }).start()
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       setTimeout(() => otpRef.current?.focus(), 350)
@@ -310,11 +319,13 @@ export default function LoginScreen() {
         {/* Resend */}
         {step === 'otp' && (
           <Pressable
-            onPress={() => { setOtp(''); setError(''); handleSendOtp() }}
-            style={styles.resendBtn}
-            disabled={loading}
+            onPress={() => { if (resendCooldown > 0 || loading) return; setOtp(''); setError(''); handleSendOtp() }}
+            style={[styles.resendBtn, (loading || resendCooldown > 0) && { opacity: 0.4 }]}
+            disabled={loading || resendCooldown > 0}
           >
-            <Text style={styles.resendText}>Resend code</Text>
+            <Text style={styles.resendText}>
+              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
+            </Text>
           </Pressable>
         )}
 

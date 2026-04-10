@@ -1,5 +1,15 @@
 import axios from 'axios'
 
+// Locations that should NOT receive orders via DartPOS
+// Comma-separated location IDs in env: DART_POS_EXCLUDED_LOCATIONS=uuid1,uuid2
+const EXCLUDED_LOCATIONS = new Set(
+  (process.env.DART_POS_EXCLUDED_LOCATIONS ?? '').split(',').filter(Boolean)
+)
+
+export function isLocationExcludedFromDart(locationId: string): boolean {
+  return EXCLUDED_LOCATIONS.has(locationId)
+}
+
 const dartClient = axios.create({
   baseURL: process.env.DART_POS_URL,
   headers: {

@@ -61,7 +61,20 @@ export default function OrderHistoryScreen() {
         <View style={styles.skeletonList}>
           {[0, 1, 2, 3, 4].map((i) => <SkeletonLoader key={i} variant="row" />)}
         </View>
-      ) : isError || !orders || orders.length === 0 ? (
+      ) : isError ? (
+        <View style={styles.emptyState}>
+          <View style={[styles.emptyIconWrapper, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <UtensilsCrossed size={40} color={T.textMuted} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: T.text }]}>Could not load orders</Text>
+          <Text style={[styles.emptySub, { color: T.textSecondary }]}>
+            Check your connection and try again.
+          </Text>
+          <Pressable style={styles.browseBtn} onPress={() => refetch()}>
+            <Text style={styles.browseBtnText}>RETRY</Text>
+          </Pressable>
+        </View>
+      ) : !orders || orders.length === 0 ? (
         <View style={styles.emptyState}>
           <View style={[styles.emptyIconWrapper, { backgroundColor: T.surface, borderColor: T.border }]}>
             <UtensilsCrossed size={40} color={T.textMuted} />

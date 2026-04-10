@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Component, ReactNode } from 'react'
+import { View, Text, Pressable } from 'react-native'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
@@ -9,6 +10,34 @@ import { useAuthStore } from '../stores/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { ONBOARDING_KEY } from './onboarding/index'
 import { DarkTheme, LightTheme } from '../utils/theme'
+
+// ─── Error Boundary ───────────────────────────────────────────────────────────
+class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError() { return { hasError: true } }
+  componentDidCatch(err: Error) { console.error('[AppErrorBoundary]', err) }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', gap: 16, padding: 32 }}>
+          <Text style={{ color: '#F05A1A', fontSize: 28, fontWeight: '900' }}>B60</Text>
+          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center' }}>Something went wrong</Text>
+          <Text style={{ color: '#888', fontSize: 14, textAlign: 'center' }}>Restart the app to continue</Text>
+          <Pressable
+            onPress={() => this.setState({ hasError: false })}
+            style={{ backgroundColor: '#F05A1A', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>Try Again</Text>
+          </Pressable>
+        </View>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,6 +64,7 @@ export default function RootLayout() {
   if (!onboardingChecked) return null
 
   return (
+    <AppErrorBoundary>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
@@ -51,5 +81,6 @@ export default function RootLayout() {
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+    </AppErrorBoundary>
   )
 }

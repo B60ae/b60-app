@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Image,
 } from 'react-native'
@@ -89,8 +89,8 @@ function CartItem({
 
       <View style={styles.qtyControls}>
         <Pressable
-          onPress={() => handleQtyPress(item.quantity - 1)}
-          style={[styles.qtyBtn, { backgroundColor: T.surface, borderColor: T.border }]}
+          onPress={() => item.quantity > 1 && handleQtyPress(item.quantity - 1)}
+          style={[styles.qtyBtn, { backgroundColor: T.surface, borderColor: T.border, opacity: item.quantity <= 1 ? 0.35 : 1 }]}
         >
           <Minus size={12} color={T.text} />
         </Pressable>
@@ -134,6 +134,11 @@ export default function CartScreen() {
     queryKey: ['locations'],
     queryFn: locationsApi.getAll,
   })
+
+  const availableLocations = useMemo(
+    () => (locations ?? []).filter((loc: any) => !loc.name.toLowerCase().includes('ghurair')),
+    [locations]
+  )
 
   const maxRedeemable = Math.min(
     user?.loyalty_points ?? 0,
@@ -219,7 +224,7 @@ export default function CartScreen() {
             <Text style={[styles.sectionTitle, { color: T.text }]}>Pickup From</Text>
           </View>
           <View style={styles.locationList}>
-            {((locations ?? []).filter((loc: any) => !loc.name.toLowerCase().includes('ghurair'))).map((loc: any) => {
+            {availableLocations.map((loc: any) => {
               const selected = locationId === loc.id
               return (
                 <Pressable

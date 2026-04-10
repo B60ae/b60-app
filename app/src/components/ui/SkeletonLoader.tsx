@@ -24,21 +24,23 @@ export function SkeletonLoader({ variant = 'card', width, height, style }: Skele
 
   const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.4, 0.9] })
 
-  const dimensions = getDimensions(variant, width, height)
+  const { width: dimWidth, height: dimHeight, borderRadius } = getDimensions(variant, width, height)
 
   return (
-    <Animated.View style={[styles.base, dimensions, style, { opacity }]}>
-      <LinearGradient
-        colors={['#E8E8E8', '#F5F5F5', '#E8E8E8']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={StyleSheet.absoluteFill}
-      />
-    </Animated.View>
+    <View style={[styles.base, { width: dimWidth as any, height: dimHeight, borderRadius }, style]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
+        <LinearGradient
+          colors={['#E8E8E8', '#F5F5F5', '#E8E8E8']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+    </View>
   )
 }
 
-function getDimensions(variant: string, width?: number | string, height?: number) {
+function getDimensions(variant: string, width?: number | string, height?: number): { width: any; height: number; borderRadius: number } {
   switch (variant) {
     case 'card':
       return { width: width ?? '100%', height: height ?? 220, borderRadius: Radius.lg }

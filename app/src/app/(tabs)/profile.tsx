@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Alert, TextInput, Image,
+  View, Text, StyleSheet, ScrollView, Pressable, Alert, TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -11,9 +11,7 @@ import {
 } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
-import Animated, {
-  useSharedValue, useAnimatedProps, withTiming, useDerivedValue,
-} from 'react-native-reanimated'
+
 import { useAuthStore } from '../../stores/authStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { ordersApi, authApi } from '../../services/api'
@@ -69,6 +67,9 @@ export default function ProfileScreen() {
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(user?.name ?? '')
   const [savingName, setSavingName] = useState(false)
+  const [editingPhone, setEditingPhone] = useState(false)
+  const [phoneInput, setPhoneInput] = useState(user?.phone ?? '')
+  const [savingPhone, setSavingPhone] = useState(false)
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
@@ -80,7 +81,7 @@ export default function ProfileScreen() {
 
   const tier = getTier(user?.loyalty_points ?? 0)
   const tierColor = TIER_COLORS[tier]
-  const totalSpent = orders?.reduce((s, o) => s + Number(o.total || 0), 0) ?? 0
+  const totalSpent = useMemo(() => orders?.reduce((s, o) => s + Number(o.total || 0), 0) ?? 0, [orders])
 
   const toggleTheme = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
@@ -100,7 +101,6 @@ export default function ProfileScreen() {
     setSavingName(true)
     try {
       const updated = await authApi.updateProfile({ name: nameInput.trim() })
-      // Update user in store without touching the token
       const currentToken = useAuthStore.getState().token ?? ''
       if (user) await setUser({ ...user, name: updated.name }, currentToken)
       setEditingName(false)
@@ -109,6 +109,23 @@ export default function ProfileScreen() {
       Alert.alert('Error', 'Could not update name.')
     } finally {
       setSavingName(false)
+    }
+  }
+
+  const handleSavePhone = async () => {
+    const cleaned = phoneInput.trim().replace(/\s/g, '')
+    if (!cleaned) return
+    setSavingPhone(true)
+    try {
+      const updated = await authApi.updateProfile({ phone: cleaned })
+      const currentToken = useAuthStore.getState().token ?? ''
+      if (user) await setUser({ ...user, phone: updated.phone }, currentToken)
+      setEditingPhone(false)
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    } catch {
+      Alert.alert('Error', 'Could not update phone.')
+    } finally {
+      setSavingPhone(false)
     }
   }
 
@@ -169,6 +186,39 @@ export default function ProfileScreen() {
                 </Pressable>
               )}
               <Text style={styles.email}>{user?.email}</Text>
+
+              {/* Phone */}
+              {editingPhone ? (
+                <View style={[styles.editNameRow, { marginTop: 4 }]}>
+                  <TextInput
+                    value={phoneInput}
+                    onChangeText={setPhoneInput}
+                    style={[styles.nameInput, { color: 'rgba(255,255,255,0.9)', borderBottomColor: 'rgba(255,255,255,0.5)', fontSize: 14 }]}
+                    autoFocus
+                    keyboardType="phone-pad"
+                    returnKeyType="done"
+                    onSubmitEditing={handleSavePhone}
+                    placeholder="+971 50 000 0000"
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                  />
+                  <Pressable onPress={handleSavePhone} hitSlop={8} disabled={savingPhone}>
+                    <Check size={18} color="rgba(255,255,255,0.9)" />
+                  </Pressable>
+                  <Pressable onPress={() => setEditingPhone(false)} hitSlop={8}>
+                    <X size={18} color="rgba(255,255,255,0.5)" />
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable
+                  style={[styles.nameRow, { marginTop: 2 }]}
+                  onPress={() => { setPhoneInput(user?.phone ?? ''); setEditingPhone(true) }}
+                >
+                  <Text style={styles.email}>
+                    {user?.phone ? user.phone : '+ Add phone number'}
+                  </Text>
+                  <Edit2 size={11} color="rgba(255,255,255,0.5)" />
+                </Pressable>
+              )}
             </View>
           </View>
 

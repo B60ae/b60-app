@@ -5,6 +5,18 @@ import helmet from 'helmet'
 import morgan from 'morgan'
 import rateLimit from 'express-rate-limit'
 
+// ─── Startup Validation ───────────────────────────────────────────────────────
+const REQUIRED_ENVS = ['JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_KEY']
+for (const key of REQUIRED_ENVS) {
+  if (!process.env[key]) {
+    console.error(`[STARTUP] Missing required env var: ${key}`)
+    process.exit(1)
+  }
+}
+if (!process.env.DART_POS_EXCLUDED_LOCATIONS) {
+  console.warn('[STARTUP] DART_POS_EXCLUDED_LOCATIONS not set — all locations will push to DartPOS')
+}
+
 import { authRouter } from './routes/auth'
 import { menuRouter } from './routes/menu'
 import { ordersRouter } from './routes/orders'
@@ -16,7 +28,10 @@ const PORT = process.env.PORT ?? 3001
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(helmet())
-app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PATCH', 'DELETE'] }))
+const ALLOWED_ORIGINS = process.env.NODE_ENV === 'development'
+  ? true
+  : ['https://b60.ae', 'https://app.b60.ae']
+app.use(cors({ origin: ALLOWED_ORIGINS, methods: ['GET', 'POST', 'PATCH', 'DELETE'] }))
 app.use(express.json())
 app.use(morgan('dev'))
 
