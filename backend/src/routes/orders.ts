@@ -92,16 +92,39 @@ ordersRouter.post('/', orderLimiter,
       // Push to Dart POS (skip excluded locations e.g. Ghurair)
       let dartResponse
       if (!isLocationExcludedFromDart(location_id)) {
+        // Fetch dart_food_id mappings for all items in this order
+        const { data: dartItems } = await supabase
+          .from('menu_items')
+          .select('id, dart_food_id, dart_variant_id')
+          .in('id', items.map((i: any) => i.menu_item.id))
+
+        const dartIdMap = new Map((dartItems ?? []).map((d: any) => [d.id, d]))
+
+        // Only push items that have a dart_food_id mapped
+        const mappedItems = items
+          .map((i: any) => {
+            const dart = dartIdMap.get(i.menu_item.id)
+            if (!dart?.dart_food_id) return null
+            return {
+              sku: dart.dart_food_id,
+              variant_id: dart.dart_variant_id ?? dart.dart_food_id,
+              name: i.menu_item.name,
+              quantity: i.quantity,
+              unit_price: i.menu_item.price,
+              modifiers: (i.selected_options ?? []).map((o: any) => ({ name: o.name, price: o.price_delta })),
+            }
+          })
+          .filter(Boolean)
+
+        const skippedItems = items.filter((i: any) => !dartIdMap.get(i.menu_item.id)?.dart_food_id)
+        if (skippedItems.length > 0) {
+          console.log(`[Orders] Skipping ${skippedItems.length} unmapped items from DartPOS: ${skippedItems.map((i: any) => i.menu_item.name).join(', ')}`)
+        }
+
         const dartPayload = {
           external_id: order.id,
           location_id,
-          items: items.map((i: any) => ({
-            sku: i.menu_item.id,
-            name: i.menu_item.name,
-            quantity: i.quantity,
-            unit_price: i.menu_item.price,
-            modifiers: (i.selected_options ?? []).map((o: any) => ({ name: o.name, price: o.price_delta })),
-          })),
+          items: mappedItems,
           total,
           customer_name: req.user?.name,
           customer_phone: req.user?.phone,

@@ -26,7 +26,8 @@ const dartClient = axios.create({
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface DartOrderItem {
-  sku: string        // maps to FoodID + VariantID
+  sku: string        // FoodID
+  variant_id?: string // VariantID (defaults to sku if not set)
   name: string
   quantity: number
   unit_price: number
@@ -73,7 +74,7 @@ export async function pushOrderToDart(payload: DartOrderPayload): Promise<DartOr
     OrderedProducts: payload.items.map((item, idx) => ({
       RowID: idx,
       FoodID: item.sku,
-      VariantID: item.sku,  // same as FoodID based on API example
+      VariantID: item.variant_id ?? item.sku,
       Price: item.unit_price.toFixed(2),
       Quantity: String(item.quantity),
       FoodNote: item.modifiers.length > 0
