@@ -101,20 +101,19 @@ ordersRouter.post('/', orderLimiter,
         const dartIdMap = new Map((dartItems ?? []).map((d: any) => [d.id, d]))
 
         // Only push items that have a dart_food_id mapped
-        const mappedItems = items
-          .map((i: any) => {
-            const dart = dartIdMap.get(i.menu_item.id)
-            if (!dart?.dart_food_id) return null
-            return {
-              sku: dart.dart_food_id,
-              variant_id: dart.dart_variant_id ?? dart.dart_food_id,
-              name: i.menu_item.name,
-              quantity: i.quantity,
-              unit_price: i.menu_item.price,
-              modifiers: (i.selected_options ?? []).map((o: any) => ({ name: o.name, price: o.price_delta })),
-            }
+        const mappedItems: { sku: string; variant_id: string; name: string; quantity: number; unit_price: number; modifiers: { name: string; price: number }[] }[] = []
+        for (const i of items as any[]) {
+          const dart = dartIdMap.get(i.menu_item.id)
+          if (!dart?.dart_food_id) continue
+          mappedItems.push({
+            sku: dart.dart_food_id,
+            variant_id: dart.dart_variant_id ?? dart.dart_food_id,
+            name: i.menu_item.name,
+            quantity: i.quantity,
+            unit_price: i.menu_item.price,
+            modifiers: (i.selected_options ?? []).map((o: any) => ({ name: o.name, price: o.price_delta })),
           })
-          .filter(Boolean)
+        }
 
         const skippedItems = items.filter((i: any) => !dartIdMap.get(i.menu_item.id)?.dart_food_id)
         if (skippedItems.length > 0) {
