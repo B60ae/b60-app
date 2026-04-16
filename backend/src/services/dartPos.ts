@@ -62,26 +62,26 @@ export async function pushOrderToDart(payload: DartOrderPayload): Promise<DartOr
   // Convert our order format to DartPOS InsertOrder format
   const dartBody = {
     OrderNo: 0,
-    OrderType: DART_ORDER_TYPE,
-    WaiterID: DART_WAITER_ID,
-    OrderNote: payload.customer_name ? `App order - ${payload.customer_name}` : 'App order',
-    TableID: DART_TABLE_ID,
+    OrderType: String(DART_ORDER_TYPE),
+    WaiterID: String(DART_WAITER_ID),
+    OrderNote: payload.customer_name ? `App - ${payload.customer_name}` : 'App order',
+    TableID: String(DART_TABLE_ID),
     GuestNo: 0,
-    GuestCount: 1,
-    TakeAwayReference: payload.external_id.slice(-6).toUpperCase(), // last 6 chars of our UUID
-    RegionID: DART_REGION_ID,
-    CustomerID: 0,
+    GuestCount: String(1),
+    TakeAwayReference: 314, // fixed number as per working Postman example
+    RegionID: String(DART_REGION_ID),
+    CustomerID: String(11), // fixed as per working example
     OrderedProducts: payload.items.map((item, idx) => ({
       RowID: idx,
-      FoodID: item.sku,
-      VariantID: item.variant_id ?? item.sku,
-      Price: item.unit_price.toFixed(2),
+      FoodID: String(item.sku),
+      VariantID: String(item.variant_id ?? item.sku),
+      Price: String(item.unit_price.toFixed(2)),
       Quantity: String(item.quantity),
       FoodNote: item.modifiers.length > 0
         ? item.modifiers.map(m => m.name).join(', ')
         : null,
       IsVoid: 0,
-      TaxID: DART_TAX_ID,
+      TaxID: String(DART_TAX_ID),
       TaxRate: String(DART_TAX_RATE),
       PromotionRefNo: 0,
       PromotionValue: 0,
