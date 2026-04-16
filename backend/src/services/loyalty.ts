@@ -3,17 +3,21 @@ import { supabase } from '../config/supabase'
 const POINTS_PER_AED = 1      // 1 AED = 1 point
 const POINTS_TO_AED = 0.05    // 1 point = AED 0.05 (20 pts = AED 1)
 
-export async function awardPoints(userId: string, orderId: string, orderTotal: number): Promise<number> {
-  const pointsToAward = Math.floor(orderTotal * POINTS_PER_AED)
+export async function awardPoints(userId: string, sourceId: string, amount: number, isDirectAmount = false): Promise<number> {
+  const pointsToAward = isDirectAmount ? amount : Math.floor(amount * POINTS_PER_AED)
   if (pointsToAward <= 0) return 0
 
-  // Record transaction
+  const isGameSource = sourceId.startsWith('game_')
+  const description = isGameSource
+    ? `Points earned from ${sourceId.replace('_', ' ')}`
+    : `Points earned on order #${sourceId.slice(-6).toUpperCase()}`
+
   await supabase.from('loyalty_transactions').insert({
     user_id: userId,
-    order_id: orderId,
-    type: 'earned',
+    order_id: isGameSource ? null : sourceId,
+    type: isGameSource ? 'bonus' : 'earned',
     points: pointsToAward,
-    description: `Points earned on order #${orderId.slice(-6).toUpperCase()}`,
+    description,
   })
 
   // Atomic increment — avoids race condition

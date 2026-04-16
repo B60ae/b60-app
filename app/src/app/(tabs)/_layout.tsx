@@ -97,14 +97,14 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="loyalty"
         options={{
-          title: 'POINTS',
+          title: 'B60 CLUB',
           tabBarIcon: ({ color, size }) => <Star size={size} color={color} />
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'ME',
+          title: 'PROFILE',
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />
         }}
       />

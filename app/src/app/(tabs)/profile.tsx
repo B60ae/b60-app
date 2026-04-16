@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Alert, TextInput, Image,
+  View, Text, StyleSheet, ScrollView, Pressable, Alert, TextInput,
 } from 'react-native'
+import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'

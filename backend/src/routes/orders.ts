@@ -158,6 +158,9 @@ ordersRouter.post('/', orderLimiter,
         .select()
         .single()
 
+      // Update order streak for games leaderboard
+      updateOrderStreak(userId).catch(e => console.error('[Orders] Streak update failed:', e))
+
       res.status(201).json({ ...(updatedOrder ?? order), points_earned: pointsEarned })
 
     } catch (err: any) {
@@ -252,3 +255,53 @@ ordersRouter.post('/:id/cancel', async (req: AuthRequest, res) => {
 
   res.json({ success: true })
 })
+
+// ─── Streak Helper ────────────────────────────────────────────────────────────
+
+async function updateOrderStreak(userId: string) {
+  const today = new Date().toISOString().split('T')[0]
+
+  const { data: existing } = await supabase
+    .from('game_streaks')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  if (!existing) {
+    await supabase.from('game_streaks').insert({
+      user_id: userId, current_streak: 1, longest_streak: 1, last_order_date: today,
+    })
+    return
+  }
+
+  const last = existing.last_order_date
+  if (last === today) return // already counted today
+
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+  const newStreak = last === yesterdayStr ? existing.current_streak + 1 : 1
+  const longest = Math.max(existing.longest_streak, newStreak)
+
+  await supabase.from('game_streaks').update({
+    current_streak: newStreak, longest_streak: longest, last_order_date: today, updated_at: new Date().toISOString(),
+  }).eq('user_id', userId)
+
+  // Sync to leaderboard
+  const weekStart = getWeekStart()
+  const { data: user } = await supabase.from('users').select('name, email').eq('id', userId).single()
+  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'Player')
+
+  await supabase.from('game_leaderboard').upsert({
+    user_id: userId, display_name: displayName, week_start: weekStart, order_streak: newStreak, updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,week_start' })
+}
+
+function getWeekStart(): string {
+  const d = new Date()
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  const monday = new Date(d.setDate(diff))
+  return monday.toISOString().split('T')[0]
+}

@@ -78,7 +78,11 @@ export default function OnboardingScreen() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        scrollEnabled={false}
+        scrollEnabled={true}
+        onMomentumScrollEnd={(e) => {
+          const idx = Math.round(e.nativeEvent.contentOffset.x / W)
+          setActiveIdx(idx)
+        }}
         keyExtractor={(s) => s.key}
         renderItem={({ item: slide }) => (
           <View style={styles.slide}>

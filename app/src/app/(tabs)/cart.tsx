@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useMemo } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Image,
+  View, Text, StyleSheet, ScrollView, Pressable,
 } from 'react-native'
+import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Trash2, MapPin, Minus, Plus, ShoppingBag } from 'lucide-react-native'

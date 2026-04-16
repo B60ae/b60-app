@@ -35,6 +35,7 @@ import { menuRouter } from './routes/menu'
 import { ordersRouter } from './routes/orders'
 import { loyaltyRouter } from './routes/loyalty'
 import { locationsRouter } from './routes/locations'
+import { gamesRouter } from './routes/games'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
@@ -63,6 +64,7 @@ app.use('/api/menu', menuRouter)
 app.use('/api/orders', ordersRouter)
 app.use('/api/loyalty', loyaltyRouter)
 app.use('/api/locations', locationsRouter)
+app.use('/api/games', gamesRouter)
 
 // Health check — includes DB ping
 app.get('/health', async (_, res) => {

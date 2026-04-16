@@ -118,3 +118,23 @@ export interface LoyaltyBalance {
   tier: 'Bronze' | 'Silver' | 'Gold'
   next_tier_points?: number
 }
+
+// ─── Games ────────────────────────────────────────────────────────────────────
+export interface LeaderboardEntry {
+  user_id: string
+  display_name: string
+  tap_score: number
+  spin_score: number
+  order_streak: number
+  total_score: number
+}
+
+export interface GameVoucher {
+  id: string
+  code: string
+  voucher_type: 'discount' | 'free_item'
+  value: string
+  is_used: boolean
+  expires_at: string
+  created_at: string
+}

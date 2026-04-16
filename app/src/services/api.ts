@@ -52,6 +52,16 @@ export const locationsApi = {
   getAll: () => client.get<Location[]>('/locations').then(r => r.data),
 }
 
+// ─── Games ────────────────────────────────────────────────────────────────
+export const gamesApi = {
+  spinStatus: () => client.get<{ can_spin: boolean; spins_left: number; spins_used: number }>('/games/spin/status').then(r => r.data),
+  spin: () => client.post<{ prize_type: string; prize_value: string; voucher_code: string | null }>('/games/spin').then(r => r.data),
+  tapStatus: () => client.get<{ plays_left: number; best_score: number }>('/games/tap/status').then(r => r.data),
+  submitTap: (score: number) => client.post<{ points_earned: number; score: number }>('/games/tap', { score }).then(r => r.data),
+  leaderboard: () => client.get<{ leaderboard: LeaderboardEntry[]; your_rank: number | null; week_start: string }>('/games/leaderboard').then(r => r.data),
+  vouchers: () => client.get<{ vouchers: GameVoucher[] }>('/games/vouchers').then(r => r.data),
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────
 export const authApi = {
   sendOtp: (email: string) => client.post('/auth/otp/send', { email }).then(r => r.data),

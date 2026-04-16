@@ -77,6 +77,9 @@ export default function RootLayout() {
             <Stack.Screen name="order/[id]" />
             <Stack.Screen name="order-success/index" />
             <Stack.Screen name="orders/index" />
+            <Stack.Screen name="games/spin" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="games/tap" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="games/leaderboard" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
