@@ -109,7 +109,7 @@ export async function pushOrderToDart(payload: DartOrderPayload): Promise<DartOr
 // DartPOS doesn't have a status polling endpoint in the docs yet
 // Return null so our backend falls back to internal status tracking
 
-export async function getOrderStatusFromDart(posOrderId: string) {
+export async function getOrderStatusFromDart(posOrderId: string): Promise<{ status: string } | null> {
   // Not yet available in DartPOS API — status is pushed via KOT
   return null
 }
