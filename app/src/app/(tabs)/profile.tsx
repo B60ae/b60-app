@@ -7,7 +7,7 @@ import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   ChevronRight, ClipboardList, Star, Edit2, Check, X,
-  Moon, LogOut, Info, Phone, Shield, HelpCircle, Instagram,
+  Moon, LogOut, Info, Globe, MapPin, Instagram,
 } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
@@ -282,37 +282,44 @@ export default function MoreScreen() {
           />
         </View>
 
+        {/* ── Our Locations ── */}
+        <SectionLabel label="OUR LOCATIONS" theme={theme} />
+        <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          {[
+            { name: 'Oud Metha, Dubai', url: 'https://maps.google.com/?q=B60+Burgers+Oud+Metha+Dubai' },
+            { name: 'Al Ghurair Centre, Deira', url: 'https://maps.google.com/?q=B60+Burgers+Flayva+Al+Ghurair+Centre+Dubai' },
+            { name: 'Muwaileh, Sharjah', url: 'https://maps.google.com/?q=B60+Burgers+Muwaileh+Sharjah' },
+            { name: 'Al Warqa, Dubai', url: 'https://maps.google.com/?q=B60+Burgers+Al+Warqa+Dubai' },
+          ].map((loc) => (
+            <Row
+              key={loc.name}
+              icon={<MapPin size={18} color={Colors.primary} />}
+              label={loc.name}
+              onPress={() => Linking.openURL(loc.url)}
+              theme={theme}
+            />
+          ))}
+        </View>
+
         {/* ── About & Support ── */}
         <SectionLabel label="ABOUT & SUPPORT" theme={theme} />
         <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Row
             icon={<Instagram size={18} color={Colors.primary} />}
-            label="Follow us @b60burgers"
-            onPress={() => Linking.openURL('https://instagram.com/b60burgers')}
+            label="Follow us @b60_ae"
+            onPress={() => Linking.openURL('https://instagram.com/b60_ae')}
             theme={theme}
           />
           <Row
-            icon={<Phone size={18} color={Colors.primary} />}
-            label="Contact Us"
-            onPress={() => Linking.openURL('tel:+97143388360')}
-            theme={theme}
-          />
-          <Row
-            icon={<HelpCircle size={18} color={Colors.primary} />}
-            label="Help & FAQ"
+            icon={<Globe size={18} color={Colors.primary} />}
+            label="Visit b60.ae"
             onPress={() => Linking.openURL('https://b60.ae')}
-            theme={theme}
-          />
-          <Row
-            icon={<Shield size={18} color={Colors.primary} />}
-            label="Privacy Policy"
-            onPress={() => Linking.openURL('https://b60.ae/privacy')}
             theme={theme}
           />
           <Row
             icon={<Info size={18} color={Colors.primary} />}
             label="About B60 Burgers"
-            onPress={() => Linking.openURL('https://b60.ae')}
+            onPress={() => Linking.openURL('https://b60.ae/#about')}
             theme={theme}
           />
         </View>
@@ -330,9 +337,14 @@ export default function MoreScreen() {
           />
         </View>
 
-        <Text style={[styles.version, { color: theme.textMuted }]}>
-          B60 Burgers{selectedLocation ? ` · ${selectedLocation.name}` : ''}
-        </Text>
+        <Pressable
+          onPress={() => selectedLocation?.maps_url && Linking.openURL(selectedLocation.maps_url)}
+          disabled={!selectedLocation?.maps_url}
+        >
+          <Text style={[styles.version, { color: theme.textMuted }]}>
+            B60 Burgers{selectedLocation ? ` · ${selectedLocation.name}` : ' · Dubai & Sharjah'}
+          </Text>
+        </Pressable>
 
       </ScrollView>
     </SafeAreaView>

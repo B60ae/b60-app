@@ -1,6 +1,6 @@
 import { useEffect, useState, Component, ReactNode } from 'react'
 import { View, Text, Pressable } from 'react-native'
-import { Stack } from 'expo-router'
+import { Stack, router } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
@@ -53,8 +53,12 @@ export default function RootLayout() {
   useEffect(() => {
     loadSession()
     AsyncStorage.getItem(ONBOARDING_KEY).then((val) => {
-      setShowOnboarding(!val)
+      const needsOnboarding = !val
+      setShowOnboarding(needsOnboarding)
       setOnboardingChecked(true)
+      if (needsOnboarding) {
+        router.replace('/onboarding/index' as any)
+      }
     })
   }, [])
 
@@ -71,7 +75,6 @@ export default function RootLayout() {
           <StatusBar style={themeMode === 'light' ? 'dark' : 'light'} backgroundColor={theme.background} />
           <Stack
             screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}
-            initialRouteName={showOnboarding ? 'onboarding/index' : '(tabs)'}
           >
             <Stack.Screen name="onboarding/index" />
             <Stack.Screen name="(auth)" />
