@@ -9,6 +9,7 @@ import {
   FlatList,
   Dimensions,
   Platform,
+  Linking,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -364,7 +365,15 @@ export default function HomeScreen() {
             {(locations ?? []).map((loc: any) => {
               const isOpen = loc.is_open !== false
               return (
-                <View key={loc.id} style={[styles.locationCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Pressable
+                  key={loc.id}
+                  style={[styles.locationCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                  onPress={() => {
+                    const query = encodeURIComponent(`${loc.name} ${loc.address}`)
+                    const url = loc.maps_url ?? `https://www.google.com/maps/search/?api=1&query=${query}`
+                    Linking.openURL(url)
+                  }}
+                >
                   {/* Left accent bar */}
                   <View style={[styles.locationAccent, { backgroundColor: isOpen ? theme.primary : theme.textMuted }]} />
 
@@ -397,7 +406,7 @@ export default function HomeScreen() {
                       {isOpen ? 'OPEN' : 'CLOSED'}
                     </Text>
                   </View>
-                </View>
+                </Pressable>
               )
             })}
           </View>

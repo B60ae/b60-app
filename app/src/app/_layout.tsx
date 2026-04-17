@@ -69,8 +69,11 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <StatusBar style={themeMode === 'light' ? 'dark' : 'light'} backgroundColor={theme.background} />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}>
-            {showOnboarding && <Stack.Screen name="onboarding/index" />}
+          <Stack
+            screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}
+            initialRouteName={showOnboarding ? 'onboarding/index' : '(tabs)'}
+          >
+            <Stack.Screen name="onboarding/index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="item/[id]" options={{ presentation: 'modal' }} />

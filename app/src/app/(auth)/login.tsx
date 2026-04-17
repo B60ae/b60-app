@@ -175,8 +175,9 @@ export default function LoginScreen() {
     }
   }
 
-  const handleVerifyOtp = async () => {
-    if (otp.length < OTP_LENGTH) {
+  const handleVerifyOtp = async (codeOverride?: string) => {
+    const code = codeOverride ?? otp
+    if (code.length < OTP_LENGTH) {
       setError('Enter the full 6-digit code')
       shake()
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
@@ -185,7 +186,7 @@ export default function LoginScreen() {
     setError('')
     setLoading(true)
     try {
-      const { token, user } = await authApi.verifyOtp(email, otp)
+      const { token, user } = await authApi.verifyOtp(email, code)
       await setUser(user, token)
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       router.replace('/(tabs)')
@@ -290,7 +291,7 @@ export default function LoginScreen() {
                 const clean = t.replace(/\D/g, '').slice(0, OTP_LENGTH)
                 setOtp(clean)
                 setError('')
-                if (clean.length === OTP_LENGTH) handleVerifyOtp()
+                if (clean.length === OTP_LENGTH) handleVerifyOtp(clean)
               }}
               maxLength={OTP_LENGTH}
               autoFocus

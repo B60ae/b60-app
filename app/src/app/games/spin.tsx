@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Animated, {
@@ -9,6 +9,7 @@ import { router } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as Haptics from 'expo-haptics'
 import { ArrowLeft, RotateCcw } from 'lucide-react-native'
+import Svg, { G, Path, Text as SvgText } from 'react-native-svg'
 import { gamesApi } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
 import { useThemeStore } from '../../stores/themeStore'
@@ -16,119 +17,77 @@ import { Colors, LightTheme, DarkTheme, Spacing, Radius, Shadows } from '../../u
 
 const { width: W } = Dimensions.get('window')
 const WHEEL_SIZE = W - 64
+const R = WHEEL_SIZE / 2
+const CX = R
+const CY = R
 
-// Wheel segments — must match backend SPIN_PRIZES order & weights (visual only)
 const SEGMENTS = [
-  { label: '10 PTS',        color: '#F05A1A', textColor: '#fff' },
-  { label: '25 PTS',        color: '#1B2A4A', textColor: '#fff' },
-  { label: '50 PTS',        color: '#C94400', textColor: '#fff' },
-  { label: '10% OFF',       color: '#16A34A', textColor: '#fff' },
-  { label: '100 PTS',       color: '#F05A1A', textColor: '#fff' },
-  { label: '25 PTS',        color: '#1B2A4A', textColor: '#fff' },
-  { label: 'FREE BURGER',   color: '#FFE500', textColor: '#000' },
-  { label: '50 PTS',        color: '#C94400', textColor: '#fff' },
-  { label: '250 PTS',       color: '#F05A1A', textColor: '#fff' },
-  { label: '15% OFF',       color: '#16A34A', textColor: '#fff' },
+  { label: '10 PTS',      color: '#F05A1A' },
+  { label: '25 PTS',      color: '#1B2A4A' },
+  { label: '50 PTS',      color: '#C94400' },
+  { label: '10% OFF',     color: '#16A34A' },
+  { label: '100 PTS',     color: '#F05A1A' },
+  { label: '25 PTS',      color: '#1B2A4A' },
+  { label: 'FREE\nBURGER',color: '#FFE500' },
+  { label: '50 PTS',      color: '#C94400' },
+  { label: '250 PTS',     color: '#F05A1A' },
+  { label: '15% OFF',     color: '#16A34A' },
 ]
 
-const SEG_ANGLE = 360 / SEGMENTS.length
+const N = SEGMENTS.length
+const SEG_DEG = 360 / N
+
+function polarToXY(angleDeg: number, radius: number) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180
+  return { x: CX + radius * Math.cos(rad), y: CY + radius * Math.sin(rad) }
+}
+
+function segPath(i: number) {
+  const startDeg = i * SEG_DEG
+  const endDeg = startDeg + SEG_DEG
+  const start = polarToXY(startDeg, R - 2)
+  const end = polarToXY(endDeg, R - 2)
+  const largeArc = SEG_DEG > 180 ? 1 : 0
+  return `M ${CX} ${CY} L ${start.x} ${start.y} A ${R - 2} ${R - 2} 0 ${largeArc} 1 ${end.x} ${end.y} Z`
+}
+
+function WheelSvg() {
+  return (
+    <Svg width={WHEEL_SIZE} height={WHEEL_SIZE}>
+      {SEGMENTS.map((seg, i) => {
+        const midDeg = i * SEG_DEG + SEG_DEG / 2
+        const textPos = polarToXY(midDeg, R * 0.62)
+        const textColor = seg.color === '#FFE500' ? '#000' : '#fff'
+        const lines = seg.label.split('\n')
+        return (
+          <G key={i}>
+            <Path d={segPath(i)} fill={seg.color} stroke="#fff" strokeWidth={1.5} />
+            {lines.map((line, li) => (
+              <SvgText
+                key={li}
+                x={textPos.x}
+                y={textPos.y + (li - (lines.length - 1) / 2) * 11}
+                fill={textColor}
+                fontSize={9}
+                fontWeight="900"
+                textAnchor="middle"
+                alignmentBaseline="middle"
+              >
+                {line}
+              </SvgText>
+            ))}
+          </G>
+        )
+      })}
+    </Svg>
+  )
+}
 
 function prizeLabel(type: string, value: string) {
   if (type === 'points') return `+${value} Points!`
   if (type === 'discount') return `${value} Discount!`
   if (type === 'free_item') return `Free ${value}!`
   return 'Better luck next time'
-}
-
-// Draw wheel using SVG-like approach with View transforms
-function WheelSegment({ index, total, label, color, textColor }: {
-  index: number; total: number; label: string; color: string; textColor: string
-}) {
-  const angle = (360 / total) * index
-  const segAngle = 360 / total
-
-  return (
-    <View
-      style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'flex-start' }]}
-      pointerEvents="none"
-    >
-      <View style={{
-        position: 'absolute',
-        width: WHEEL_SIZE,
-        height: WHEEL_SIZE,
-        transform: [{ rotate: `${angle}deg` }],
-        alignItems: 'center',
-      }}>
-        {/* Segment wedge using overflow hidden trick */}
-        <View style={{
-          width: 2,
-          height: WHEEL_SIZE / 2,
-          backgroundColor: color,
-          transformOrigin: 'bottom center',
-          transform: [{ scaleX: Math.tan((segAngle / 2) * Math.PI / 180) * (WHEEL_SIZE / 2) / 1 }],
-          opacity: 0.95,
-        }} />
-        <Text style={{
-          position: 'absolute',
-          top: WHEEL_SIZE * 0.18,
-          fontSize: 10,
-          fontWeight: '900',
-          color: textColor,
-          textAlign: 'center',
-          transform: [{ rotate: `${segAngle / 2}deg` }],
-          width: 56,
-        }} numberOfLines={2}>{label}</Text>
-      </View>
-    </View>
-  )
-}
-
-// Simple pie-based wheel using colored border sectors
-function SpinWheel({ rotation }: { rotation: Animated.SharedValue<number> }) {
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotation.value}deg` }],
-  }))
-
-  return (
-    <Animated.View style={[styles.wheel, animStyle]}>
-      {SEGMENTS.map((seg, i) => {
-        const angle = SEG_ANGLE * i
-        const mid = angle + SEG_ANGLE / 2
-        const r = WHEEL_SIZE / 2 - 20
-        const x = r * Math.sin((mid * Math.PI) / 180)
-        const y = -r * Math.cos((mid * Math.PI) / 180)
-        return (
-          <View key={i} style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
-            <View style={{
-              position: 'absolute',
-              transform: [{ translateX: x }, { translateY: y }, { rotate: `${mid}deg` }],
-              alignItems: 'center',
-            }}>
-              <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff', textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 4 }} numberOfLines={2}>
-                {seg.label}
-              </Text>
-            </View>
-          </View>
-        )
-      })}
-      {/* Colored sector lines */}
-      {SEGMENTS.map((seg, i) => {
-        const angle = SEG_ANGLE * i
-        return (
-          <View key={`s${i}`} style={[StyleSheet.absoluteFill]} pointerEvents="none">
-            <View style={{
-              position: 'absolute',
-              top: 0, left: WHEEL_SIZE / 2 - 1,
-              width: 2, height: WHEEL_SIZE / 2,
-              backgroundColor: 'rgba(0,0,0,0.3)',
-              transformOrigin: `1px ${WHEEL_SIZE / 2}px`,
-              transform: [{ rotate: `${angle}deg` }],
-            }} />
-          </View>
-        )
-      })}
-    </Animated.View>
-  )
 }
 
 export default function SpinScreen() {
@@ -157,8 +116,6 @@ export default function SpinScreen() {
 
     try {
       const res = await gamesApi.spin()
-
-      // Spin 5–8 full rotations + land on a visually random segment
       const extraSpins = 5 + Math.floor(Math.random() * 3)
       const landAngle = Math.random() * 360
       const target = rotation.value + extraSpins * 360 + landAngle
@@ -182,9 +139,12 @@ export default function SpinScreen() {
     queryClient.invalidateQueries({ queryKey: ['loyalty', 'balance'] })
   }
 
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }))
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header */}
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
           <ArrowLeft size={22} color={theme.text} />
@@ -199,22 +159,9 @@ export default function SpinScreen() {
 
         {/* Wheel */}
         <View style={styles.wheelWrap}>
-          {/* Colored background sectors */}
-          <View style={[styles.wheel, { position: 'absolute' }]}>
-            {SEGMENTS.map((seg, i) => (
-              <View key={i} style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
-                <View style={{
-                  position: 'absolute',
-                  width: WHEEL_SIZE,
-                  height: WHEEL_SIZE,
-                  borderRadius: WHEEL_SIZE / 2,
-                  overflow: 'hidden',
-                }} />
-              </View>
-            ))}
-          </View>
-
-          <SpinWheel rotation={rotation} />
+          <Animated.View style={[styles.wheelContainer, animStyle]}>
+            <WheelSvg />
+          </Animated.View>
 
           {/* Center hub */}
           <View style={styles.hub}>
@@ -240,7 +187,6 @@ export default function SpinScreen() {
             colors={result.type === 'nothing' ? [theme.surface, theme.surface] : [Colors.primary, Colors.primaryDark]}
             style={styles.resultCard}
           >
-            <Text style={[styles.resultEmoji]}>{result.type === 'nothing' ? '😅' : '🎉'}</Text>
             <Text style={styles.resultLabel}>{prizeLabel(result.type, result.prize_value ?? '')}</Text>
             {result.voucher_code && (
               <View style={styles.voucherBox}>
@@ -258,7 +204,6 @@ export default function SpinScreen() {
           </View>
         )}
 
-        {/* Spin Button */}
         <Pressable
           style={[styles.spinBtn, { opacity: (!spinStatus?.can_spin || spinning) ? 0.45 : 1 }]}
           onPress={doSpin}
@@ -288,16 +233,16 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   wheelWrap: { width: WHEEL_SIZE, height: WHEEL_SIZE, alignItems: 'center', justifyContent: 'center' },
-  wheel: {
+  wheelContainer: {
     width: WHEEL_SIZE,
     height: WHEEL_SIZE,
     borderRadius: WHEEL_SIZE / 2,
     overflow: 'hidden',
-    backgroundColor: '#1B2A4A',
     borderWidth: 4,
     borderColor: Colors.primary,
   },
   hub: {
+    position: 'absolute',
     width: 56, height: 56, borderRadius: 28,
     backgroundColor: Colors.primary,
     alignItems: 'center', justifyContent: 'center',
@@ -309,7 +254,6 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 13, fontWeight: '600' },
 
   resultCard: { width: '100%', borderRadius: Radius.lg, padding: Spacing.lg, alignItems: 'center', gap: Spacing.sm },
-  resultEmoji: { fontSize: 36 },
   resultLabel: { fontSize: 22, fontWeight: '900', color: '#fff', textAlign: 'center' },
   voucherBox: { width: '100%', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', gap: 4 },
   voucherLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.6)', letterSpacing: 2, textTransform: 'uppercase' },
