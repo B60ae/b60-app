@@ -237,7 +237,7 @@ export default function ItemDetailScreen() {
           setShowToast(false)
           router.push('/(tabs)/cart')
         }}
-      />
+      />}
     </View>
   )
 }
