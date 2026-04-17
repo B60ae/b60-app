@@ -2,7 +2,7 @@ import axios from 'axios'
 import * as SecureStore from 'expo-secure-store'
 import { API_URL } from '../utils/constants'
 import { useAuthStore } from '../stores/authStore'
-import type { MenuItem, MenuCategory, Order, Cart, LoyaltyBalance, LoyaltyTransaction, Location, User } from '../types'
+import type { MenuItem, MenuCategory, Order, Cart, LoyaltyBalance, LoyaltyTransaction, Location, User, LeaderboardEntry, GameVoucher } from '../types'
 
 const client = axios.create({ baseURL: API_URL, timeout: 15000 })
 

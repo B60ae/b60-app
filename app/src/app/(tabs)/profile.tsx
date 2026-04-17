@@ -14,7 +14,8 @@ import * as Haptics from 'expo-haptics'
 
 import { useAuthStore } from '../../stores/authStore'
 import { useThemeStore } from '../../stores/themeStore'
-import { ordersApi, authApi } from '../../services/api'
+import { useCartStore } from '../../stores/cartStore'
+import { ordersApi, authApi, locationsApi } from '../../services/api'
 import { LightTheme, DarkTheme, Spacing, Radius, Shadows, Colors } from '../../utils/theme'
 
 const TIER_COLORS: Record<string, string> = {
@@ -67,6 +68,14 @@ export default function MoreScreen() {
   const { themeMode, setThemeMode } = useThemeStore()
   const theme = themeMode === 'light' ? LightTheme : DarkTheme
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const locationId = useCartStore((s) => s.locationId)
+
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: locationsApi.getAll,
+    staleTime: 1000 * 60 * 10,
+  })
+  const selectedLocation = locations?.find((l: any) => l.id === locationId)
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(user?.name ?? '')
@@ -321,7 +330,9 @@ export default function MoreScreen() {
           />
         </View>
 
-        <Text style={[styles.version, { color: theme.textMuted }]}>B60 Burgers · Oud Metha, Dubai</Text>
+        <Text style={[styles.version, { color: theme.textMuted }]}>
+          B60 Burgers{selectedLocation ? ` · ${selectedLocation.name}` : ''}
+        </Text>
 
       </ScrollView>
     </SafeAreaView>

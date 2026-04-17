@@ -134,6 +134,7 @@ export default function CartScreen() {
   const { data: locations } = useQuery({
     queryKey: ['locations'],
     queryFn: locationsApi.getAll,
+    enabled: !!user,
   })
 
   const availableLocations = useMemo(

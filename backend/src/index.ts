@@ -81,7 +81,7 @@ app.get('/health', async (_, res) => {
 // 404
 app.use((_, res) => res.status(404).json({ error: 'Not found' }))
 
-const server = app.listen(PORT, () => console.log(`🍔 B60 API running on port ${PORT}`))
+const server = app.listen(PORT, () => console.log(`[B60] API running on port ${PORT}`))
 
 // Request timeout — prevent hung connections
 server.setTimeout(30000)
