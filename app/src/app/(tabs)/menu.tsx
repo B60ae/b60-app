@@ -295,11 +295,15 @@ export default function OrderScreen() {
   const { addItem, setLocation, locationId, items: cartItems } = useCartStore()
   const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0)
 
-  const { data: locations } = useQuery({
+  const { data: locationsRaw } = useQuery({
     queryKey: ['locations'],
     queryFn: locationsApi.getAll,
     staleTime: 1000 * 60 * 10,
   })
+  const locations = useMemo(
+    () => (locationsRaw ?? []).filter((l: any) => !l.name.toLowerCase().includes('ghurair')),
+    [locationsRaw]
+  )
 
   const { data: categories } = useQuery({
     queryKey: ['menu', 'categories'],
