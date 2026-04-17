@@ -61,7 +61,7 @@ const SLIDES = [
     key: 'locations',
     tag: '4 BRANCHES',
     title: 'DUBAI &\nSHARJAH.',
-    body: 'Oud Metha · Al Ghurair · Al Warqa · Muwaileh. Pick your nearest, order now.',
+    body: 'Oud Metha · Al Warqa · Muwaileh. Pick your nearest, order now.',
     image: 'https://b60.ae/images/classic-beef.webp',
     accent: Colors.primary,
     icon: MapPin,

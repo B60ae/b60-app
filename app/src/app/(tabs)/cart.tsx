@@ -135,10 +135,7 @@ export default function CartScreen() {
     enabled: !!user,
   })
 
-  const availableLocations = useMemo(
-    () => (locations ?? []).filter((loc: any) => !loc.name.toLowerCase().includes('ghurair')),
-    [locations]
-  )
+  const availableLocations = locations ?? []
 
   const maxRedeemable = Math.min(
     user?.loyalty_points ?? 0,

@@ -39,34 +39,8 @@ function generateVoucherCode() {
   return 'B60-' + Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
-// GET /api/games/spin/status — check if user can spin today
+// GET /api/games/spin/status — no daily limit
 gamesRouter.get('/spin/status', async (req: AuthRequest, res) => {
-  const userId = req.userId!
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-
-  const { count } = await supabase
-    .from('game_spins')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('spun_at', todayStart.toISOString())
-
-  // Extra spins: 1 per order placed today
-  const { count: ordersToday } = await supabase
-    .from('orders')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', todayStart.toISOString())
-
-  const totalSpinsAllowed = 1 + (ordersToday ?? 0)
-  const spinsUsed = count ?? 0
-  const spinsLeft = Math.max(0, totalSpinsAllowed - spinsUsed)
-
-  res.json({ can_spin: spinsLeft > 0, spins_left: spinsLeft, spins_used: spinsUsed })
-})
-
-// POST /api/games/spin — perform a spin
-gamesRouter.post('/spin', async (req: AuthRequest, res) => {
   const userId = req.userId!
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
@@ -77,16 +51,12 @@ gamesRouter.post('/spin', async (req: AuthRequest, res) => {
     .eq('user_id', userId)
     .gte('spun_at', todayStart.toISOString())
 
-  const { count: ordersToday } = await supabase
-    .from('orders')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', todayStart.toISOString())
+  res.json({ can_spin: true, spins_left: 999, spins_used: spinsUsed ?? 0 })
+})
 
-  const totalAllowed = 1 + (ordersToday ?? 0)
-  if ((spinsUsed ?? 0) >= totalAllowed) {
-    return res.status(429).json({ error: 'No spins left today' })
-  }
+// POST /api/games/spin — perform a spin (no daily limit)
+gamesRouter.post('/spin', async (req: AuthRequest, res) => {
+  const userId = req.userId!
 
   const prize = pickPrize()
 
@@ -127,16 +97,7 @@ gamesRouter.post('/tap', async (req: AuthRequest, res) => {
     return res.status(400).json({ error: 'Invalid score' })
   }
 
-  // Max 3 plays per day
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-  const { count } = await supabase
-    .from('game_tap_scores')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('played_at', todayStart.toISOString())
-
-  if ((count ?? 0) >= 3) {
+  if (false) {
     return res.status(429).json({ error: 'Max 3 tap games per day' })
   }
 
@@ -174,7 +135,7 @@ gamesRouter.get('/tap/status', async (req: AuthRequest, res) => {
     .single()
 
   res.json({
-    plays_left: Math.max(0, 3 - (count ?? 0)),
+    plays_left: 999,
     best_score: best?.score ?? 0,
   })
 })

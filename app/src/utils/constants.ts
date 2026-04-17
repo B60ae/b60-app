@@ -16,7 +16,6 @@ export const MIN_REDEEM_POINTS = 100      // minimum points to redeem
 
 export const LOCATIONS = [
   { id: 'oud-metha', name: 'Oud Metha', city: 'Dubai' },
-  { id: 'al-ghurair', name: 'Al Ghurair', city: 'Dubai' },
   { id: 'muwaileh', name: 'Muwaileh', city: 'Sharjah' },
   { id: 'al-warqa', name: 'Al Warqa', city: 'Dubai' },
 ]

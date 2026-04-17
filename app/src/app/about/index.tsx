@@ -34,7 +34,6 @@ const VALUES = [
 
 const LOCATIONS = [
   { name: 'OUD METHA', city: 'Dubai', note: 'The OG — since Sept 2024', maps: 'https://maps.google.com/?q=B60+Burgers+Oud+Metha+Dubai' },
-  { name: 'AL GHURAIR', city: 'Dubai', note: 'Flayva Food Hall', maps: 'https://maps.google.com/?q=B60+Burgers+Flayva+Al+Ghurair+Centre+Dubai' },
   { name: 'MUWAILEH', city: 'Sharjah', note: 'Coming through', maps: 'https://maps.google.com/?q=B60+Burgers+Muwaileh+Sharjah' },
   { name: 'AL WARQA', city: 'Dubai', note: 'East side', maps: 'https://maps.google.com/?q=B60+Burgers+Al+Warqa+Dubai' },
 ]

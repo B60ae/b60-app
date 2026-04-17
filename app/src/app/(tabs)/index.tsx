@@ -36,7 +36,6 @@ const FEATURED_SNAP_INTERVAL = 194
 
 const LOCATION_MAPS: Record<string, string> = {
   'Oud Metha': 'https://maps.google.com/?q=B60+Burgers+Oud+Metha+Dubai',
-  'Al Ghurair': 'https://maps.google.com/?q=B60+Burgers+Flayva+Al+Ghurair+Centre+Dubai',
   'Muwaileh': 'https://maps.google.com/?q=B60+Burgers+Muwaileh+Sharjah',
   'Al Warqa': 'https://maps.google.com/?q=B60+Burgers+Al+Warqa+Dubai',
 }

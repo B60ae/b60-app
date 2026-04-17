@@ -48,19 +48,23 @@ const queryClient = new QueryClient({
 export default function RootLayout() {
   const loadSession = useAuthStore((s) => s.loadSession)
   const [onboardingChecked, setOnboardingChecked] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [needsOnboarding, setNeedsOnboarding] = useState(false)
 
   useEffect(() => {
     loadSession()
     AsyncStorage.getItem(ONBOARDING_KEY).then((val) => {
-      const needsOnboarding = !val
-      setShowOnboarding(needsOnboarding)
+      setNeedsOnboarding(!val)
       setOnboardingChecked(true)
-      if (needsOnboarding) {
-        router.replace('/onboarding/index' as any)
-      }
     })
   }, [])
+
+  // Fire redirect only after Stack is mounted
+  useEffect(() => {
+    if (!onboardingChecked) return
+    if (needsOnboarding) {
+      router.replace('/onboarding/index' as any)
+    }
+  }, [onboardingChecked, needsOnboarding])
 
   const themeMode = useThemeStore((s) => s.themeMode)
   const theme = themeMode === 'light' ? LightTheme : DarkTheme
