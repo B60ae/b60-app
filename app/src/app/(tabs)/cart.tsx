@@ -123,12 +123,10 @@ export default function CartScreen() {
   const T = themeMode === 'light' ? LightTheme : DarkTheme
 
   const [placing, setPlacing] = useState(false)
-  const [toastMsg, setToastMsg] = useState('')
-  const [toastVisible, setToastVisible] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
-  const showToast = (msg: string) => {
-    setToastMsg(msg)
-    setToastVisible(true)
+  const showToast = (msg: string, type: 'success' | 'error' = 'error') => {
+    setToast({ message: msg, type })
   }
 
   const { data: locations } = useQuery({
@@ -150,7 +148,7 @@ export default function CartScreen() {
   const handlePlaceOrder = async () => {
     if (!locationId) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-      showToast('Select a pickup location first')
+      showToast('Select a pickup location first', 'error')
       return
     }
     setPlacing(true)
@@ -172,7 +170,7 @@ export default function CartScreen() {
       })
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
-      showToast('Order failed. Please try again.')
+      showToast('Order failed. Please try again.', 'error')
     } finally {
       setPlacing(false)
     }
@@ -339,7 +337,7 @@ export default function CartScreen() {
         <View style={{ height: 112 }} />
       </ScrollView>
 
-      <Toast message={toastMsg} visible={toastVisible} onHide={() => setToastVisible(false)} duration={3000} />
+      {toast && <Toast message={toast.message} type={toast.type} onHide={() => setToast(null)} duration={3000} />}
 
       {/* Sticky Checkout */}
       <View style={styles.stickyWrapper} pointerEvents="box-none">

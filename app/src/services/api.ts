@@ -12,12 +12,14 @@ client.interceptors.request.use(async (config) => {
   return config
 })
 
-// Auto-logout on 401 — only if user is currently authenticated (avoids hydration race)
+let loggingOut = false
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && useAuthStore.getState().isAuthenticated) {
+    if (error.response?.status === 401 && useAuthStore.getState().isAuthenticated && !loggingOut) {
+      loggingOut = true
       useAuthStore.getState().logout()
+      setTimeout(() => { loggingOut = false }, 2000)
     }
     return Promise.reject(error)
   }
@@ -35,6 +37,7 @@ export const menuApi = {
 // ─── Orders ───────────────────────────────────────────────────────────────
 export const ordersApi = {
   create: (cart: Cart) => client.post<Order>('/orders', cart).then(r => r.data),
+  createOrder: (cart: Cart) => client.post<Order>('/orders', cart).then(r => r.data),
   get: (id: string) => client.get<Order>(`/orders/${id}`).then(r => r.data),
   getHistory: () => client.get<Order[]>('/orders/history').then(r => r.data),
   track: (id: string) => client.get<{ status: string; estimated_ready_at: string }>(`/orders/${id}/track`).then(r => r.data),

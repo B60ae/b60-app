@@ -21,7 +21,7 @@ interface MenuItemCardProps {
   onAddToCart: () => void
 }
 
-export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) {
+export const MenuItemCard = React.memo(function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) {
   const themeMode = useThemeStore((s) => s.themeMode)
   const theme = themeMode === 'light' ? LightTheme : DarkTheme
   
@@ -145,7 +145,7 @@ export function MenuItemCard({ item, onPress, onAddToCart }: MenuItemCardProps) 
       </Pressable>
     </Animated.View>
   )
-}
+})
 
 const styles = StyleSheet.create({
   wrapper: {

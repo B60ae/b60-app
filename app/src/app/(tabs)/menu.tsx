@@ -136,16 +136,9 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
     if (items.length === 0) return
     setPlacing(true)
     try {
-      const orderItems = items.map((ci) => ({
-        menu_item_id: ci.menu_item.id,
-        quantity: ci.quantity,
-        unit_price: ci.menu_item.price + ci.selected_options.reduce((s, o) => s + o.price_delta, 0),
-        selected_options: ci.selected_options.map((o) => o.id),
-        notes: ci.notes,
-      }))
       const order = await ordersApi.createOrder({
         location_id: locationId,
-        items: orderItems,
+        items: items as any,
         subtotal: subtotal(),
         discount: discount(),
         total: total(),

@@ -229,8 +229,7 @@ export default function ItemDetailScreen() {
         </View>
       </View>
 
-      <Toast
-        visible={showToast}
+      {showToast && <Toast
         message={`${item.name} added to cart`}
         onHide={() => setShowToast(false)}
         actionLabel="View Cart"

@@ -1,59 +1,60 @@
 import React, { useEffect, useRef } from 'react'
-import { Animated, Text, StyleSheet, View, Pressable } from 'react-native'
-import { LightTheme, DarkTheme, Radius, Spacing, Shadows } from '../../utils/theme'
+import { Animated, Text, StyleSheet, Pressable } from 'react-native'
+import { LightTheme, DarkTheme, Radius, Spacing, Shadows, Colors } from '../../utils/theme'
 import { useThemeStore } from '../../stores/themeStore'
-import { CheckCircle } from 'lucide-react-native'
+import { CheckCircle, XCircle } from 'lucide-react-native'
+
+export type ToastType = 'success' | 'error'
 
 interface ToastProps {
   message: string
-  visible: boolean
   onHide: () => void
+  type?: ToastType
   duration?: number
   actionLabel?: string
   onAction?: () => void
 }
 
-export function Toast({ message, visible, onHide, duration = 2000, actionLabel, onAction }: ToastProps) {
+export function Toast({ message, onHide, type = 'success', duration = 2500, actionLabel, onAction }: ToastProps) {
   const themeMode = useThemeStore((s) => s.themeMode)
   const theme = themeMode === 'light' ? LightTheme : DarkTheme
   const translateY = useRef(new Animated.Value(100)).current
   const opacity = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    if (visible) {
+    Animated.parallel([
+      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 80 }),
+      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start()
+
+    const timer = setTimeout(() => {
       Animated.parallel([
-        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 80 }),
-        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-      ]).start()
+        Animated.timing(translateY, { toValue: 100, duration: 250, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 250, useNativeDriver: true }),
+      ]).start(() => onHide())
+    }, duration)
 
-      const timer = setTimeout(() => {
-        Animated.parallel([
-          Animated.timing(translateY, { toValue: 100, duration: 250, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0, duration: 250, useNativeDriver: true }),
-        ]).start(() => onHide())
-      }, duration)
+    return () => clearTimeout(timer)
+  }, [duration])
 
-      return () => clearTimeout(timer)
-    }
-  }, [visible])
-
-  if (!visible) return null
+  const iconColor = type === 'error' ? theme.error : theme.success
+  const Icon = type === 'error' ? XCircle : CheckCircle
 
   return (
     <Animated.View style={[
-      styles.container, 
-      { 
+      styles.container,
+      {
         backgroundColor: theme.black,
-        borderColor: theme.black,
-        transform: [{ translateY }], 
-        opacity 
+        borderColor: type === 'error' ? theme.error : Colors.primary,
+        transform: [{ translateY }],
+        opacity,
       }
     ]}>
-      <CheckCircle size={18} color={theme.success} />
+      <Icon size={18} color={iconColor} />
       <Text style={[styles.text, { color: theme.white }]}>{message}</Text>
       {actionLabel && onAction && (
         <Pressable onPress={onAction} hitSlop={8}>
-          <Text style={[styles.action, { color: theme.primary }]}>{actionLabel}</Text>
+          <Text style={[styles.action, { color: Colors.primary }]}>{actionLabel}</Text>
         </Pressable>
       )}
     </Animated.View>
