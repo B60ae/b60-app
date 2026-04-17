@@ -7,7 +7,7 @@ import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   ChevronRight, ClipboardList, Star, Edit2, Check, X,
-  Moon, LogOut, Info, Globe, MapPin, Instagram,
+  Moon, LogOut, Info, Globe, Instagram,
 } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
@@ -280,25 +280,6 @@ export default function MoreScreen() {
               />
             }
           />
-        </View>
-
-        {/* ── Our Locations ── */}
-        <SectionLabel label="OUR LOCATIONS" theme={theme} />
-        <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          {[
-            { name: 'Oud Metha, Dubai', url: 'https://maps.google.com/?q=B60+Burgers+Oud+Metha+Dubai' },
-            { name: 'Al Ghurair Centre, Deira', url: 'https://maps.google.com/?q=B60+Burgers+Flayva+Al+Ghurair+Centre+Dubai' },
-            { name: 'Muwaileh, Sharjah', url: 'https://maps.google.com/?q=B60+Burgers+Muwaileh+Sharjah' },
-            { name: 'Al Warqa, Dubai', url: 'https://maps.google.com/?q=B60+Burgers+Al+Warqa+Dubai' },
-          ].map((loc) => (
-            <Row
-              key={loc.name}
-              icon={<MapPin size={18} color={Colors.primary} />}
-              label={loc.name}
-              onPress={() => Linking.openURL(loc.url)}
-              theme={theme}
-            />
-          ))}
         </View>
 
         {/* ── About & Support ── */}

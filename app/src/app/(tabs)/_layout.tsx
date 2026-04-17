@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { Tabs } from 'expo-router'
-import { UtensilsCrossed, ShoppingCart, Star, MoreHorizontal } from 'lucide-react-native'
+import { ShoppingBag, ShoppingCart, Star, MoreHorizontal } from 'lucide-react-native'
 import { View, Text, StyleSheet, Animated } from 'react-native'
 import { LightTheme, DarkTheme } from '../../utils/theme'
 import { useCartStore } from '../../stores/cartStore'
@@ -83,15 +83,14 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="menu"
         options={{
-          title: 'MENU',
-          tabBarIcon: ({ color, size }) => <UtensilsCrossed size={size} color={color} />
+          title: 'ORDER',
+          tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />
         }}
       />
       <Tabs.Screen
         name="cart"
         options={{
-          title: 'CART',
-          tabBarIcon: ({ color, size }) => <CartTabIcon color={color} size={size} theme={theme} />
+          href: null,
         }}
       />
       <Tabs.Screen

@@ -34,6 +34,18 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const FEATURED_CARD_WIDTH = 180
 const FEATURED_SNAP_INTERVAL = 194
 
+const LOCATION_MAPS: Record<string, string> = {
+  'Oud Metha': 'https://maps.google.com/?q=B60+Burgers+Oud+Metha+Dubai',
+  'Al Ghurair': 'https://maps.google.com/?q=B60+Burgers+Flayva+Al+Ghurair+Centre+Dubai',
+  'Muwaileh': 'https://maps.google.com/?q=B60+Burgers+Muwaileh+Sharjah',
+  'Al Warqa': 'https://maps.google.com/?q=B60+Burgers+Al+Warqa+Dubai',
+}
+
+function getMapsUrl(name: string, address: string) {
+  const key = Object.keys(LOCATION_MAPS).find((k) => name.toLowerCase().includes(k.toLowerCase()))
+  return key ? LOCATION_MAPS[key] : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + address)}`
+}
+
 const CATEGORY_QUICK = [
   { id: 'burgers', label: 'Burgers' },
   { id: 'chicken', label: 'Chicken' },
@@ -368,11 +380,7 @@ export default function HomeScreen() {
                 <Pressable
                   key={loc.id}
                   style={[styles.locationCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                  onPress={() => {
-                    const query = encodeURIComponent(`${loc.name} ${loc.address}`)
-                    const url = loc.maps_url ?? `https://www.google.com/maps/search/?api=1&query=${query}`
-                    Linking.openURL(url)
-                  }}
+                  onPress={() => Linking.openURL(getMapsUrl(loc.name, loc.address ?? ''))}
                 >
                   {/* Left accent bar */}
                   <View style={[styles.locationAccent, { backgroundColor: isOpen ? theme.primary : theme.textMuted }]} />
