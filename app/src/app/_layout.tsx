@@ -86,6 +86,8 @@ export default function RootLayout() {
             <Stack.Screen name="games/spin" options={{ presentation: 'modal' }} />
             <Stack.Screen name="games/tap" options={{ presentation: 'modal' }} />
             <Stack.Screen name="games/leaderboard" />
+            <Stack.Screen name="about/index" />
+            <Stack.Screen name="legal/index" />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>

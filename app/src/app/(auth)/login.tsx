@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import {
   View, Text, TextInput, StyleSheet, Pressable,
-  KeyboardAvoidingView, Platform, Animated, Dimensions, StatusBar,
+  KeyboardAvoidingView, Platform, Animated, Dimensions, StatusBar, Linking,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
@@ -112,6 +112,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const setUser = useAuthStore((s) => s.setUser)
 
   // Resend cooldown countdown
@@ -149,6 +150,11 @@ export default function LoginScreen() {
   }
 
   const handleSendOtp = async () => {
+    if (!termsAccepted) {
+      setError('Please accept the Terms & Privacy Policy to continue')
+      shake()
+      return
+    }
     const trimmed = email.trim().toLowerCase()
     if (!trimmed.includes('@') || !trimmed.includes('.')) {
       setError('Enter a valid email address')
@@ -330,10 +336,24 @@ export default function LoginScreen() {
           </Pressable>
         )}
 
-        {/* Terms */}
-        <Text style={styles.terms}>
-          By signing in you agree to B60's Terms of Service and Privacy Policy.
-        </Text>
+        {/* Terms checkbox */}
+        {step === 'email' && (
+          <Pressable style={styles.termsRow} onPress={() => { setTermsAccepted(v => !v); setError('') }}>
+            <View style={[styles.checkbox, termsAccepted && styles.checkboxActive]}>
+              {termsAccepted && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={styles.terms}>
+              I agree to B60's{' '}
+              <Text style={styles.termsLink} onPress={(e) => { e.stopPropagation?.(); router.push('/legal/index' as any) }}>
+                Terms & Conditions
+              </Text>
+              {' '}and{' '}
+              <Text style={styles.termsLink} onPress={(e) => { e.stopPropagation?.(); router.push('/legal/index' as any) }}>
+                Privacy Policy
+              </Text>
+            </Text>
+          </Pressable>
+        )}
       </Animated.View>
     </KeyboardAvoidingView>
   )
@@ -434,7 +454,22 @@ const styles = StyleSheet.create({
   resendText: {
     fontSize: 13, color: C.textSub, fontWeight: '600', textDecorationLine: 'underline',
   },
+  termsRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 4,
+  },
+  checkbox: {
+    width: 20, height: 20, borderRadius: 5,
+    borderWidth: 1.5, borderColor: C.border,
+    backgroundColor: C.input,
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 1,
+  },
+  checkboxActive: { backgroundColor: C.primary, borderColor: C.primary },
+  checkmark: { color: '#fff', fontSize: 12, fontWeight: '900', lineHeight: 14 },
   terms: {
-    fontSize: 10, color: C.textMuted, textAlign: 'center', lineHeight: 15, marginTop: 4,
+    flex: 1, fontSize: 11, color: C.textMuted, lineHeight: 16,
+  },
+  termsLink: {
+    color: C.primary, fontWeight: '700', textDecorationLine: 'underline',
   },
 })

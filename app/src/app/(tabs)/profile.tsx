@@ -7,7 +7,7 @@ import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   ChevronRight, ClipboardList, Star, Edit2, Check, X,
-  Moon, LogOut, Info, Globe, Instagram,
+  Moon, LogOut, Info, Globe, Instagram, Shield,
 } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
@@ -300,7 +300,13 @@ export default function MoreScreen() {
           <Row
             icon={<Info size={18} color={Colors.primary} />}
             label="About B60 Burgers"
-            onPress={() => Linking.openURL('https://b60.ae/#about')}
+            onPress={() => router.push('/about/index' as any)}
+            theme={theme}
+          />
+          <Row
+            icon={<Shield size={18} color={Colors.primary} />}
+            label="Terms & Privacy"
+            onPress={() => router.push('/legal/index' as any)}
             theme={theme}
           />
         </View>
