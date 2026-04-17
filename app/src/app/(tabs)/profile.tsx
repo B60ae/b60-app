@@ -1,14 +1,13 @@
 import React, { useState, useMemo } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Alert, TextInput,
+  View, Text, StyleSheet, ScrollView, Pressable, Alert, TextInput, Switch, Linking,
 } from 'react-native'
-import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import {
-  LogOut, ChevronRight, ClipboardList, Star,
-  Edit2, Check, X,
+  ChevronRight, ClipboardList, Star, Edit2, Check, X,
+  Moon, LogOut, Info, Phone, Shield, HelpCircle, Instagram,
 } from 'lucide-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
@@ -16,54 +15,58 @@ import * as Haptics from 'expo-haptics'
 import { useAuthStore } from '../../stores/authStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { ordersApi, authApi } from '../../services/api'
-import { OrderStatusBadge } from '../../components/features/OrderStatusBadge'
-import { LightTheme, DarkTheme, Spacing, Radius, Shadows, Typography } from '../../utils/theme'
-import { Switch } from 'react-native'
-import { Moon } from 'lucide-react-native'
-
-// ─── Tier ─────────────────────────────────────────────────────────────────────
+import { LightTheme, DarkTheme, Spacing, Radius, Shadows, Colors } from '../../utils/theme'
 
 const TIER_COLORS: Record<string, string> = {
   Bronze: '#CD7F32',
   Silver: '#A8A8A8',
   Gold: '#FFD700',
+  Platinum: '#E5E4E2',
 }
 
-function getTier(points: number): string {
+function getTier(points: number) {
+  if (points >= 10000) return 'Platinum'
   if (points >= 5000) return 'Gold'
   if (points >= 1000) return 'Silver'
   return 'Bronze'
 }
 
-function AnimatedStat({ target, prefix = '' }: { target: number; prefix?: string }) {
-  return <Text style={styles.statNum}>{`${prefix}${target.toLocaleString()}`}</Text>
-}
-
-// ─── Menu Row ─────────────────────────────────────────────────────────────────
-
-function MenuRow({
-  icon, label, onPress, color
+function Row({
+  icon, label, onPress, danger = false, theme, right,
 }: {
   icon: React.ReactNode
   label: string
-  onPress: () => void
-  color: string
+  onPress?: () => void
+  danger?: boolean
+  theme: any
+  right?: React.ReactNode
 }) {
   return (
-    <Pressable style={styles.menuRow} onPress={onPress}>
-      <View style={styles.menuRowIcon}>{icon}</View>
-      <Text style={[styles.menuLabel, { color }]}>{label}</Text>
-      <ChevronRight size={16} color={color === '#FFFFFF' ? 'rgba(255,255,255,0.4)' : '#888888'} />
+    <Pressable
+      style={[styles.row, { borderBottomColor: theme.border }]}
+      onPress={onPress}
+      android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
+    >
+      <View style={[styles.rowIcon, { backgroundColor: danger ? 'rgba(220,38,38,0.1)' : 'rgba(240,90,26,0.1)' }]}>
+        {icon}
+      </View>
+      <Text style={[styles.rowLabel, { color: danger ? theme.error : theme.text }]}>{label}</Text>
+      {right ?? <ChevronRight size={16} color={theme.textMuted} />}
     </Pressable>
   )
 }
 
-// ─── Screen ──────────────────────────────────────────────────────────────────
+function SectionLabel({ label, theme }: { label: string; theme: any }) {
+  return (
+    <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>{label}</Text>
+  )
+}
 
-export default function ProfileScreen() {
+export default function MoreScreen() {
   const { user, logout, setUser } = useAuthStore()
   const { themeMode, setThemeMode } = useThemeStore()
   const theme = themeMode === 'light' ? LightTheme : DarkTheme
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(user?.name ?? '')
@@ -71,8 +74,6 @@ export default function ProfileScreen() {
   const [editingPhone, setEditingPhone] = useState(false)
   const [phoneInput, setPhoneInput] = useState(user?.phone ?? '')
   const [savingPhone, setSavingPhone] = useState(false)
-
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   const { data: orders } = useQuery({
     queryKey: ['orders', 'history'],
@@ -83,19 +84,6 @@ export default function ProfileScreen() {
   const tier = getTier(user?.loyalty_points ?? 0)
   const tierColor = TIER_COLORS[tier]
   const totalSpent = useMemo(() => orders?.reduce((s, o) => s + Number(o.total || 0), 0) ?? 0, [orders])
-
-  const toggleTheme = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    setThemeMode(themeMode === 'light' ? 'dark' : 'light')
-  }
-
-  const handleLogout = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    Alert.alert('Log Out', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Log Out', style: 'destructive', onPress: () => logout() },
-    ])
-  }
 
   const handleSaveName = async () => {
     if (!nameInput.trim()) return
@@ -130,38 +118,46 @@ export default function ProfileScreen() {
     }
   }
 
+  const handleLogout = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    Alert.alert('Log Out', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Log Out', style: 'destructive', onPress: () => logout() },
+    ])
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
 
-        {/* ── Profile Header ── */}
+        {/* ── Header title ── */}
+        <View style={[styles.pageHeader, { borderBottomColor: theme.border }]}>
+          <Text style={[styles.pageTitle, { color: theme.text }]}>More</Text>
+        </View>
+
+        {/* ── User card ── */}
         <LinearGradient
-          colors={[theme.primary, theme.primaryDark]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.profileHeader}
+          colors={[Colors.primary, Colors.primaryDark]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={styles.userCard}
         >
-          {/* Decorative circle */}
-          <View style={styles.headerDecor} />
+          <View style={styles.decorCircle} />
 
+          {/* Avatar + name */}
           <View style={styles.avatarRow}>
-            {/* Avatar with tier-color ring */}
             <View style={[styles.avatarRing, { borderColor: tierColor }]}>
-              <View style={[styles.avatarCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                <Text style={[styles.avatarInitial, { color: theme.white }]}>
-                  {user?.name?.charAt(0).toUpperCase() ?? 'B'}
-                </Text>
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarInitial}>{user?.name?.charAt(0).toUpperCase() ?? 'B'}</Text>
               </View>
             </View>
 
-            <View style={styles.nameSection}>
-              <Text style={styles.greetingLabel}>Your Profile</Text>
+            <View style={styles.userInfo}>
               {editingName ? (
-                <View style={styles.editNameRow}>
+                <View style={styles.editRow}>
                   <TextInput
                     value={nameInput}
                     onChangeText={setNameInput}
-                    style={[styles.nameInput, { color: theme.white, borderBottomColor: 'rgba(255,255,255,0.5)' }]}
+                    style={styles.nameInput}
                     autoFocus
                     editable={!savingName}
                     returnKeyType="done"
@@ -169,33 +165,25 @@ export default function ProfileScreen() {
                     placeholderTextColor="rgba(255,255,255,0.5)"
                   />
                   <Pressable onPress={handleSaveName} hitSlop={8} disabled={savingName}>
-                    <Check size={20} color={theme.white} />
+                    <Check size={20} color="#fff" />
                   </Pressable>
                   <Pressable onPress={() => setEditingName(false)} hitSlop={8}>
                     <X size={20} color="rgba(255,255,255,0.6)" />
                   </Pressable>
                 </View>
               ) : (
-                <Pressable
-                  style={styles.nameRow}
-                  onPress={() => {
-                    setNameInput(user?.name ?? '')
-                    setEditingName(true)
-                  }}
-                >
-                  <Text style={[styles.name, { color: theme.white }]}>{user?.name ?? 'B60 Fan'}</Text>
+                <Pressable style={styles.editRow} onPress={() => { setNameInput(user?.name ?? ''); setEditingName(true) }}>
+                  <Text style={styles.userName}>{user?.name ?? 'B60 Fan'}</Text>
                   <Edit2 size={13} color="rgba(255,255,255,0.65)" />
                 </Pressable>
               )}
-              <Text style={styles.email}>{user?.email}</Text>
 
-              {/* Phone */}
               {editingPhone ? (
-                <View style={[styles.editNameRow, { marginTop: 4 }]}>
+                <View style={[styles.editRow, { marginTop: 4 }]}>
                   <TextInput
                     value={phoneInput}
                     onChangeText={setPhoneInput}
-                    style={[styles.nameInput, { color: 'rgba(255,255,255,0.9)', borderBottomColor: 'rgba(255,255,255,0.5)', fontSize: 14 }]}
+                    style={[styles.nameInput, { fontSize: 13 }]}
                     autoFocus
                     editable={!savingPhone}
                     keyboardType="phone-pad"
@@ -205,270 +193,218 @@ export default function ProfileScreen() {
                     placeholderTextColor="rgba(255,255,255,0.4)"
                   />
                   <Pressable onPress={handleSavePhone} hitSlop={8} disabled={savingPhone}>
-                    <Check size={18} color="rgba(255,255,255,0.9)" />
+                    <Check size={18} color="#fff" />
                   </Pressable>
                   <Pressable onPress={() => setEditingPhone(false)} hitSlop={8}>
                     <X size={18} color="rgba(255,255,255,0.5)" />
                   </Pressable>
                 </View>
               ) : (
-                <Pressable
-                  style={[styles.nameRow, { marginTop: 2 }]}
-                  onPress={() => { setPhoneInput(user?.phone ?? ''); setEditingPhone(true) }}
-                >
-                  <Text style={styles.email}>
-                    {user?.phone ? user.phone : '+ Add phone number'}
-                  </Text>
+                <Pressable style={styles.editRow} onPress={() => { setPhoneInput(user?.phone ?? ''); setEditingPhone(true) }}>
+                  <Text style={styles.userSub}>{user?.phone ?? '+ Add phone number'}</Text>
                   <Edit2 size={11} color="rgba(255,255,255,0.5)" />
                 </Pressable>
               )}
+
+              <Text style={styles.userSub}>{user?.email}</Text>
             </View>
           </View>
 
-          {/* Tier pill badge */}
-          <View style={[styles.tierPill, { backgroundColor: tierColor }]}>
-            <Star size={10} color={theme.black} fill={theme.black} />
-            <Text style={[styles.tierPillText, { color: theme.black }]}>{tier} Member</Text>
+          {/* Tier + stats row */}
+          <View style={styles.cardBottom}>
+            <View style={[styles.tierPill, { backgroundColor: tierColor }]}>
+              <Star size={10} color="#000" fill="#000" />
+              <Text style={styles.tierPillText}>{tier}</Text>
+            </View>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNum}>{orders?.length ?? 0}</Text>
+                <Text style={styles.statLabel}>Orders</Text>
+              </View>
+              <View style={styles.statDot} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNum}>{(user?.loyalty_points ?? 0).toLocaleString()}</Text>
+                <Text style={styles.statLabel}>Points</Text>
+              </View>
+              <View style={styles.statDot} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNum}>AED {Math.round(totalSpent)}</Text>
+                <Text style={styles.statLabel}>Spent</Text>
+              </View>
+            </View>
           </View>
         </LinearGradient>
 
-        {/* ── Street Mode Toggle ── */}
-        <View style={[styles.menuCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <View style={styles.themeToggleRow}>
-            <View style={styles.themeIconBox}>
-              <Moon size={18} color={themeMode === 'dark' ? theme.yellow : theme.textSecondary} />
-              <Text style={[styles.themeLabel, { color: theme.text }]}>STREET MODE</Text>
-            </View>
-            <Switch
-              value={themeMode === 'dark'}
-              onValueChange={toggleTheme}
-              trackColor={{ false: '#767577', true: theme.primary }}
-              thumbColor={theme.white}
-            />
-          </View>
-        </View>
-
-        {/* ── Stats Card ── */}
-        <View style={[styles.statsCard, { backgroundColor: theme.surface, borderColor: theme.border }, themeMode === 'dark' ? Shadows.hard : Shadows.card]}>
-          <View style={styles.stat}>
-            <Text style={[styles.statNum, { color: theme.primary }]}>{orders?.length ?? 0}</Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Orders</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-          <View style={styles.stat}>
-            <Text style={[styles.statNum, { color: theme.primary }]}>{user?.loyalty_points ?? 0}</Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Points</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-          <View style={styles.stat}>
-            <Text style={[styles.statNum, { color: theme.primary }]}>AED {Math.round(totalSpent).toLocaleString()}</Text>
-            <Text style={[styles.statLabel, { color: theme.textMuted }]}>Spent</Text>
-          </View>
-        </View>
-
-        {/* ── Menu Section ── */}
-        <View style={[styles.menuCard, { backgroundColor: theme.surface, borderColor: theme.border }, themeMode === 'dark' ? Shadows.hard : Shadows.card]}>
-          <MenuRow
-            icon={<ClipboardList size={18} color={theme.primary} />}
+        {/* ── My Account ── */}
+        <SectionLabel label="MY ACCOUNT" theme={theme} />
+        <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Row
+            icon={<ClipboardList size={18} color={Colors.primary} />}
             label="Order History"
             onPress={() => router.push('/orders')}
-            color={theme.text}
+            theme={theme}
           />
-          <View style={[styles.rowDivider, { backgroundColor: theme.border }]} />
-          <MenuRow
-            icon={<Star size={18} color={theme.primary} />}
-            label="Loyalty Points"
+          <Row
+            icon={<Star size={18} color={Colors.primary} />}
+            label="Loyalty & Rewards"
             onPress={() => router.push('/(tabs)/loyalty')}
-            color={theme.text}
+            theme={theme}
           />
         </View>
 
-        {/* ── Recent Orders ── */}
-        {orders && orders.length > 0 && (
-          <View style={[styles.menuCard, { backgroundColor: theme.surface, borderColor: theme.border }, themeMode === 'dark' ? Shadows.hard : Shadows.card]}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Recent Orders</Text>
-            {orders.slice(0, 3).map((order, idx) => (
-              <View key={order.id}>
-                {idx > 0 && <View style={[styles.rowDivider, { backgroundColor: theme.border }]} />}
-                <Pressable
-                  style={styles.orderRow}
-                  onPress={() => router.push({ pathname: '/order/[id]', params: { id: order.id } })}
-                >
-                  {order.items?.[0]?.menu_item?.image_url ? (
-                    <Image
-                      source={{ uri: order.items[0].menu_item.image_url }}
-                      style={styles.orderThumb}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={[styles.orderThumb, styles.orderThumbPlaceholder, { backgroundColor: theme.border }]} />
-                  )}
-                  <View style={styles.orderInfo}>
-                    <Text style={[styles.orderId, { color: theme.text }]}>#{order.id.slice(-6).toUpperCase()}</Text>
-                    <Text style={[styles.orderDate, { color: theme.textMuted }]}>
-                      {new Date(order.created_at).toLocaleDateString('en-AE')}
-                    </Text>
-                  </View>
-                  <View style={styles.orderRight}>
-                    <OrderStatusBadge status={order.status} />
-                    <Text style={[styles.orderTotal, { color: theme.primary }]}>AED {Number(order.total || 0).toFixed(0)}</Text>
-                  </View>
-                </Pressable>
-              </View>
-            ))}
+        {/* ── Preferences ── */}
+        <SectionLabel label="PREFERENCES" theme={theme} />
+        <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Row
+            icon={<Moon size={18} color={themeMode === 'dark' ? Colors.yellow : Colors.primary} />}
+            label="Street Mode (Dark)"
+            theme={theme}
+            right={
+              <Switch
+                value={themeMode === 'dark'}
+                onValueChange={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                  setThemeMode(themeMode === 'light' ? 'dark' : 'light')
+                }}
+                trackColor={{ false: '#767577', true: Colors.primary }}
+                thumbColor="#fff"
+              />
+            }
+          />
+        </View>
 
-            <Pressable style={[styles.seeAllRow, { borderTopColor: theme.border }]} onPress={() => router.push('/orders')}>
-              <Text style={[styles.seeAllText, { color: theme.primary }]}>See all orders</Text>
-              <ChevronRight size={14} color={theme.primary} />
-            </Pressable>
-          </View>
-        )}
+        {/* ── About & Support ── */}
+        <SectionLabel label="ABOUT & SUPPORT" theme={theme} />
+        <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Row
+            icon={<Instagram size={18} color={Colors.primary} />}
+            label="Follow us @b60burgers"
+            onPress={() => Linking.openURL('https://instagram.com/b60burgers')}
+            theme={theme}
+          />
+          <Row
+            icon={<Phone size={18} color={Colors.primary} />}
+            label="Contact Us"
+            onPress={() => Linking.openURL('tel:+97143388360')}
+            theme={theme}
+          />
+          <Row
+            icon={<HelpCircle size={18} color={Colors.primary} />}
+            label="Help & FAQ"
+            onPress={() => Linking.openURL('https://b60.ae')}
+            theme={theme}
+          />
+          <Row
+            icon={<Shield size={18} color={Colors.primary} />}
+            label="Privacy Policy"
+            onPress={() => Linking.openURL('https://b60.ae/privacy')}
+            theme={theme}
+          />
+          <Row
+            icon={<Info size={18} color={Colors.primary} />}
+            label="About B60 Burgers"
+            onPress={() => Linking.openURL('https://b60.ae')}
+            theme={theme}
+          />
+        </View>
 
-        {/* ── Logout ── */}
-        <Pressable
-          style={[styles.logoutBtn, { borderColor: theme.error }]}
-          onPress={handleLogout}
-        >
-          <Text style={[styles.logoutText, { color: theme.error }]}>LOG OUT</Text>
-          <LogOut size={16} color={theme.error} strokeWidth={2.5} />
-        </Pressable>
+        {/* ── Sign Out ── */}
+        <SectionLabel label="" theme={theme} />
+        <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Row
+            icon={<LogOut size={18} color={theme.error} />}
+            label="Log Out"
+            onPress={handleLogout}
+            danger
+            theme={theme}
+            right={<View />}
+          />
+        </View>
+
+        <Text style={[styles.version, { color: theme.textMuted }]}>B60 Burgers · Oud Metha, Dubai</Text>
 
       </ScrollView>
     </SafeAreaView>
   )
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { gap: Spacing.md, paddingBottom: Spacing.xxl },
 
-  // Header
-  profileHeader: {
+  pageHeader: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  pageTitle: { fontSize: 28, fontWeight: '900' },
+
+  userCard: {
+    margin: Spacing.md,
+    borderRadius: Radius.lg,
     padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
     gap: Spacing.md,
     overflow: 'hidden',
+    ...Shadows.glowStrong,
   },
-  headerDecor: {
+  decorCircle: {
     position: 'absolute', right: -40, top: -40,
     width: 160, height: 160, borderRadius: 80,
     borderWidth: 24, borderColor: 'rgba(255,255,255,0.08)',
   },
+
   avatarRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   avatarRing: {
-    width: 80, height: 80, borderRadius: 40,
-    borderWidth: 3, padding: 3,
+    width: 72, height: 72, borderRadius: 36,
+    borderWidth: 2.5, padding: 3,
     alignItems: 'center', justifyContent: 'center',
   },
   avatarCircle: {
-    width: 70, height: 70, borderRadius: 35,
+    width: 62, height: 62, borderRadius: 31,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarInitial: { fontSize: 28, fontWeight: '900' },
-  nameSection: { flex: 1, gap: 2 },
-  greetingLabel: { fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '500' },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  name: { fontSize: 20, fontWeight: '900', textTransform: 'uppercase' },
-  email: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 1 },
-  editNameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  nameInput: {
-    flex: 1, fontSize: 18, fontWeight: '700',
-    paddingVertical: 2,
-  },
+  avatarInitial: { fontSize: 26, fontWeight: '900', color: '#fff' },
+  userInfo: { flex: 1, gap: 2 },
+  editRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  userName: { fontSize: 20, fontWeight: '900', color: '#fff', textTransform: 'uppercase' },
+  userSub: { fontSize: 13, color: 'rgba(255,255,255,0.7)' },
+  nameInput: { flex: 1, fontSize: 18, fontWeight: '700', color: '#fff', paddingVertical: 2 },
+
+  cardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   tierPill: {
-    alignSelf: 'flex-start',
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 12, paddingVertical: 5,
+    paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: Radius.full,
   },
-  tierPillText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+  tierPillText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', color: '#000' },
+  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  statItem: { alignItems: 'center' },
+  statNum: { fontSize: 14, fontWeight: '900', color: '#fff' },
+  statLabel: { fontSize: 10, color: 'rgba(255,255,255,0.6)' },
+  statDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.4)' },
 
-  // Theme Toggle Row
-  themeToggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
+  sectionLabel: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 1.5,
+    marginHorizontal: Spacing.lg, marginTop: Spacing.md, marginBottom: 4,
   },
-  themeIconBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  themeLabel: {
-    fontSize: 15,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-
-  // Stats
-  statsCard: {
-    flexDirection: 'row',
-    borderRadius: Radius.md,
+  section: {
     marginHorizontal: Spacing.md,
-    padding: Spacing.md,
-    borderWidth: 1.5,
-  },
-  stat: { flex: 1, alignItems: 'center', gap: 3 },
-  statNum: { fontSize: 17, fontWeight: '900' },
-  statLabel: { fontSize: 11 },
-  statDivider: { width: 1.5 },
-
-  // Menu card
-  menuCard: {
     borderRadius: Radius.md,
-    marginHorizontal: Spacing.md,
-    borderWidth: 1.5,
+    borderWidth: 1,
     overflow: 'hidden',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
   },
-  menuRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    paddingVertical: Spacing.md,
+
+  row: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: Spacing.md, paddingVertical: 14,
+    gap: Spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  menuRowIcon: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: 'rgba(240, 90, 26, 0.1)',
+  rowIcon: {
+    width: 36, height: 36, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
   },
-  menuLabel: { fontSize: 15, fontWeight: '900', textTransform: 'uppercase', flex: 1 },
-  rowDivider: { height: 1 },
+  rowLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
 
-  // Section title
-  sectionTitle: { fontSize: 15, fontWeight: '900', textTransform: 'uppercase', marginBottom: Spacing.sm },
-
-  // Recent orders
-  orderRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    paddingVertical: Spacing.sm,
-  },
-  orderThumb: { width: 48, height: 48, borderRadius: Radius.sm },
-  orderThumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  orderInfo: { flex: 1 },
-  orderId: { fontSize: 13, fontWeight: '900' },
-  orderDate: { fontSize: 11, marginTop: 1 },
-  orderRight: { alignItems: 'flex-end', gap: 4 },
-  orderTotal: { fontSize: 13, fontWeight: '900' },
-  seeAllRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
-    paddingTop: Spacing.md, marginTop: Spacing.sm,
-    borderTopWidth: 1,
-  },
-  seeAllText: { fontSize: 13, fontWeight: '700' },
-
-  // Logout
-  logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.lg,
-    height: 52,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5,
-    backgroundColor: 'transparent',
-  },
-  logoutText: { fontSize: 14, fontWeight: '700', letterSpacing: 1 },
+  version: { textAlign: 'center', fontSize: 11, marginTop: Spacing.lg },
 })
