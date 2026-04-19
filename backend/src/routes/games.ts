@@ -132,15 +132,27 @@ gamesRouter.post('/tap', async (req: AuthRequest, res) => {
     .from('game_tap_scores')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .gte('played_at', todayStart.toISOString())
+    .gte('created_at', todayStart.toISOString())
 
   if ((playsToday ?? 0) >= 3) {
     return res.status(429).json({ error: 'Max 3 tap games per day' })
   }
 
   const pointsEarned = Math.floor(score / 10)
+  const now = new Date().toISOString()
 
-  await supabase.from('game_tap_scores').insert({ user_id: userId, score, points_earned: pointsEarned, played_at: new Date().toISOString() })
+  const { error: insertError } = await supabase
+    .from('game_tap_scores')
+    .insert({ user_id: userId, score, points_earned: pointsEarned, played_at: now })
+
+  if (insertError) {
+    console.error('tap score insert error:', insertError)
+    // Try without played_at in case column doesn't exist
+    const { error: e2 } = await supabase
+      .from('game_tap_scores')
+      .insert({ user_id: userId, score, points_earned: pointsEarned })
+    if (e2) console.error('tap score insert error (fallback):', e2)
+  }
 
   if (pointsEarned > 0) {
     await awardPoints(userId, 'game_tap', pointsEarned, true)
@@ -161,7 +173,7 @@ gamesRouter.get('/tap/status', async (req: AuthRequest, res) => {
     .from('game_tap_scores')
     .select('score', { count: 'exact' })
     .eq('user_id', userId)
-    .gte('played_at', todayStart.toISOString())
+    .gte('created_at', todayStart.toISOString())
 
   const { data: best } = await supabase
     .from('game_tap_scores')
