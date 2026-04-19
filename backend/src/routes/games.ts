@@ -140,7 +140,7 @@ gamesRouter.post('/tap', async (req: AuthRequest, res) => {
 
   const pointsEarned = Math.floor(score / 10)
 
-  await supabase.from('game_tap_scores').insert({ user_id: userId, score, points_earned: pointsEarned })
+  await supabase.from('game_tap_scores').insert({ user_id: userId, score, points_earned: pointsEarned, played_at: new Date().toISOString() })
 
   if (pointsEarned > 0) {
     await awardPoints(userId, 'game_tap', pointsEarned, true)
