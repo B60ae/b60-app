@@ -39,7 +39,7 @@ function generateVoucherCode() {
   return 'B60-' + Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
-// GET /api/games/spin/status — no daily limit
+// GET /api/games/spin/status — 1 free spin/day + 1 per order
 gamesRouter.get('/spin/status', async (req: AuthRequest, res) => {
   const userId = req.userId!
   const todayStart = new Date()
@@ -51,12 +51,41 @@ gamesRouter.get('/spin/status', async (req: AuthRequest, res) => {
     .eq('user_id', userId)
     .gte('spun_at', todayStart.toISOString())
 
-  res.json({ can_spin: true, spins_left: 999, spins_used: spinsUsed ?? 0 })
+  const { count: ordersToday } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', todayStart.toISOString())
+
+  const totalAllowed = 1 + (ordersToday ?? 0)
+  const used = spinsUsed ?? 0
+  const spinsLeft = Math.max(0, totalAllowed - used)
+
+  res.json({ can_spin: spinsLeft > 0, spins_left: spinsLeft, spins_used: used })
 })
 
-// POST /api/games/spin — perform a spin (no daily limit)
+// POST /api/games/spin — 1 free spin/day + 1 per order
 gamesRouter.post('/spin', async (req: AuthRequest, res) => {
   const userId = req.userId!
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+
+  const { count: spinsUsed } = await supabase
+    .from('game_spins')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('spun_at', todayStart.toISOString())
+
+  const { count: ordersToday } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', todayStart.toISOString())
+
+  const totalAllowed = 1 + (ordersToday ?? 0)
+  if ((spinsUsed ?? 0) >= totalAllowed) {
+    return res.status(429).json({ error: 'No spins left today. Place an order to get more!' })
+  }
 
   const prize = pickPrize()
 
@@ -97,7 +126,15 @@ gamesRouter.post('/tap', async (req: AuthRequest, res) => {
     return res.status(400).json({ error: 'Invalid score' })
   }
 
-  if (false) {
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const { count: playsToday } = await supabase
+    .from('game_tap_scores')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('played_at', todayStart.toISOString())
+
+  if ((playsToday ?? 0) >= 3) {
     return res.status(429).json({ error: 'Max 3 tap games per day' })
   }
 
@@ -135,7 +172,7 @@ gamesRouter.get('/tap/status', async (req: AuthRequest, res) => {
     .single()
 
   res.json({
-    plays_left: 999,
+    plays_left: Math.max(0, 3 - (count ?? 0)),
     best_score: best?.score ?? 0,
   })
 })
@@ -201,13 +238,18 @@ async function upsertLeaderboard(userId: string, scores: { tap_score?: number; s
     .eq('week_start', weekStart)
     .single()
 
+  const tap_score = Math.max(existing?.tap_score ?? 0, scores.tap_score ?? 0)
+  const spin_score = (existing?.spin_score ?? 0) + (scores.spin_score ?? 0)
+  const order_streak = Math.max(existing?.order_streak ?? 0, scores.order_streak ?? 0)
+
   const updated = {
     user_id: userId,
     display_name: displayName,
     week_start: weekStart,
-    tap_score: Math.max(existing?.tap_score ?? 0, scores.tap_score ?? 0),
-    spin_score: (existing?.spin_score ?? 0) + (scores.spin_score ?? 0),
-    order_streak: Math.max(existing?.order_streak ?? 0, scores.order_streak ?? 0),
+    tap_score,
+    spin_score,
+    order_streak,
+    total_score: tap_score + spin_score + order_streak,
     updated_at: new Date().toISOString(),
   }
 
