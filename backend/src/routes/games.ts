@@ -12,17 +12,18 @@ gamesRouter.use(gameLimiter)
 
 // ─── Spin Wheel ───────────────────────────────────────────────────────────────
 
+// Order MUST match frontend SEGMENTS array in spin.tsx exactly (index = wheel segment)
 const SPIN_PRIZES = [
-  { type: 'points', value: '10',         weight: 30 },
-  { type: 'points', value: '25',         weight: 25 },
-  { type: 'points', value: '50',         weight: 15 },
-  { type: 'points', value: '100',        weight: 10 },
-  { type: 'points', value: '250',        weight: 5  },
-  { type: 'points', value: '500',        weight: 3  },
-  { type: 'discount', value: '10%',      weight: 6  },
-  { type: 'discount', value: '15%',      weight: 3  },
-  { type: 'free_item', value: 'Classic Beef', weight: 2 },
-  { type: 'nothing', value: '',          weight: 1  },
+  { type: 'points',    value: '10',          weight: 30 }, // 0: 10 PTS
+  { type: 'points',    value: '25',          weight: 25 }, // 1: 25 PTS
+  { type: 'points',    value: '50',          weight: 15 }, // 2: 50 PTS
+  { type: 'discount',  value: '10%',         weight: 6  }, // 3: 10% OFF
+  { type: 'points',    value: '100',         weight: 10 }, // 4: 100 PTS
+  { type: 'points',    value: '25',          weight: 25 }, // 5: 25 PTS
+  { type: 'free_item', value: 'Burger',      weight: 2  }, // 6: FREE BURGER
+  { type: 'points',    value: '50',          weight: 15 }, // 7: 50 PTS
+  { type: 'points',    value: '250',         weight: 5  }, // 8: 250 PTS
+  { type: 'discount',  value: '15%',         weight: 3  }, // 9: 15% OFF
 ]
 
 function pickPrize() {
@@ -112,7 +113,7 @@ gamesRouter.post('/spin', async (req: AuthRequest, res) => {
   // Update leaderboard spin_score
   await upsertLeaderboard(userId, { spin_score: parseInt(prize.value) || 50 })
 
-  res.json({ prize_type: prize.type, prize_value: prize.value, voucher_code: voucherCode })
+  res.json({ prize_type: prize.type, prize_value: prize.value, voucher_code: voucherCode, segment_index: SPIN_PRIZES.indexOf(prize) })
 })
 
 // ─── Smash Tap ────────────────────────────────────────────────────────────────
