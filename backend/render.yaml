@@ -20,3 +20,7 @@ services:
         sync: false
       - key: DART_POS_API_KEY
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: DART_POS_EXCLUDED_LOCATIONS
+        sync: false
