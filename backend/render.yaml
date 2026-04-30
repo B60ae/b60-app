@@ -20,6 +20,18 @@ services:
         sync: false
       - key: DART_POS_API_KEY
         sync: false
+      - key: DART_WAITER_ID
+        sync: false
+      - key: DART_TABLE_ID
+        sync: false
+      - key: DART_REGION_ID
+        sync: false
+      - key: DART_TAX_ID
+        sync: false
+      - key: DART_TAX_RATE
+        sync: false
+      - key: DART_ORDER_TYPE
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: DART_POS_EXCLUDED_LOCATIONS
