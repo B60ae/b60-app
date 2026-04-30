@@ -3,7 +3,7 @@ services:
     name: b60-api
     runtime: node
     region: fra
-    plan: starter
+    plan: free
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /health
