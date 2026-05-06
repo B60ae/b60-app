@@ -1,110 +1,135 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
-  View, Text, StyleSheet, Pressable, Dimensions, Modal, ScrollView,
+  View, Text, StyleSheet, Pressable, Dimensions, Modal,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS,
-  withSpring, withSequence, useAnimatedProps,
+  withSpring, withSequence,
 } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as Haptics from 'expo-haptics'
-import { ArrowLeft, Gift, X, Zap, Star } from 'lucide-react-native'
-import Svg, { G, Path, Text as SvgText, Circle, Defs, RadialGradient, Stop } from 'react-native-svg'
+import { ArrowLeft, Gift, X, Zap, Star, RotateCcw } from 'lucide-react-native'
+import Svg, {
+  G, Path, Text as SvgText, Circle,
+  Defs, RadialGradient, LinearGradient as SvgLinearGradient, Stop, Line,
+} from 'react-native-svg'
 import { gamesApi } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { Colors, LightTheme, DarkTheme, Spacing, Radius, Shadows } from '../../utils/theme'
 
 const { width: W } = Dimensions.get('window')
-const WHEEL_SIZE = Math.min(W - 32, 360)
+// Wheel fits comfortably with padding for the bulb ring
+const WHEEL_SIZE = Math.min(W - 64, 320)
 const R = WHEEL_SIZE / 2
 const CX = R
 const CY = R
+// Inner radius where segments start (leaves room for outer rim)
+const OUTER_R = R - 2
+const INNER_R = 38  // hub radius
 
-// ─── Wheel Segments ───────────────────────────────────────────────────────────
 const SEGMENTS = [
-  { label: '10 PTS',        color: '#E8440A', textColor: '#fff' },
-  { label: '25 PTS',        color: '#1B2A4A', textColor: '#fff' },
-  { label: '50 PTS',        color: '#B83500', textColor: '#fff' },
-  { label: '10% OFF',       color: '#15803D', textColor: '#fff' },
-  { label: '100 PTS',       color: '#F05A1A', textColor: '#fff' },
-  { label: '25 PTS',        color: '#1B2A4A', textColor: '#fff' },
-  { label: 'FREE\nBURGER',  color: '#FFE500', textColor: '#1B2A4A' },
-  { label: '50 PTS',        color: '#B83500', textColor: '#fff' },
-  { label: '250 PTS',       color: '#F05A1A', textColor: '#fff' },
-  { label: '15% OFF',       color: '#15803D', textColor: '#fff' },
+  { label: '10 PTS',       color: '#C93D08', textColor: '#fff' },
+  { label: '25 PTS',       color: '#1B2A4A', textColor: '#fff' },
+  { label: '50 PTS',       color: '#E04A18', textColor: '#fff' },
+  { label: '10% OFF',      color: '#166534', textColor: '#fff' },
+  { label: '100 PTS',      color: '#F05A1A', textColor: '#fff' },
+  { label: '25 PTS',       color: '#1B2A4A', textColor: '#fff' },
+  { label: 'FREE\nBURGER', color: '#F5C400', textColor: '#1B2A4A' },
+  { label: '50 PTS',       color: '#C93D08', textColor: '#fff' },
+  { label: '250 PTS',      color: '#F05A1A', textColor: '#fff' },
+  { label: '15% OFF',      color: '#166534', textColor: '#fff' },
 ]
 
 const N = SEGMENTS.length
 const SEG_DEG = 360 / N
-const BULB_COUNT = 14
+const BULB_COUNT = 16
+// Bulbs sit on a ring just outside the wheel
+const BULB_R = R + 18
 
-function polarToXY(angleDeg: number, radius: number) {
+function polarToXY(angleDeg: number, r: number) {
   const rad = ((angleDeg - 90) * Math.PI) / 180
-  return { x: CX + radius * Math.cos(rad), y: CY + radius * Math.sin(rad) }
+  return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) }
 }
 
 function segPath(i: number) {
-  const startDeg = i * SEG_DEG
-  const endDeg = startDeg + SEG_DEG
-  const start = polarToXY(startDeg, R - 2)
-  const end = polarToXY(endDeg, R - 2)
-  const largeArc = SEG_DEG > 180 ? 1 : 0
-  return `M ${CX} ${CY} L ${start.x} ${start.y} A ${R - 2} ${R - 2} 0 ${largeArc} 1 ${end.x} ${end.y} Z`
+  const s = polarToXY(i * SEG_DEG, OUTER_R)
+  const e = polarToXY((i + 1) * SEG_DEG, OUTER_R)
+  const si = polarToXY(i * SEG_DEG, INNER_R)
+  const ei = polarToXY((i + 1) * SEG_DEG, INNER_R)
+  const large = SEG_DEG > 180 ? 1 : 0
+  // Wedge from inner radius to outer radius (donut segment)
+  return [
+    `M ${si.x} ${si.y}`,
+    `L ${s.x} ${s.y}`,
+    `A ${OUTER_R} ${OUTER_R} 0 ${large} 1 ${e.x} ${e.y}`,
+    `L ${ei.x} ${ei.y}`,
+    `A ${INNER_R} ${INNER_R} 0 ${large} 0 ${si.x} ${si.y}`,
+    'Z',
+  ].join(' ')
 }
 
-// ─── Wheel SVG ────────────────────────────────────────────────────────────────
+// ─── Wheel SVG (static — does not rotate, parent View rotates) ───────────────
 function WheelSvg() {
+  const svgSize = WHEEL_SIZE + 44  // extra space for bulb ring
+
   return (
-    <Svg width={WHEEL_SIZE} height={WHEEL_SIZE}>
+    <Svg width={svgSize} height={svgSize} viewBox={`${-22} ${-22} ${svgSize} ${svgSize}`}>
       <Defs>
-        <RadialGradient id="hubGlow" cx="50%" cy="50%" r="50%">
+        <RadialGradient id="hub" cx="50%" cy="50%" r="50%">
           <Stop offset="0%" stopColor="#FF7A3D" />
-          <Stop offset="100%" stopColor="#C94400" />
+          <Stop offset="100%" stopColor="#B83500" />
         </RadialGradient>
-        <RadialGradient id="rimGrad" cx="50%" cy="50%" r="50%">
-          <Stop offset="85%" stopColor="#FFF3D6" />
-          <Stop offset="100%" stopColor="#E0C090" />
+        <RadialGradient id="hubShine" cx="35%" cy="30%" r="60%">
+          <Stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
+          <Stop offset="100%" stopColor="rgba(255,255,255,0)" />
         </RadialGradient>
       </Defs>
 
-      {/* Outer rim */}
-      <Circle cx={CX} cy={CY} r={R - 1} fill="#FFF3D6" />
-      <Circle cx={CX} cy={CY} r={R - 6} fill="none" stroke="#B83500" strokeWidth={4} />
+      {/* ── Outer gold rim ── */}
+      <Circle cx={CX} cy={CY} r={R + 10} fill="#8B5E0A" />
+      <Circle cx={CX} cy={CY} r={R + 8}  fill="#F5C400" />
+      <Circle cx={CX} cy={CY} r={R + 4}  fill="#B8860B" />
+      <Circle cx={CX} cy={CY} r={R + 1}  fill="#1A0800" />
 
-      {/* Segments */}
+      {/* ── Segments ── */}
       {SEGMENTS.map((seg, i) => {
         const midDeg = i * SEG_DEG + SEG_DEG / 2
         const midRad = ((midDeg - 90) * Math.PI) / 180
-        const isBottom = midDeg > 90 && midDeg < 270
-        const textR = R * 0.58
+        // Text sits at 65% radius
+        const textR = INNER_R + (OUTER_R - INNER_R) * 0.52
         const tx = CX + textR * Math.cos(midRad)
         const ty = CY + textR * Math.sin(midRad)
         const lines = seg.label.split('\n')
-        const textRotate = isBottom ? midDeg + 180 : midDeg
+        // Text always reads outward from center:
+        // rotate so baseline faces outward. For top half rotate = midDeg (points down-outward)
+        // For bottom half we add 180 so text doesn't flip upside down
+        const textRot = midDeg <= 180 ? midDeg : midDeg + 180
 
         return (
           <G key={i}>
+            <Path d={segPath(i)} fill={seg.color} />
+            {/* Subtle inner shadow on each segment edge */}
             <Path
               d={segPath(i)}
-              fill={seg.color}
-              stroke="rgba(255,255,255,0.2)"
-              strokeWidth={1}
+              fill="none"
+              stroke="rgba(0,0,0,0.18)"
+              strokeWidth={1.5}
             />
-            <G transform={`translate(${tx},${ty}) rotate(${textRotate})`}>
+            <G transform={`translate(${tx},${ty}) rotate(${textRot})`}>
               {lines.map((line, li) => (
                 <SvgText
                   key={li}
                   x={0}
-                  y={(li - (lines.length - 1) / 2) * 13}
+                  y={(li - (lines.length - 1) / 2) * 14}
                   fill={seg.textColor}
-                  fontSize={lines.length > 1 ? 9 : 11}
+                  fontSize={lines.length > 1 ? 10 : 12}
                   fontWeight="900"
                   textAnchor="middle"
-                  alignmentBaseline="middle"
+                  alignmentBaseline="central"
                 >
                   {line}
                 </SvgText>
@@ -114,56 +139,69 @@ function WheelSvg() {
         )
       })}
 
-      {/* Divider lines */}
+      {/* ── Divider lines ── */}
       {SEGMENTS.map((_, i) => {
-        const angleDeg = i * SEG_DEG
-        const inner = polarToXY(angleDeg, 28)
-        const outer = polarToXY(angleDeg, R - 6)
+        const a = polarToXY(i * SEG_DEG, INNER_R)
+        const b = polarToXY(i * SEG_DEG, OUTER_R)
         return (
-          <Path
-            key={`div-${i}`}
-            d={`M ${inner.x} ${inner.y} L ${outer.x} ${outer.y}`}
-            stroke="rgba(255,255,255,0.25)"
+          <Line
+            key={`d${i}`}
+            x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+            stroke="rgba(255,255,255,0.35)"
             strokeWidth={1.5}
           />
         )
       })}
 
-      {/* Center hub */}
-      <Circle cx={CX} cy={CY} r={36} fill="url(#hubGlow)" />
-      <Circle cx={CX} cy={CY} r={36} fill="none" stroke="#FFF3D6" strokeWidth={3} />
-      <Circle cx={CX} cy={CY} r={28} fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth={1} />
+      {/* ── Bulb ring (outside wheel, inside SVG) ── */}
+      {/* Rendered in WheelSvg so they rotate WITH the wheel */}
+      {/* Actually bulbs should be STATIC — rendered separately below */}
+
+      {/* ── Center hub ── */}
+      <Circle cx={CX} cy={CY} r={INNER_R + 2} fill="#0A0A0A" />
+      <Circle cx={CX} cy={CY} r={INNER_R}     fill="url(#hub)" />
+      <Circle cx={CX} cy={CY} r={INNER_R}     fill="url(#hubShine)" />
+      <Circle cx={CX} cy={CY} r={INNER_R}     fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={2} />
     </Svg>
   )
 }
 
-// ─── Blinking Bulb Ring ───────────────────────────────────────────────────────
+// ─── Static bulb ring (does NOT rotate) ──────────────────────────────────────
 function BulbRing({ bulbOn }: { bulbOn: boolean }) {
-  const outerR = WHEEL_SIZE / 2 + 18
+  // Total container size = WHEEL_SIZE + 44 (same as SVG viewBox)
+  const containerSize = WHEEL_SIZE + 44
+  const center = containerSize / 2
+
   return (
-    <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]} pointerEvents="none">
+    <View
+      style={{ position: 'absolute', width: containerSize, height: containerSize }}
+      pointerEvents="none"
+    >
       {Array.from({ length: BULB_COUNT }, (_, i) => {
         const angle = (360 / BULB_COUNT) * i
         const rad = ((angle - 90) * Math.PI) / 180
-        const x = WHEEL_SIZE / 2 + outerR * Math.cos(rad)
-        const y = WHEEL_SIZE / 2 + outerR * Math.sin(rad)
+        // BULB_R is relative to wheel center, which is at `center`
+        const x = center + BULB_R * Math.cos(rad)
+        const y = center + BULB_R * Math.sin(rad)
         const isOn = i % 2 === 0 ? bulbOn : !bulbOn
         return (
           <View
             key={i}
             style={{
               position: 'absolute',
-              left: x - 6,
-              top: y - 6,
-              width: 12,
-              height: 12,
-              borderRadius: 6,
-              backgroundColor: isOn ? '#FFF3D6' : 'rgba(255,243,214,0.25)',
+              left: x - 7,
+              top: y - 7,
+              width: 14,
+              height: 14,
+              borderRadius: 7,
+              backgroundColor: isOn ? '#FFF3D6' : '#5A3A00',
+              borderWidth: 1.5,
+              borderColor: isOn ? '#F5C400' : '#3A2200',
               shadowColor: isOn ? '#FFE500' : 'transparent',
               shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: isOn ? 1 : 0,
-              shadowRadius: 6,
-              elevation: isOn ? 4 : 0,
+              shadowOpacity: isOn ? 0.9 : 0,
+              shadowRadius: 8,
+              elevation: isOn ? 6 : 0,
             }}
           />
         )
@@ -172,39 +210,78 @@ function BulbRing({ bulbOn }: { bulbOn: boolean }) {
   )
 }
 
-// ─── Confetti Dot ─────────────────────────────────────────────────────────────
-const CONFETTI_COLORS = [Colors.primary, Colors.yellow, Colors.success, '#3FA9F5', '#1B2A4A']
+// ─── Pointer (static, above wheel) ───────────────────────────────────────────
+function Pointer() {
+  return (
+    <View style={pointerStyles.wrap}>
+      {/* Shadow layer */}
+      <View style={pointerStyles.shadow} />
+      {/* Main triangle */}
+      <View style={pointerStyles.triangle} />
+      {/* Highlight stripe */}
+      <View style={pointerStyles.highlight} />
+    </View>
+  )
+}
+
+const pointerStyles = StyleSheet.create({
+  wrap: {
+    alignItems: 'center',
+    zIndex: 20,
+    marginBottom: -6,
+  },
+  shadow: {
+    position: 'absolute',
+    top: 3,
+    width: 0, height: 0,
+    borderLeftWidth: 14, borderRightWidth: 14, borderTopWidth: 26,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderTopColor: 'rgba(0,0,0,0.4)',
+  },
+  triangle: {
+    width: 0, height: 0,
+    borderLeftWidth: 14, borderRightWidth: 14, borderTopWidth: 26,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderTopColor: Colors.primary,
+  },
+  highlight: {
+    position: 'absolute',
+    top: 2,
+    width: 0, height: 0,
+    borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 10,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderTopColor: 'rgba(255,255,255,0.35)',
+  },
+})
+
+// ─── Confetti dots ────────────────────────────────────────────────────────────
+const CONFETTI_COLORS = [Colors.primary, '#F5C400', Colors.success, '#3FA9F5', Colors.primaryDark]
 
 function ConfettiDot({ dx, dy, color, delay }: { dx: number; dy: number; color: string; delay: number }) {
   const x = useSharedValue(0)
   const y = useSharedValue(0)
   const opacity = useSharedValue(0)
+  const scale = useSharedValue(0)
 
   useEffect(() => {
-    opacity.value = withTiming(1, { duration: 150 })
+    opacity.value = withTiming(1, { duration: 100 })
+    scale.value = withSpring(1, { damping: 10, stiffness: 200 })
     x.value = withSpring(dx, { damping: 14, stiffness: 80 })
     y.value = withSequence(
       withSpring(dy, { damping: 12, stiffness: 70 }),
-      withTiming(dy + 100, { duration: 700, easing: Easing.in(Easing.quad) }),
+      withTiming(dy + 120, { duration: 600, easing: Easing.in(Easing.quad) }),
     )
-    const timer = setTimeout(() => {
-      opacity.value = withTiming(0, { duration: 400 })
-    }, delay + 500)
-    return () => clearTimeout(timer)
+    const t = setTimeout(() => { opacity.value = withTiming(0, { duration: 300 }) }, delay + 600)
+    return () => clearTimeout(t)
   }, [])
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }, { translateY: y.value }],
+    transform: [{ translateX: x.value }, { translateY: y.value }, { scale: scale.value }],
     opacity: opacity.value,
   }))
 
   return (
-    <Animated.View
-      style={[
-        { position: 'absolute', width: 10, height: 10, borderRadius: 5, backgroundColor: color },
-        style,
-      ]}
-    />
+    <Animated.View style={[{ position: 'absolute', width: 10, height: 10, borderRadius: 5, backgroundColor: color }, style]} />
   )
 }
 
@@ -216,24 +293,24 @@ function WinModal({
   result: { type: string; prize_value: string; voucher_code: string | null } | null
   onClose: () => void
 }) {
-  const T = useThemeStore((s) => s.themeMode) === 'light' ? LightTheme : DarkTheme
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const T = themeMode === 'light' ? LightTheme : DarkTheme
   const [confetti, setConfetti] = useState<Array<{ id: number; dx: number; dy: number; color: string; delay: number }>>([])
-  const modalScale = useSharedValue(0)
+  const modalScale = useSharedValue(0.85)
   const modalOpacity = useSharedValue(0)
 
   useEffect(() => {
     if (visible) {
-      modalScale.value = withSpring(1, { damping: 12, stiffness: 100 })
-      modalOpacity.value = withTiming(1, { duration: 200 })
-      const pieces = Array.from({ length: 16 }, (_, i) => ({
+      modalScale.value = withSpring(1, { damping: 14, stiffness: 120 })
+      modalOpacity.value = withTiming(1, { duration: 180 })
+      setConfetti(Array.from({ length: 20 }, (_, i) => ({
         id: i,
-        dx: (Math.random() - 0.5) * 240,
-        dy: -(60 + Math.random() * 120),
+        dx: (Math.random() - 0.5) * 280,
+        dy: -(70 + Math.random() * 140),
         color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-        delay: i * 40,
-      }))
-      setConfetti(pieces)
-      setTimeout(() => setConfetti([]), 2000)
+        delay: i * 35,
+      })))
+      setTimeout(() => setConfetti([]), 2500)
     } else {
       modalScale.value = withTiming(0.9, { duration: 150 })
       modalOpacity.value = withTiming(0, { duration: 150 })
@@ -248,61 +325,64 @@ function WinModal({
   if (!result) return null
 
   const isNothing = result.type === 'nothing'
-  const prizeText = result.type === 'points' ? `+${result.prize_value} POINTS`
+  const prizeText = result.type === 'points' ? `+${result.prize_value} PTS`
     : result.type === 'discount' ? `${result.prize_value} OFF`
     : result.type === 'free_item' ? `FREE ${result.prize_value.toUpperCase()}`
-    : 'BETTER LUCK NEXT TIME'
+    : '—'
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <View style={{ alignItems: 'center' }}>
-          {/* Confetti burst from center */}
+      <Pressable style={mStyles.backdrop} onPress={onClose}>
+        <View style={{ alignItems: 'center' }} pointerEvents="box-none">
           {confetti.map((c) => (
             <ConfettiDot key={c.id} dx={c.dx} dy={c.dy} color={c.color} delay={c.delay} />
           ))}
-          <Animated.View style={[styles.modalCard, { backgroundColor: T.background }, modalStyle]}>
-            <Pressable style={styles.modalClose} onPress={onClose} hitSlop={12}>
+          <Animated.View
+            style={[mStyles.card, { backgroundColor: T.background }, modalStyle]}
+            onStartShouldSetResponder={() => true}
+          >
+            <Pressable style={mStyles.closeBtn} onPress={onClose} hitSlop={12}>
               <X size={20} color={T.textMuted} />
             </Pressable>
 
-            {/* Prize icon */}
+            {/* Icon */}
             <LinearGradient
-              colors={isNothing ? ['#555', '#333'] : [Colors.yellow, Colors.primary]}
-              style={styles.modalIconCircle}
+              colors={isNothing ? ['#444', '#222'] : ['#F5C400', Colors.primary]}
+              style={mStyles.iconCircle}
             >
               {isNothing
-                ? <Star size={36} color="#fff" />
-                : <Gift size={36} color="#fff" />
+                ? <RotateCcw size={34} color="#fff" />
+                : <Gift size={34} color="#fff" />
               }
             </LinearGradient>
 
-            <Text style={[styles.modalTitle, { color: T.text }]}>
-              {isNothing ? 'BETTER LUCK!' : 'CONGRATULATIONS!'}
+            <Text style={[mStyles.title, { color: T.text }]}>
+              {isNothing ? 'BETTER LUCK!' : 'YOU WON!'}
             </Text>
-            <Text style={[styles.modalSub, { color: T.textSecondary }]}>
-              {isNothing ? 'Try again tomorrow' : 'You just won'}
+            <Text style={[mStyles.sub, { color: T.textSecondary }]}>
+              {isNothing ? 'Try again tomorrow' : 'Congratulations'}
             </Text>
 
             {!isNothing && (
-              <View style={[styles.prizeBox, { backgroundColor: T.surface, borderColor: T.border }]}>
-                <Text style={[styles.prizeText, { color: Colors.primary }]}>{prizeText}</Text>
-              </View>
+              <LinearGradient
+                colors={[Colors.primary, Colors.primaryDark]}
+                style={mStyles.prizeBanner}
+              >
+                <Text style={mStyles.prizeText}>{prizeText}</Text>
+              </LinearGradient>
             )}
 
             {result.voucher_code && (
-              <View style={[styles.voucherBox, { backgroundColor: 'rgba(240,90,26,0.08)', borderColor: Colors.primary }]}>
-                <Text style={[styles.voucherTag, { color: Colors.primary }]}>YOUR CODE</Text>
-                <Text style={styles.voucherCode}>{result.voucher_code}</Text>
-                <Text style={[styles.voucherNote, { color: T.textMuted }]}>Valid 30 days · Use at checkout</Text>
+              <View style={[mStyles.voucherBox, { backgroundColor: T.surface, borderColor: T.border }]}>
+                <Text style={[mStyles.voucherLabel, { color: T.textMuted }]}>YOUR CODE</Text>
+                <Text style={mStyles.voucherCode}>{result.voucher_code}</Text>
+                <Text style={[mStyles.voucherNote, { color: T.textMuted }]}>Valid 30 days · use at checkout</Text>
               </View>
             )}
 
-            <Pressable style={styles.claimBtn} onPress={onClose}>
-              <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.claimBtnGradient}>
-                <Text style={styles.claimBtnText}>
-                  {isNothing ? 'GOT IT' : 'CLAIM PRIZE'}
-                </Text>
+            <Pressable onPress={onClose} style={{ width: '100%' }}>
+              <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={mStyles.claimBtn}>
+                <Text style={mStyles.claimText}>{isNothing ? 'GOT IT' : 'AWESOME!'}</Text>
               </LinearGradient>
             </Pressable>
           </Animated.View>
@@ -311,6 +391,49 @@ function WinModal({
     </Modal>
   )
 }
+
+const mStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.75)',
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  card: {
+    width: '100%', borderRadius: Radius.xl,
+    padding: Spacing.lg, alignItems: 'center', gap: 14,
+    elevation: 24,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4, shadowRadius: 24,
+  },
+  closeBtn: { position: 'absolute', top: 14, right: 14, padding: 4 },
+  iconCircle: {
+    width: 88, height: 88, borderRadius: 44,
+    alignItems: 'center', justifyContent: 'center',
+    ...Shadows.glowStrong,
+  },
+  title: { fontSize: 26, fontWeight: '900', letterSpacing: 0.5 },
+  sub: { fontSize: 14, marginTop: -8 },
+  prizeBanner: {
+    width: '100%', borderRadius: Radius.lg,
+    paddingVertical: 18, alignItems: 'center',
+    ...Shadows.glowStrong,
+  },
+  prizeText: { fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: 2 },
+  voucherBox: {
+    width: '100%', borderRadius: Radius.md,
+    padding: Spacing.md, alignItems: 'center',
+    borderWidth: 1, gap: 3,
+  },
+  voucherLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 2 },
+  voucherCode: { fontSize: 24, fontWeight: '900', color: Colors.primary, letterSpacing: 4 },
+  voucherNote: { fontSize: 11 },
+  claimBtn: {
+    borderRadius: Radius.lg, paddingVertical: 16,
+    alignItems: 'center',
+    ...Shadows.glowStrong,
+  },
+  claimText: { fontSize: 16, fontWeight: '900', color: '#fff', letterSpacing: 1 },
+})
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function SpinScreen() {
@@ -327,9 +450,8 @@ export default function SpinScreen() {
   const [error, setError] = useState<string | null>(null)
   const [bulbOn, setBulbOn] = useState(true)
 
-  // Blinking bulbs
   useEffect(() => {
-    const id = setInterval(() => setBulbOn((b) => !b), 500)
+    const id = setInterval(() => setBulbOn((b) => !b), 520)
     return () => clearInterval(id)
   }, [])
 
@@ -340,14 +462,14 @@ export default function SpinScreen() {
     staleTime: 0,
   })
 
-  const handleSpinDone = (res: { prize_type: string; prize_value: string; voucher_code: string | null }) => {
+  const handleSpinDone = useCallback((res: { prize_type: string; prize_value: string; voucher_code: string | null }) => {
     setResult({ type: res.prize_type, prize_value: res.prize_value, voucher_code: res.voucher_code })
     setSpinning(false)
     setShowModal(true)
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     refetchStatus()
     queryClient.invalidateQueries({ queryKey: ['loyalty', 'balance'] })
-  }
+  }, [refetchStatus, queryClient])
 
   const doSpin = async () => {
     if (spinning || !spinStatus?.can_spin) return
@@ -360,99 +482,97 @@ export default function SpinScreen() {
       const extraSpins = 5 + Math.floor(Math.random() * 3)
       const segIdx = res.segment_index ?? 0
       const segMid = segIdx * SEG_DEG + SEG_DEG / 2
-      const jitter = (Math.random() - 0.5) * (SEG_DEG * 0.5)
+      const jitter = (Math.random() - 0.5) * (SEG_DEG * 0.45)
       const landAngle = 360 - ((segMid + jitter) % 360)
       const currentBase = Math.ceil(rotation.value / 360) * 360
       const target = currentBase + extraSpins * 360 + landAngle
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
       rotation.value = withTiming(target, {
         duration: 4500,
-        easing: Easing.bezier(0.17, 0.67, 0.16, 1),
-      }, () => {
-        runOnJS(handleSpinDone)(res)
-      })
+        easing: Easing.bezier(0.17, 0.67, 0.12, 0.99),
+      }, () => runOnJS(handleSpinDone)(res))
     } catch (e: any) {
-      setError(e?.response?.data?.error ?? 'Something went wrong. Try again.')
+      setError(e?.response?.data?.error ?? 'Something went wrong.')
       setSpinning(false)
     }
   }
 
-  const animStyle = useAnimatedStyle(() => ({
+  const wheelAnimStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
   }))
 
   const canSpin = !spinning && !!spinStatus?.can_spin
   const spinsLeft = spinStatus?.spins_left ?? 0
+  const containerSize = WHEEL_SIZE + 44
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: T.background }]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Full-screen dark gradient background */}
+      <LinearGradient
+        colors={['#1A0600', '#2C0E00', '#0A0A0A']}
+        style={StyleSheet.absoluteFill}
+      />
 
       {/* Header */}
-      <View style={styles.headerRow}>
+      <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
-          <ArrowLeft size={22} color={T.text} />
+          <ArrowLeft size={22} color="#fff" />
         </Pressable>
-        <Text style={[styles.title, { color: T.text }]}>SPIN THE WHEEL</Text>
+        <Text style={styles.title}>SPIN THE WHEEL</Text>
         <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 24 }]}
-        showsVerticalScrollIndicator={false}
-      >
+      {/* Spins pill */}
+      <View style={[
+        styles.spinsPill,
+        { borderColor: canSpin ? Colors.primary : 'rgba(255,255,255,0.15)', backgroundColor: canSpin ? 'rgba(240,90,26,0.15)' : 'rgba(255,255,255,0.06)' },
+      ]}>
+        <Zap size={13} color={canSpin ? Colors.primary : 'rgba(255,255,255,0.4)'} fill={canSpin ? Colors.primary : 'none'} />
+        <Text style={[styles.spinsPillText, { color: canSpin ? Colors.primary : 'rgba(255,255,255,0.5)' }]}>
+          {spinning
+            ? 'Spinning...'
+            : spinsLeft > 0
+              ? `${spinsLeft} spin${spinsLeft !== 1 ? 's' : ''} left today`
+              : 'No spins left — come back tomorrow'}
+        </Text>
+      </View>
 
-        {/* Spins left pill */}
-        <View style={[styles.spinsPill, { backgroundColor: canSpin ? T.primaryTint : T.surface, borderColor: canSpin ? Colors.primary : T.border }]}>
-          <Zap size={13} color={canSpin ? Colors.primary : T.textMuted} fill={canSpin ? Colors.primary : 'none'} />
-          <Text style={[styles.spinsPillText, { color: canSpin ? Colors.primary : T.textMuted }]}>
-            {spinning
-              ? 'Spinning...'
-              : spinsLeft > 0
-                ? `${spinsLeft} spin${spinsLeft !== 1 ? 's' : ''} left today`
-                : 'No spins left — come back tomorrow'}
-          </Text>
-        </View>
+      {/* Pointer + Wheel zone */}
+      <View style={styles.wheelZone}>
+        <Pointer />
 
-        {/* Pointer */}
-        <View style={styles.pointerWrap}>
-          <View style={styles.pointer} />
-        </View>
+        {/* Wheel container — animated rotation applied here */}
+        <View style={{ width: containerSize, height: containerSize, alignItems: 'center', justifyContent: 'center' }}>
+          {/* Static bulb ring */}
+          <BulbRing bulbOn={bulbOn} />
 
-        {/* Wheel + bulb ring container */}
-        <View style={[styles.wheelOuter, { width: WHEEL_SIZE + 48, height: WHEEL_SIZE + 48 }]}>
-          {/* Glow shadow */}
-          <View style={[styles.wheelGlow, { width: WHEEL_SIZE + 24, height: WHEEL_SIZE + 24, borderRadius: (WHEEL_SIZE + 24) / 2 }]} />
+          {/* Rotating wheel */}
+          <Animated.View style={[{ width: containerSize, height: containerSize }, wheelAnimStyle]}>
+            <WheelSvg />
+          </Animated.View>
 
-          {/* Bulb ring */}
-          <View style={{ width: WHEEL_SIZE + 48, height: WHEEL_SIZE + 48, alignItems: 'center', justifyContent: 'center' }}>
-            <BulbRing bulbOn={bulbOn} />
-
-            {/* Animated wheel */}
-            <Animated.View style={[{ width: WHEEL_SIZE, height: WHEEL_SIZE, borderRadius: WHEEL_SIZE / 2, overflow: 'hidden' }, animStyle]}>
-              <WheelSvg />
-            </Animated.View>
-
-            {/* Hub label — static */}
-            <View style={styles.hubLabel} pointerEvents="none">
-              <Text style={styles.hubText}>B60</Text>
-            </View>
+          {/* Hub label — static overlay */}
+          <View style={styles.hubLabel} pointerEvents="none">
+            <Text style={styles.hubText}>B60</Text>
           </View>
         </View>
+      </View>
 
-        {error && (
-          <View style={[styles.errorBox, { borderColor: Colors.error, backgroundColor: T.errorTint }]}>
-            <Text style={[styles.errorText, { color: Colors.error }]}>{error}</Text>
-          </View>
-        )}
+      {error && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
 
-        {/* Spin button */}
+      {/* Spin button */}
+      <View style={[styles.bottomArea, { paddingBottom: insets.bottom + 16 }]}>
         <Pressable
-          style={[styles.spinBtnWrap, !canSpin && { opacity: 0.5 }]}
           onPress={doSpin}
           disabled={!canSpin}
+          style={[styles.spinBtnWrap, !canSpin && { opacity: 0.45 }]}
         >
           <LinearGradient
-            colors={canSpin ? [Colors.primary, Colors.primaryDark] : ['#555', '#333']}
+            colors={canSpin ? [Colors.primary, Colors.primaryDark] : ['#444', '#222']}
             style={styles.spinBtn}
           >
             <Zap size={20} color="#fff" fill={canSpin ? '#fff' : 'none'} />
@@ -462,145 +582,73 @@ export default function SpinScreen() {
           </LinearGradient>
         </Pressable>
 
-        {/* How it works */}
-        <View style={[styles.infoBox, { backgroundColor: T.surface, borderColor: T.border }]}>
-          <Text style={[styles.infoTitle, { color: T.text }]}>HOW IT WORKS</Text>
-          {[
-            '1 free spin per day',
-            '+1 spin for every order you place',
-            'Win points, discounts & free food',
-          ].map((line, i) => (
-            <View key={i} style={styles.infoRow}>
-              <View style={[styles.infoDot, { backgroundColor: Colors.primary }]} />
-              <Text style={[styles.infoText, { color: T.textSecondary }]}>{line}</Text>
+        {/* Quick info row */}
+        <View style={styles.infoRow}>
+          {['1 free spin/day', '+1 per order', 'Win food & points'].map((t, i) => (
+            <View key={i} style={styles.infoChip}>
+              <Text style={styles.infoChipText}>{t}</Text>
             </View>
           ))}
         </View>
+      </View>
 
-      </ScrollView>
-
-      <WinModal
-        visible={showModal}
-        result={result}
-        onClose={() => setShowModal(false)}
-      />
+      <WinModal visible={showModal} result={result} onClose={() => setShowModal(false)} />
     </SafeAreaView>
   )
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#0A0A0A' },
 
-  headerRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md, paddingVertical: 10,
   },
   backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 17, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
-
-  body: {
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.md,
-    paddingTop: 4,
-  },
+  title: { fontSize: 16, fontWeight: '900', letterSpacing: 2, color: '#fff', textTransform: 'uppercase' },
 
   spinsPill: {
+    alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 16, paddingVertical: 8,
+    paddingHorizontal: 18, paddingVertical: 8,
     borderRadius: Radius.full, borderWidth: 1.5,
+    marginBottom: 4,
   },
   spinsPillText: { fontSize: 13, fontWeight: '700' },
 
-  pointerWrap: { alignItems: 'center', marginBottom: -10, zIndex: 10 },
-  pointer: {
-    width: 0, height: 0,
-    borderLeftWidth: 16, borderRightWidth: 16, borderBottomWidth: 28,
-    borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    borderBottomColor: Colors.primaryDark,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8, shadowRadius: 10, elevation: 8,
-  },
-
-  wheelOuter: { alignItems: 'center', justifyContent: 'center' },
-  wheelGlow: {
-    position: 'absolute',
-    backgroundColor: 'transparent',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5, shadowRadius: 24, elevation: 0,
+  wheelZone: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
   },
 
   hubLabel: {
     position: 'absolute',
-    width: 68, height: 68, borderRadius: 34,
+    width: INNER_R * 2, height: INNER_R * 2, borderRadius: INNER_R,
     alignItems: 'center', justifyContent: 'center',
   },
-  hubText: { fontSize: 15, fontWeight: '900', color: '#fff', letterSpacing: 1 },
+  hubText: { fontSize: 14, fontWeight: '900', color: '#fff', letterSpacing: 1 },
 
   errorBox: {
-    width: '100%', borderRadius: Radius.md,
-    padding: Spacing.md, borderWidth: 1,
+    marginHorizontal: Spacing.lg, borderRadius: Radius.md,
+    padding: Spacing.sm, backgroundColor: 'rgba(239,68,68,0.12)',
+    borderWidth: 1, borderColor: Colors.error,
   },
-  errorText: { fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  errorText: { fontSize: 13, color: Colors.error, fontWeight: '600', textAlign: 'center' },
 
-  spinBtnWrap: { width: '100%' },
+  bottomArea: { paddingHorizontal: Spacing.lg, gap: 10 },
+  spinBtnWrap: {},
   spinBtn: {
     borderRadius: Radius.lg, paddingVertical: 18,
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
     ...Shadows.glowStrong,
   },
   spinBtnText: { fontSize: 18, fontWeight: '900', color: '#fff', letterSpacing: 1.5 },
 
-  infoBox: {
-    width: '100%', borderRadius: Radius.lg,
-    padding: Spacing.md, borderWidth: 1, gap: Spacing.sm,
+  infoRow: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
+  infoChip: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 5,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
   },
-  infoTitle: { fontSize: 11, fontWeight: '900', letterSpacing: 1.5 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  infoDot: { width: 6, height: 6, borderRadius: 3 },
-  infoText: { fontSize: 13, fontWeight: '500', flex: 1 },
-
-  // Modal
-  modalBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
-    alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: Spacing.lg,
-  },
-  modalCard: {
-    width: '100%', borderRadius: Radius.xl,
-    padding: Spacing.lg, alignItems: 'center', gap: Spacing.md,
-    ...Shadows.glowStrong,
-  },
-  modalClose: { position: 'absolute', top: Spacing.md, right: Spacing.md, padding: 4 },
-  modalIconCircle: {
-    width: 80, height: 80, borderRadius: 40,
-    alignItems: 'center', justifyContent: 'center',
-    ...Shadows.glowStrong,
-  },
-  modalTitle: { fontSize: 24, fontWeight: '900', letterSpacing: 1 },
-  modalSub: { fontSize: 14, fontWeight: '500', marginTop: -8 },
-  prizeBox: {
-    width: '100%', borderRadius: Radius.md,
-    padding: Spacing.md, alignItems: 'center', borderWidth: 1,
-  },
-  prizeText: { fontSize: 28, fontWeight: '900', letterSpacing: 1 },
-  voucherBox: {
-    width: '100%', borderRadius: Radius.md,
-    padding: Spacing.md, alignItems: 'center',
-    borderWidth: 1.5, gap: 4,
-  },
-  voucherTag: { fontSize: 10, fontWeight: '900', letterSpacing: 2 },
-  voucherCode: { fontSize: 26, fontWeight: '900', color: Colors.yellow, letterSpacing: 4 },
-  voucherNote: { fontSize: 11, marginTop: 2 },
-  claimBtn: { width: '100%', borderRadius: Radius.lg, overflow: 'hidden' },
-  claimBtnGradient: {
-    paddingVertical: 16, alignItems: 'center', justifyContent: 'center',
-    ...Shadows.glowStrong,
-  },
-  claimBtnText: { fontSize: 16, fontWeight: '900', color: '#fff', letterSpacing: 1 },
+  infoChipText: { fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: '600' },
 })
