@@ -57,7 +57,7 @@
       },
       "supabaseUrl": "https://yyygcbovqblkzehjrtqw.supabase.co",
       "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5eWdjYm92cWJsa3plaGpydHF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzODkzNTEsImV4cCI6MjA4OTk2NTM1MX0.OB7oYdN8_Lp6uSaolG0bOSc_Yo1E4UkfwfKn2g5_uLs",
-      "apiUrl": "https://b60-app-production.up.railway.app/api",
+      "apiUrl": "https://b60-app.onrender.com/api",
       "router": {
         "origin": false
       }

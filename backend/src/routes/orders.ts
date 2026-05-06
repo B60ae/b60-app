@@ -174,27 +174,35 @@ ordersRouter.post('/', orderLimiter,
 ordersRouter.get('/history', async (req: AuthRequest, res) => {
   const { data, error } = await supabase
     .from('orders')
-    .select('*')
+    .select('id, status, total, subtotal, points_earned, points_redeemed, discount, created_at, location_id, estimated_ready_at, items')
     .eq('user_id', req.userId!)
     .order('created_at', { ascending: false })
     .limit(50)
 
   if (error) return res.status(500).json({ error: 'Failed to fetch history' })
-  res.json(data)
+
+  // items is stored as jsonb — already includes menu_item snapshot
+  res.json(data ?? [])
 })
 
 // ─── Get Order ────────────────────────────────────────────────────────────────
-ordersRouter.get('/:id', async (req: AuthRequest, res) => {
-  const { data, error } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('id', req.params.id)
-    .eq('user_id', req.userId!)
-    .single()
+ordersRouter.get('/:id',
+  param('id').isUUID().withMessage('Invalid order id'),
+  async (req: AuthRequest, res) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) return res.status(400).json({ error: 'Invalid order id' })
 
-  if (error) return res.status(404).json({ error: 'Order not found' })
-  res.json(data)
-})
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, status, total, subtotal, points_earned, points_redeemed, discount, created_at, location_id, estimated_ready_at, items')
+      .eq('id', req.params.id)
+      .eq('user_id', req.userId!)
+      .single()
+
+    if (error || !data) return res.status(404).json({ error: 'Order not found' })
+    res.json(data)
+  }
+)
 
 // ─── Track Order ──────────────────────────────────────────────────────────────
 ordersRouter.get('/:id/track', async (req: AuthRequest, res) => {

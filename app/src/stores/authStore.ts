@@ -60,7 +60,14 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {
-        if (state) state.isLoading = false
+        if (state) {
+          state.isLoading = false
+          // Invalidate auth if token is missing (e.g. manually deleted from storage)
+          if (!state.token) {
+            state.isAuthenticated = false
+            state.user = null
+          }
+        }
       },
     }
   )

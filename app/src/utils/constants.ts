@@ -1,6 +1,6 @@
 import Constants from 'expo-constants'
 
-export const API_URL = Constants.expoConfig?.extra?.apiUrl ?? 'https://b60.ae/api'
+export const API_URL = Constants.expoConfig?.extra?.apiUrl ?? 'https://b60-app.onrender.com/api'
 
 // ─── Image Assets ──────────────────────────────────────────────────────────
 export const IMAGES = {

@@ -33,9 +33,10 @@ const VALUES = [
 ]
 
 const LOCATIONS = [
-  { name: 'OUD METHA', city: 'Dubai', note: 'The OG — since Sept 2024', maps: 'https://maps.google.com/?q=B60+Burgers+Oud+Metha+Dubai' },
-  { name: 'MUWAILEH', city: 'Sharjah', note: 'Coming through', maps: 'https://maps.google.com/?q=B60+Burgers+Muwaileh+Sharjah' },
-  { name: 'AL WARQA', city: 'Dubai', note: 'East side', maps: 'https://maps.google.com/?q=B60+Burgers+Al+Warqa+Dubai' },
+  { name: 'OUD METHA', city: 'Dubai', note: 'Oud Metha Road · Daily 1PM – 2AM', maps: 'https://maps.google.com/?q=B60+Burgers+Oud+Metha+Dubai' },
+  { name: 'AL GHURAIR', city: 'Dubai', note: 'Flayva Food Hall, Deira · Weekdays 10AM–10PM · Weekends 10AM–12AM', maps: 'https://maps.google.com/?q=B60+Burgers+Flayva+Al+Ghurair+Centre+Dubai' },
+  { name: 'MUWAILEH', city: 'Sharjah', note: 'Muwaileh Commercial · Daily 1PM – 2AM', maps: 'https://maps.google.com/?q=B60+Burgers+Muwaileh+Sharjah' },
+  { name: 'AL WARQA', city: 'Dubai', note: 'Al Warqa 1 · Daily 1PM – 2AM', maps: 'https://maps.google.com/?q=B60+Burgers+Al+Warqa+Dubai' },
 ]
 
 export default function AboutScreen() {
@@ -150,16 +151,17 @@ export default function AboutScreen() {
             <View style={styles.hoursRow}>
               <Clock size={16} color={Colors.primary} />
               <View style={styles.hoursCopy}>
-                <Text style={[styles.hoursDay, { color: T.text }]}>Sunday – Thursday</Text>
-                <Text style={[styles.hoursTime, { color: T.textMuted }]}>12:00 PM – 11:00 PM</Text>
+                <Text style={[styles.hoursDay, { color: T.text }]}>Oud Metha · Muwaileh · Al Warqa</Text>
+                <Text style={[styles.hoursTime, { color: T.textMuted }]}>Daily 1:00 PM – 2:00 AM</Text>
               </View>
             </View>
             <View style={[styles.hoursDivider, { backgroundColor: T.border }]} />
             <View style={styles.hoursRow}>
               <Clock size={16} color={Colors.primary} />
               <View style={styles.hoursCopy}>
-                <Text style={[styles.hoursDay, { color: T.text }]}>Friday – Saturday</Text>
-                <Text style={[styles.hoursTime, { color: T.textMuted }]}>12:00 PM – 12:00 AM</Text>
+                <Text style={[styles.hoursDay, { color: T.text }]}>Al Ghurair Centre</Text>
+                <Text style={[styles.hoursTime, { color: T.textMuted }]}>Weekdays 10:00 AM – 10:00 PM</Text>
+                <Text style={[styles.hoursTime, { color: T.textMuted }]}>Weekends 10:00 AM – 12:00 AM</Text>
               </View>
             </View>
           </View>
