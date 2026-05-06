@@ -148,7 +148,7 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
       updatePoints((user?.loyalty_points ?? 0) - pointsToRedeem + earned)
       clearCart()
       onClose()
-      router.push({ pathname: '/order-success/index', params: { orderId: order.id, pointsEarned: earned } } as any)
+      router.push({ pathname: '/order-success', params: { orderId: order.id, pointsEarned: earned } } as any)
       onOrderPlaced()
     } catch (e: any) {
       setToast({ message: e?.response?.data?.error ?? 'Order failed. Try again.', type: 'error' })
@@ -189,7 +189,7 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
           <>
             <ScrollView style={styles.sheetItems} showsVerticalScrollIndicator={false}>
               {items.map((ci, idx) => (
-                <View key={idx} style={[styles.sheetItem, { borderBottomColor: T.border }]}>
+                <View key={`${ci.menu_item.id}-${idx}`} style={[styles.sheetItem, { borderBottomColor: T.border }]}>
                   {ci.menu_item.image_url
                     ? <Image source={{ uri: ci.menu_item.image_url }} style={styles.sheetThumb} contentFit="cover" />
                     : <View style={[styles.sheetThumb, { backgroundColor: T.border }]} />
@@ -207,18 +207,20 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
                     <Pressable
                       onPress={() => ci.quantity > 1 ? updateQuantity(idx, ci.quantity - 1) : removeItem(idx)}
                       style={[styles.qtyBtn, { borderColor: T.border, backgroundColor: T.surface }]}
+                      hitSlop={8}
                     >
                       {ci.quantity === 1
-                        ? <Trash2 size={11} color="#EF4444" />
-                        : <Minus size={11} color={T.text} />
+                        ? <Trash2 size={13} color="#EF4444" />
+                        : <Minus size={13} color={T.text} />
                       }
                     </Pressable>
                     <Text style={[styles.qtyNum, { color: T.text }]}>{ci.quantity}</Text>
                     <Pressable
                       onPress={() => updateQuantity(idx, ci.quantity + 1)}
                       style={[styles.qtyBtn, { borderColor: T.border, backgroundColor: T.surface }]}
+                      hitSlop={8}
                     >
-                      <Plus size={11} color={T.text} />
+                      <Plus size={13} color={T.text} />
                     </Pressable>
                   </View>
                 </View>
@@ -734,7 +736,7 @@ const styles = StyleSheet.create({
   sheetItemSub: { fontSize: 11, marginTop: 1 },
   sheetItemPrice: { fontSize: 14, fontWeight: '900', marginTop: 2 },
   sheetQty: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  qtyBtn: { width: 28, height: 28, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  qtyBtn: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   qtyNum: { fontSize: 14, fontWeight: '700', minWidth: 16, textAlign: 'center' },
   emptyCart: { alignItems: 'center', justifyContent: 'center', padding: 48, gap: 12 },
   emptyCartText: { fontSize: 16, fontWeight: '600' },

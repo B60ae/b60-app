@@ -9,7 +9,6 @@ import {
   Star, TrendingUp, Gift, ArrowUpRight, ArrowDownLeft,
   ChevronDown, ChevronUp, ArrowRight, Zap, Trophy, RotateCcw,
 } from 'lucide-react-native'
-
 import { loyaltyApi, gamesApi } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
 import { useThemeStore } from '../../stores/themeStore'
@@ -32,24 +31,23 @@ function getTier(points: number) {
 // ─── Animated Points Number ──────────────────────────────────────────────────
 
 function AnimatedPointsText({ target }: { target: number }) {
-  const [displayPoints, setDisplayPoints] = React.useState(0)
+  const [display, setDisplay] = React.useState(0)
 
-  useEffect(() => {
-    const duration = 1200
-    const frameDuration = 1000 / 60
-    const totalFrames = Math.round(duration / frameDuration)
-    let frame = 0
+  React.useEffect(() => {
+    const steps = 40
+    const intervalMs = 1200 / steps
+    let step = 0
     const timer = setInterval(() => {
-      frame++
-      const progress = frame / totalFrames
-      const eased = 1 - (1 - progress) * (1 - progress)
-      setDisplayPoints(Math.floor(eased * target))
-      if (frame >= totalFrames) clearInterval(timer)
-    }, frameDuration)
+      step++
+      const t = step / steps
+      const eased = 1 - (1 - t) * (1 - t)
+      setDisplay(Math.floor(eased * target))
+      if (step >= steps) clearInterval(timer)
+    }, intervalMs)
     return () => clearInterval(timer)
   }, [target])
 
-  return <Text style={styles.pointsNumber}>{displayPoints.toLocaleString()}</Text>
+  return <Text style={styles.pointsNumber}>{display.toLocaleString()}</Text>
 }
 
 // ─── Smash Meter ─────────────────────────────────────────────────────────────
@@ -285,7 +283,11 @@ export default function LoyaltyScreen() {
 
           <ArcadeCard
             title="SMASH TAP"
-            subtitle={tapStatus ? `${tapStatus.plays_left} plays left · Best: ${tapStatus.best_score} taps` : 'Tap as fast as you can'}
+            subtitle={tapStatus
+              ? tapStatus.best_score > 0
+                ? `${tapStatus.plays_left} plays left · Best: ${tapStatus.best_score} taps`
+                : `${tapStatus.plays_left} play${tapStatus.plays_left !== 1 ? 's' : ''} left today`
+              : 'Tap as fast as you can'}
             badge={tapStatus && tapStatus.plays_left > 0 ? 'PLAY' : undefined}
             gradientColors={['#1B2A4A', '#2D3E6A']}
             icon={Zap}
@@ -388,7 +390,7 @@ const styles = StyleSheet.create({
   sectionBlock: { gap: Spacing.sm },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   sectionTitle: { fontSize: 16, fontWeight: '800' },
-  sectionPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.full },
+  sectionPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.full, color: Colors.white, fontSize: 11, fontWeight: '900' },
   sectionDesc: { fontSize: 13, marginTop: -4 },
 
   arcadeCard: { borderRadius: Radius.lg, overflow: 'hidden' },

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Alert, TextInput, Switch, Linking,
+  KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
@@ -74,6 +75,7 @@ export default function MoreScreen() {
     queryKey: ['locations'],
     queryFn: locationsApi.getAll,
     staleTime: 1000 * 60 * 10,
+    enabled: isAuthenticated,
   })
   const selectedLocation = locations?.find((l: any) => l.id === locationId)
 
@@ -137,6 +139,10 @@ export default function MoreScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
 
         {/* ── Header title ── */}
@@ -300,13 +306,13 @@ export default function MoreScreen() {
           <Row
             icon={<Info size={18} color={Colors.primary} />}
             label="About B60 Burgers"
-            onPress={() => router.push('/about/index' as any)}
+            onPress={() => router.push('/about' as any)}
             theme={theme}
           />
           <Row
             icon={<Shield size={18} color={Colors.primary} />}
             label="Terms & Privacy"
-            onPress={() => router.push('/legal/index' as any)}
+            onPress={() => router.push('/legal' as any)}
             theme={theme}
           />
         </View>
@@ -331,9 +337,11 @@ export default function MoreScreen() {
           <Text style={[styles.version, { color: theme.textMuted }]}>
             B60 Burgers{selectedLocation ? ` · ${selectedLocation.name}` : ' · Dubai & Sharjah'}
           </Text>
+          <Text style={[styles.version, { color: theme.textMuted, marginTop: 2 }]}>v1.0.0</Text>
         </Pressable>
 
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }

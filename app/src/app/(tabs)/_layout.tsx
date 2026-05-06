@@ -26,7 +26,7 @@ const b60IconStyles = StyleSheet.create({
 })
 
 function CartTabIcon({ color, size, theme }: { color: string; size: number; theme: any }) {
-  const count = useCartStore((s) => s.items.length)
+  const count = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
   const prevCount = useRef(count)
   const badgeScale = useRef(new Animated.Value(1)).current
 

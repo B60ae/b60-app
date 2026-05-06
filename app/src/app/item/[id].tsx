@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import {
-  View, Text, StyleSheet, Pressable, Platform, Animated as RNAnimated,
+  View, Text, StyleSheet, Pressable, Animated as RNAnimated, ActivityIndicator,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { useLocalSearchParams, router } from 'expo-router'
@@ -11,12 +11,12 @@ import * as Haptics from 'expo-haptics'
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withSequence,
 } from 'react-native-reanimated'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { menuApi } from '../../services/api'
 import { useCartStore } from '../../stores/cartStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { Toast } from '../../components/ui/Toast'
-import { LightTheme, DarkTheme, Spacing, Radius } from '../../utils/theme'
+import { LightTheme, DarkTheme, Spacing, Radius, Colors } from '../../utils/theme'
 import type { CustomizationOption } from '../../types'
 
 export default function ItemDetailScreen() {
@@ -27,6 +27,7 @@ export default function ItemDetailScreen() {
   const addItem = useCartStore((s) => s.addItem)
   const themeMode = useThemeStore((s) => s.themeMode)
   const T = themeMode === 'light' ? LightTheme : DarkTheme
+  const insets = useSafeAreaInsets()
 
   const addBtnScale = useSharedValue(1)
   const qtyScale = useSharedValue(1)
@@ -41,7 +42,7 @@ export default function ItemDetailScreen() {
     enabled: !!id,
   })
 
-  const toggleOption = (option: CustomizationOption, type: 'single' | 'multi', groupId: string) => {
+  const toggleOption = useCallback((option: CustomizationOption, type: 'single' | 'multi', groupId: string) => {
     if (type === 'single') {
       setSelectedOptions((prev) => [
         ...prev.filter((o) => {
@@ -57,7 +58,7 @@ export default function ItemDetailScreen() {
           : [...prev, option],
       )
     }
-  }
+  }, [item])
 
   const changeQty = (delta: number) => {
     const next = quantity + delta
@@ -86,7 +87,16 @@ export default function ItemDetailScreen() {
   const addBtnAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: addBtnScale.value }] }))
   const qtyAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: qtyScale.value }] }))
 
-  if (isLoading || !item) return null
+  if (isLoading || !item) {
+    return (
+      <View style={[styles.container, styles.loadingContainer, { backgroundColor: T.background }]}>
+        <Pressable style={[styles.closeBtn, { top: insets.top + 12 }]} onPress={() => router.back()} hitSlop={10}>
+          <X size={18} color={T.text} strokeWidth={2.5} />
+        </Pressable>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    )
+  }
 
   // Render all customization groups — don't filter by hardcoded ID
   const addons = item.customizations ?? []
@@ -113,7 +123,7 @@ export default function ItemDetailScreen() {
         />
 
         {/* Close button */}
-        <Pressable style={styles.closeBtn} onPress={() => router.back()} hitSlop={10}>
+        <Pressable style={[styles.closeBtn, { top: insets.top + 12 }]} onPress={() => router.back()} hitSlop={10}>
           <X size={18} color="#fff" strokeWidth={2.5} />
         </Pressable>
 
@@ -157,8 +167,8 @@ export default function ItemDetailScreen() {
                     key={option.id}
                     style={[
                       styles.addonRow,
-                      { borderColor: isSelected ? '#F05A1A' : T.border },
-                      isSelected && { backgroundColor: 'rgba(240,90,26,0.07)' },
+                      { borderColor: isSelected ? Colors.primary : T.border },
+                      isSelected && { backgroundColor: T.primaryTint },
                     ]}
                     onPress={() => {
                       Haptics.selectionAsync()
@@ -167,12 +177,12 @@ export default function ItemDetailScreen() {
                   >
                     <View style={[
                       styles.addonCheck,
-                      { borderColor: isSelected ? '#F05A1A' : T.border },
-                      isSelected && { backgroundColor: '#F05A1A', borderColor: '#F05A1A' },
+                      { borderColor: isSelected ? Colors.primary : T.border },
+                      isSelected && { backgroundColor: Colors.primary, borderColor: Colors.primary },
                     ]}>
-                      {isSelected && <Check size={11} color="#fff" strokeWidth={3} />}
+                      {isSelected && <Check size={11} color={Colors.white} strokeWidth={3} />}
                     </View>
-                    <Text style={[styles.addonName, { color: isSelected ? '#F05A1A' : T.text }]}>
+                    <Text style={[styles.addonName, { color: isSelected ? Colors.primary : T.text }]}>
                       {option.name}
                     </Text>
                     <Text style={[styles.addonPrice, { color: T.textMuted }]}>+AED {option.price_delta}</Text>
@@ -216,7 +226,7 @@ export default function ItemDetailScreen() {
           style={styles.ctaFade}
           pointerEvents="none"
         />
-        <View style={[styles.ctaContainer, { backgroundColor: T.background }]}>
+        <View style={[styles.ctaContainer, { backgroundColor: T.background, paddingBottom: insets.bottom + 8 }]}>
           <Animated.View style={[{ flex: 1 }, addBtnAnimStyle]}>
             <Pressable style={styles.addBtn} onPress={handleAddToCart}>
               <View style={styles.qtyBadge}>
@@ -247,9 +257,9 @@ const styles = StyleSheet.create({
 
   imageContainer: { width: '100%', height: 320 },
   image: { width: '100%', height: '100%' },
+  loadingContainer: { alignItems: 'center', justifyContent: 'center' },
   closeBtn: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 56 : 40,
     right: 16,
     backgroundColor: 'rgba(0,0,0,0.4)',
     borderRadius: Radius.full,
@@ -326,7 +336,6 @@ const styles = StyleSheet.create({
   ctaContainer: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 20,
     paddingTop: 8,
     gap: Spacing.sm,
   },

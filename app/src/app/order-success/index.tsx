@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native'
+import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -15,7 +15,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated'
 import { MapPin, UtensilsCrossed, Star } from 'lucide-react-native'
-import { Colors, Spacing, Radius, Shadows } from '../../utils/theme'
+import { Colors, LightTheme, DarkTheme, Spacing, Radius, Shadows } from '../../utils/theme'
+import { useThemeStore } from '../../stores/themeStore'
 
 // Confetti dot config
 const DOTS = [
@@ -68,6 +69,8 @@ function ConfettiDot({
 
 export default function OrderSuccessScreen() {
   const { orderId, pointsEarned } = useLocalSearchParams<{ orderId: string; pointsEarned: string }>()
+  const themeMode = useThemeStore((s) => s.themeMode)
+  const T = themeMode === 'light' ? LightTheme : DarkTheme
 
   const checkScale = useSharedValue(0)
   const checkOpacity = useSharedValue(0)
@@ -131,10 +134,14 @@ export default function OrderSuccessScreen() {
     transform: [{ rotate: `${coinRotate.value}deg` }],
   }))
 
+  const gradientColors = themeMode === 'dark'
+    ? ['#000000', '#0A0A0A', '#121212'] as const
+    : ['#000000', '#FFF8F5', '#F8F9FA'] as const
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: T.background }]}>
       <LinearGradient
-        colors={['#000000', '#FFF8F5', '#F8F9FA']}
+        colors={gradientColors}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -159,15 +166,15 @@ export default function OrderSuccessScreen() {
 
       {/* Main content */}
       <Animated.View style={[styles.content, contentAnimStyle]}>
-        <Text style={styles.title}>IT'S SMASHING!</Text>
-        <Text style={styles.subtitle}>Your order is being fired up right now.</Text>
+        <Text style={[styles.title, { color: T.text }]}>IT'S SMASHING!</Text>
+        <Text style={[styles.subtitle, { color: T.textSecondary }]}>Your order is being fired up right now.</Text>
 
         {/* Order number card */}
         {orderId && (
-          <View style={styles.orderIdCard}>
-            <Text style={styles.orderIdLabel}>YOUR ORDER</Text>
-            <Text style={styles.orderIdValue}>#{orderId.slice(-6).toUpperCase()}</Text>
-            <Text style={styles.orderIdSub}>Flash this at the counter to collect</Text>
+          <View style={[styles.orderIdCard, { backgroundColor: T.surface }]}>
+            <Text style={[styles.orderIdLabel, { color: T.textMuted }]}>YOUR ORDER</Text>
+            <Text style={[styles.orderIdValue, { color: T.text }]}>#{orderId.slice(-6).toUpperCase()}</Text>
+            <Text style={[styles.orderIdSub, { color: T.textMuted }]}>Flash this at the counter to collect</Text>
           </View>
         )}
 
@@ -178,8 +185,8 @@ export default function OrderSuccessScreen() {
               <Star size={28} color="#22C55E" fill="#22C55E" />
             </Animated.View>
             <View style={styles.pointsTextBlock}>
-              <Text style={styles.pointsTitle}>+{pts} POINTS EARNED</Text>
-              <Text style={styles.pointsSub}>Stacking in your B60 Club</Text>
+              <Text style={[styles.pointsTitle, { color: T.text }]}>+{pts} POINTS EARNED</Text>
+              <Text style={[styles.pointsSub, { color: T.textSecondary }]}>Stacking in your B60 Club</Text>
             </View>
           </Animated.View>
         )}
@@ -194,9 +201,9 @@ export default function OrderSuccessScreen() {
             <MapPin size={18} color="#fff" strokeWidth={2.5} />
             <Text style={styles.trackBtnText}>TRACK MY ORDER</Text>
           </Pressable>
-          <Pressable style={styles.menuBtn} onPress={() => router.replace('/(tabs)/menu')}>
-            <UtensilsCrossed size={16} color="#444444" strokeWidth={2} />
-            <Text style={styles.menuBtnText}>Back to Menu</Text>
+          <Pressable style={[styles.menuBtn, { backgroundColor: T.surface, borderColor: T.border }]} onPress={() => router.replace('/(tabs)/menu')}>
+            <UtensilsCrossed size={16} color={T.textSecondary} strokeWidth={2} />
+            <Text style={[styles.menuBtnText, { color: T.textSecondary }]}>Back to Menu</Text>
           </Pressable>
         </View>
       </Animated.View>
@@ -266,12 +273,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 36,
     fontWeight: '900',
-    color: '#1B2A4A',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: '#444444',
     textAlign: 'center',
     marginTop: -6,
   },
@@ -292,18 +297,15 @@ const styles = StyleSheet.create({
   orderIdLabel: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#888888',
     letterSpacing: 2,
   },
   orderIdValue: {
     fontSize: 36,
     fontWeight: '900',
-    color: '#1B2A4A',
     letterSpacing: 3,
   },
   orderIdSub: {
     fontSize: 12,
-    color: '#888888',
     fontWeight: '500',
   },
 
@@ -320,8 +322,8 @@ const styles = StyleSheet.create({
   },
   coinWrapper: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   pointsTextBlock: { flex: 1 },
-  pointsTitle: { fontSize: 18, fontWeight: '800', color: '#1B2A4A' },
-  pointsSub: { fontSize: 13, color: '#444444', marginTop: 2 },
+  pointsTitle: { fontSize: 18, fontWeight: '800' },
+  pointsSub: { fontSize: 13, marginTop: 2 },
 
   ctaGroup: { width: '100%', gap: Spacing.sm, marginTop: Spacing.sm },
   trackBtn: {
@@ -340,11 +342,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    backgroundColor: '#F8F9FA',
     borderRadius: Radius.lg,
     paddingVertical: Spacing.md,
     borderWidth: 1.5,
-    borderColor: '#EEEEEE',
   },
-  menuBtnText: { fontSize: 15, fontWeight: '700', color: '#444444' },
+  menuBtnText: { fontSize: 15, fontWeight: '700' },
 })

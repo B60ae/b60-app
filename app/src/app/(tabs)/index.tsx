@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import React, { useEffect, useRef, useState, useCallback, useMemo, memo } from 'react'
 import {
   ScrollView,
   View,
@@ -36,6 +36,7 @@ const FEATURED_SNAP_INTERVAL = 194
 
 const LOCATION_MAPS: Record<string, string> = {
   'Oud Metha': 'https://maps.google.com/?q=B60+Burgers+Oud+Metha+Dubai',
+  'Al Ghurair': 'https://maps.google.com/?q=B60+Burgers+Flayva+Al+Ghurair+Centre+Dubai',
   'Muwaileh': 'https://maps.google.com/?q=B60+Burgers+Muwaileh+Sharjah',
   'Al Warqa': 'https://maps.google.com/?q=B60+Burgers+Al+Warqa+Dubai',
 }
@@ -44,6 +45,31 @@ function getMapsUrl(name: string, address: string) {
   const key = Object.keys(LOCATION_MAPS).find((k) => name.toLowerCase().includes(k.toLowerCase()))
   return key ? LOCATION_MAPS[key] : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + address)}`
 }
+
+// Memoized featured item card — prevents re-render on unrelated state changes
+const FeaturedCard = memo(function FeaturedCard({
+  item, theme, onPress, onAdd,
+}: { item: MenuItem; theme: any; onPress: () => void; onAdd: () => void }) {
+  return (
+    <Pressable
+      style={[styles.featuredCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+      onPress={onPress}
+    >
+      <Image source={{ uri: item.image_url }} style={styles.featuredCardImage} contentFit="cover" />
+      <View style={styles.featuredCardBody}>
+        <Text style={[styles.featuredCardName, { color: theme.text }]} numberOfLines={2}>{item.name}</Text>
+        <Text style={[styles.featuredCardPrice, { color: theme.primary }]}>AED {Number(item.price || 0).toFixed(0)}</Text>
+        <Pressable
+          style={styles.featuredAddBtn}
+          onPress={onAdd}
+          hitSlop={8}
+        >
+          <Text style={styles.featuredAddBtnText}>+ ADD</Text>
+        </Pressable>
+      </View>
+    </Pressable>
+  )
+})
 
 const CATEGORY_QUICK = [
   { id: 'burgers', label: 'Burgers' },
@@ -211,6 +237,15 @@ export default function HomeScreen() {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
   }, [addItem])
 
+  const renderFeaturedItem = useCallback(({ item }: { item: MenuItem }) => (
+    <FeaturedCard
+      item={item}
+      theme={theme}
+      onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })}
+      onAdd={() => handleAddFeatured(item)}
+    />
+  ), [theme, handleAddFeatured])
+
   const handleCategoryPress = (id: string) => {
     setActiveCategory(id)
     if (Platform.OS !== 'web') Haptics.selectionAsync()
@@ -347,24 +382,8 @@ export default function HomeScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.featuredRow}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={[styles.featuredCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                  onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })}
-                >
-                  <Image source={{ uri: item.image_url }} style={styles.featuredCardImage} contentFit="cover" />
-                  <View style={styles.featuredCardBody}>
-                    <Text style={[styles.featuredCardName, { color: theme.text }]} numberOfLines={2}>{item.name}</Text>
-                    <Text style={[styles.featuredCardPrice, { color: theme.primary }]}>AED {Number(item.price || 0).toFixed(0)}</Text>
-                    <Pressable
-                      style={styles.featuredAddBtn}
-                      onPress={() => handleAddFeatured(item)}
-                    >
-                      <Text style={styles.featuredAddBtnText}>+ ADD</Text>
-                    </Pressable>
-                  </View>
-                </Pressable>
-              )}
+              renderItem={renderFeaturedItem}
+              getItemLayout={(_, index) => ({ length: 200, offset: 212 * index, index })}
             />
           )}
         </StaggerSection>
