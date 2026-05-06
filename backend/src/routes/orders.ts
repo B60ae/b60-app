@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { body, param, validationResult } from 'express-validator'
-import rateLimit from 'express-rate-limit'
 import { supabase } from '../config/supabase'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { pushOrderToDart, getOrderStatusFromDart, isLocationExcludedFromDart } from '../services/dartPos'
@@ -8,17 +7,10 @@ import { awardPoints, redeemPoints } from '../services/loyalty'
 
 export const ordersRouter = Router()
 ordersRouter.use(requireAuth)
-
-// Per-user order rate limit: max 5 orders per minute
-const orderLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 5,
-  keyGenerator: (req: any) => req.userId ?? req.ip,
-  message: { error: 'Too many orders placed. Please wait a moment.' },
-})
+// Rate limiting applied at index.ts level (ordersLimiter) — not duplicated here
 
 // ─── Create Order ─────────────────────────────────────────────────────────────
-ordersRouter.post('/', orderLimiter,
+ordersRouter.post('/',
   body('items').isArray({ min: 1 }),
   body('items.*.menu_item.id').notEmpty().withMessage('Each item must have menu_item.id'),
   body('items.*.menu_item.price').isNumeric().withMessage('Each item must have menu_item.price'),

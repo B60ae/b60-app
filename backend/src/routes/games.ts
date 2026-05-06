@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { randomBytes } from 'crypto'
 import rateLimit from 'express-rate-limit'
 import { supabase } from '../config/supabase'
 import { requireAuth, AuthRequest } from '../middleware/auth'
@@ -36,8 +37,8 @@ function pickPrize() {
   return SPIN_PRIZES[0]
 }
 
-function generateVoucherCode() {
-  return 'B60-' + Math.random().toString(36).substring(2, 8).toUpperCase()
+function generateVoucherCode(): string {
+  return 'B60-' + randomBytes(4).toString('hex').toUpperCase()
 }
 
 // GET /api/games/spin/status — 1 free spin/day + 1 per order

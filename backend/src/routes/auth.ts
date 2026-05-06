@@ -1,32 +1,31 @@
 import { Router } from 'express'
 import { body, validationResult } from 'express-validator'
 import jwt from 'jsonwebtoken'
-import { randomInt } from 'crypto'
+import { createHash, randomInt } from 'crypto'
 import { supabase } from '../config/supabase'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 
 export const authRouter = Router()
 
-// Temp OTP store (use Redis in production)
-const otpStore = new Map<string, { otp: string; expires: number }>()
+const OTP_TTL_MS        = 5 * 60 * 1000   // 5 minutes
+const MAX_OTP_ATTEMPTS  = 5
+const LOCKOUT_MS        = 15 * 60 * 1000  // 15 minutes after 5 wrong attempts
+const JWT_TTL           = '7d'
 
-// Clean expired OTPs every 60s to prevent unbounded memory growth
-setInterval(() => {
-  const now = Date.now()
-  otpStore.forEach((v, k) => { if (v.expires < now) otpStore.delete(k) })
-}, 60_000)
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function hashOtp(otp: string): string {
+  return createHash('sha256').update(otp).digest('hex')
+}
 
 async function sendOtpEmail(email: string, otp: string): Promise<void> {
   const resendApiKey = process.env.RESEND_API_KEY
   if (!resendApiKey) {
-    // No email provider — just log it (for local dev / Railway logs)
     console.log(`[OTP] ${email} → ${otp}`)
     return
   }
-
   const { Resend } = await import('resend')
   const resend = new Resend(resendApiKey)
-
   await resend.emails.send({
     from: 'B60 Burgers <noreply@b60.ae>',
     to: email,
@@ -42,16 +41,39 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
   })
 }
 
-// ─── Send OTP ─────────────────────────────────────────────────────────────────
+// ─── POST /otp/send ───────────────────────────────────────────────────────────
+
 authRouter.post('/otp/send',
-  body('email').isEmail().withMessage('Invalid email address'),
+  body('email').isEmail().normalizeEmail().withMessage('Invalid email address'),
   async (req, res) => {
     const errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })
 
-    const { email } = req.body
+    const email = (req.body.email as string).toLowerCase().trim()
+
+    // Check if currently locked out
+    const { data: existing } = await supabase
+      .from('otp_store')
+      .select('locked_until')
+      .eq('email', email)
+      .single()
+
+    if (existing?.locked_until && new Date(existing.locked_until) > new Date()) {
+      return res.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' })
+    }
+
     const otp = randomInt(100000, 999999).toString()
-    otpStore.set(email, { otp, expires: Date.now() + 5 * 60 * 1000 })
+    const expiresAt = new Date(Date.now() + OTP_TTL_MS).toISOString()
+
+    // Upsert into DB — replaces any previous OTP for this email
+    await supabase.from('otp_store').upsert({
+      email,
+      otp_hash: hashOtp(otp),
+      attempts: 0,
+      locked_until: null,
+      expires_at: expiresAt,
+      created_at: new Date().toISOString(),
+    }, { onConflict: 'email' })
 
     try {
       await sendOtpEmail(email, otp)
@@ -60,63 +82,115 @@ authRouter.post('/otp/send',
       console.log(`[OTP FALLBACK] ${email} → ${otp}`)
     }
 
+    // Always return success — no user enumeration
     res.json({ success: true, message: 'OTP sent' })
   }
 )
 
-// ─── Verify OTP ───────────────────────────────────────────────────────────────
+// ─── POST /otp/verify ─────────────────────────────────────────────────────────
+
 authRouter.post('/otp/verify',
-  body('email').isEmail(),
-  body('otp').isLength({ min: 6, max: 6 }),
+  body('email').isEmail().normalizeEmail(),
+  body('otp').isLength({ min: 6, max: 6 }).isNumeric(),
   async (req, res) => {
     const errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })
 
-    const { email, otp } = req.body
-    const stored = otpStore.get(email)
+    const email = (req.body.email as string).toLowerCase().trim()
+    const { otp } = req.body
 
-    if (!stored || stored.otp !== otp || stored.expires < Date.now()) {
-      return res.status(401).json({ error: 'Invalid or expired OTP' })
+    // Fetch OTP record
+    const { data: record } = await supabase
+      .from('otp_store')
+      .select('otp_hash, attempts, locked_until, expires_at')
+      .eq('email', email)
+      .single()
+
+    // Generic error — don't reveal whether email exists
+    const invalid = () => res.status(401).json({ error: 'Invalid or expired code' })
+
+    if (!record) return invalid()
+
+    // Check lockout
+    if (record.locked_until && new Date(record.locked_until) > new Date()) {
+      return res.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' })
     }
 
-    otpStore.delete(email)
+    // Check expiry
+    if (new Date(record.expires_at) < new Date()) {
+      await supabase.from('otp_store').delete().eq('email', email)
+      return invalid()
+    }
 
-    // Try to find existing user first
+    // Check hash match
+    if (record.otp_hash !== hashOtp(otp)) {
+      const newAttempts = (record.attempts ?? 0) + 1
+      if (newAttempts >= MAX_OTP_ATTEMPTS) {
+        // Lock out for 15 min
+        await supabase.from('otp_store').update({
+          attempts: newAttempts,
+          locked_until: new Date(Date.now() + LOCKOUT_MS).toISOString(),
+        }).eq('email', email)
+        return res.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' })
+      }
+      await supabase.from('otp_store').update({ attempts: newAttempts }).eq('email', email)
+      return invalid()
+    }
+
+    // Valid — delete OTP record immediately (single-use)
+    await supabase.from('otp_store').delete().eq('email', email)
+
+    // Find or create user
     let { data: user, error } = await supabase
       .from('users')
-      .select()
+      .select('id, email, name, loyalty_points, token_version')
       .eq('email', email)
       .single()
 
     if (!user) {
-      // Create new user
       const insert = await supabase
         .from('users')
         .insert({ email, name: '' })
-        .select()
+        .select('id, email, name, loyalty_points, token_version')
         .single()
       user = insert.data
       error = insert.error
     }
 
     if (error || !user) {
-      console.error('[DB ERROR]', error)
-      console.error('[Auth] Failed to create user:', error?.message)
-      return res.status(500).json({ error: 'Failed to create user' })
+      console.error('[Auth] Failed to find/create user:', error?.message)
+      return res.status(500).json({ error: 'Failed to create account' })
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '30d' })
+    // Sign JWT with token_version embedded — allows revocation
+    const token = jwt.sign(
+      { userId: user.id, tv: user.token_version ?? 0 },
+      process.env.JWT_SECRET!,
+      { expiresIn: JWT_TTL }
+    )
 
     res.json({ token, user })
   }
 )
 
-// ─── Update Profile ───────────────────────────────────────────────────────────
+// ─── POST /logout ─────────────────────────────────────────────────────────────
+// Bumps token_version — invalidates ALL existing tokens for this user
+
+authRouter.post('/logout', requireAuth, async (req: AuthRequest, res) => {
+  await supabase
+    .from('users')
+    .update({ token_version: (req.user.token_version ?? 0) + 1 })
+    .eq('id', req.userId!)
+
+  res.json({ success: true })
+})
+
+// ─── PATCH /profile ───────────────────────────────────────────────────────────
+
 authRouter.patch('/profile', requireAuth, async (req: AuthRequest, res) => {
-  const { name, email, phone } = req.body
+  const { name, phone } = req.body
   const updates: any = {}
   if (name && typeof name === 'string') updates.name = name.trim().slice(0, 100)
-  if (email && typeof email === 'string') updates.email = email.trim().toLowerCase()
   if (phone !== undefined) {
     if (phone !== null && !/^\+?[0-9\s\-()]{8,20}$/.test(phone)) {
       return res.status(400).json({ error: 'Invalid phone number format' })
@@ -124,18 +198,23 @@ authRouter.patch('/profile', requireAuth, async (req: AuthRequest, res) => {
     updates.phone = phone
   }
 
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Nothing to update' })
+  }
+
   const { data, error } = await supabase
     .from('users')
     .update(updates)
     .eq('id', req.userId!)
-    .select()
+    .select('id, email, name, phone, loyalty_points')
     .single()
 
   if (error) return res.status(500).json({ error: 'Update failed' })
   res.json(data)
 })
 
-// ─── Get Profile ──────────────────────────────────────────────────────────────
+// ─── GET /me ──────────────────────────────────────────────────────────────────
+
 authRouter.get('/me', requireAuth, async (req: AuthRequest, res) => {
   res.json(req.user)
 })

@@ -17,9 +17,6 @@ if ((process.env.JWT_SECRET ?? '').length < 32) {
   console.error('[STARTUP] JWT_SECRET must be at least 32 characters')
   process.exit(1)
 }
-if (!process.env.DART_POS_EXCLUDED_LOCATIONS) {
-  console.warn('[STARTUP] DART_POS_EXCLUDED_LOCATIONS not set — all locations will push to DartPOS')
-}
 
 // ─── Global Error Handlers ────────────────────────────────────────────────────
 process.on('unhandledRejection', (reason) => {
@@ -37,33 +34,45 @@ import { loyaltyRouter } from './routes/loyalty'
 import { locationsRouter } from './routes/locations'
 import { gamesRouter } from './routes/games'
 import { analyticsRouter } from './routes/analytics'
+import { cache } from './services/cache'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
+const IS_PROD = process.env.NODE_ENV === 'production'
+const INSTANCE_ID = process.env.INSTANCE_ID ?? 'local'
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(helmet())
-const ALLOWED_ORIGINS = process.env.NODE_ENV === 'development'
-  ? true
-  : ['https://b60.ae', 'https://app.b60.ae']
-app.use(cors({ origin: ALLOWED_ORIGINS, methods: ['GET', 'POST', 'PATCH', 'DELETE'] }))
-app.use(express.json())
-app.use(morgan('dev'))
 
-// Trust Railway's proxy so rate limiter gets real IPs
+const ALLOWED_ORIGINS = IS_PROD
+  ? ['https://b60.ae', 'https://app.b60.ae']
+  : true
+app.use(cors({ origin: ALLOWED_ORIGINS, methods: ['GET', 'POST', 'PATCH', 'DELETE'] }))
+
+// Body limit — prevents large payload attacks
+app.use(express.json({ limit: '50kb' }))
+
+// Morgan: 'combined' in prod (standard log format), 'dev' locally
+app.use(morgan(IS_PROD ? 'combined' : 'dev'))
+
+// Trust Render's proxy so rate limiter + IP hashing gets real IPs
 app.set('trust proxy', 1)
 
-// Rate limiting
+// Global rate limit — defence in depth
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false }))
 
-// Auth endpoints get stricter limit
+// ─── Per-route limiters ───────────────────────────────────────────────────────
+
+// OTP send/verify: 20 per 15 min per IP
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 })
-// Orders: 5 per minute per user (anti-spam)
+
+// Orders: 5 POST per minute per user — GETs skipped
 const ordersLimiter = rateLimit({
   windowMs: 60_000,
   max: 5,
   keyGenerator: (req: any) => req.userId ?? req.ip,
   skip: (req) => req.method === 'GET',
+  message: { error: 'Too many orders placed. Please wait a moment.' },
 })
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
@@ -75,27 +84,34 @@ app.use('/api/locations', locationsRouter)
 app.use('/api/games', gamesRouter)
 app.use('/api/analytics', analyticsRouter)
 
-// Health check — includes DB ping
+// ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', async (_, res) => {
   try {
     const { error } = await (await import('./config/supabase')).supabase
       .from('locations').select('id').limit(1)
     if (error) throw error
-    res.json({ status: 'ok', service: 'b60-api', db: 'ok', ts: new Date() })
+    res.json({
+      status: 'ok',
+      service: 'b60-api',
+      instance: INSTANCE_ID,
+      db: 'ok',
+      cache_keys: cache.size(),
+      ts: new Date(),
+    })
   } catch {
-    res.status(503).json({ status: 'degraded', service: 'b60-api', db: 'error', ts: new Date() })
+    res.status(503).json({ status: 'degraded', service: 'b60-api', instance: INSTANCE_ID, db: 'error', ts: new Date() })
   }
 })
 
 // 404
 app.use((_, res) => res.status(404).json({ error: 'Not found' }))
 
-const server = app.listen(PORT, () => console.log(`[B60] API running on port ${PORT}`))
+const server = app.listen(PORT, () =>
+  console.log(`[B60] API running on port ${PORT} | instance=${INSTANCE_ID} | env=${process.env.NODE_ENV ?? 'development'}`)
+)
 
-// Request timeout — prevent hung connections
 server.setTimeout(30000)
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('[SIGTERM] Graceful shutdown...')
   server.close(() => {

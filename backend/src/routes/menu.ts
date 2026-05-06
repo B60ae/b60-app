@@ -1,22 +1,39 @@
 import { Router } from 'express'
 import { supabase } from '../config/supabase'
+import { cache, TTL } from '../services/cache'
 
 export const menuRouter = Router()
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 menuRouter.get('/categories', async (_, res) => {
+  const KEY = 'menu:categories'
+  const cached = cache.get<any[]>(KEY)
+  if (cached) {
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60')
+    return res.json(cached)
+  }
+
   const { data, error } = await supabase
     .from('menu_categories')
     .select('*')
     .order('sort_order')
 
   if (error) return res.status(500).json({ error: 'Failed to fetch categories' })
+  cache.set(KEY, data, TTL.MENU_CATEGORIES)
   res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60')
   res.json(data)
 })
 
 // ─── Items ────────────────────────────────────────────────────────────────────
 menuRouter.get('/items', async (req, res) => {
+  const categoryId = (req.query.category_id as string) ?? 'all'
+  const KEY = `menu:items:${categoryId}`
+  const cached = cache.get<any[]>(KEY)
+  if (cached) {
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30')
+    return res.json(cached)
+  }
+
   let query = supabase
     .from('menu_items')
     .select('*, menu_categories(name)')
@@ -29,13 +46,13 @@ menuRouter.get('/items', async (req, res) => {
 
   const { data, error } = await query
   if (error) return res.status(500).json({ error: 'Failed to fetch items' })
+  cache.set(KEY, data, TTL.MENU_ITEMS)
   res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30')
   res.json(data)
 })
 
 // ─── Single Item ──────────────────────────────────────────────────────────────
 
-// Add-ons only available for burger/chicken items (not drinks, sides, desserts)
 const BURGER_ADDONS = {
   id: 'addons',
   name: 'Add-ons',
@@ -50,6 +67,10 @@ const BURGER_ADDONS = {
 const ADDON_CATEGORY_SLUGS = ['burgers', 'chicken']
 
 menuRouter.get('/items/:id', async (req, res) => {
+  const KEY = `menu:item:${req.params.id}`
+  const cached = cache.get<any>(KEY)
+  if (cached) return res.json(cached)
+
   const { data: item, error } = await supabase
     .from('menu_items')
     .select('*, menu_categories(slug)')
@@ -60,15 +81,22 @@ menuRouter.get('/items/:id', async (req, res) => {
 
   const categorySlug = (item as any).menu_categories?.slug?.toLowerCase() ?? ''
   const hasAddons = ADDON_CATEGORY_SLUGS.some(s => categorySlug.includes(s))
-
-  // Only expose add-ons group — strip any existing customizations (removes Heat Level etc.)
   const customizations = hasAddons ? [BURGER_ADDONS] : []
+  const result = { ...item, customizations }
 
-  res.json({ ...item, customizations })
+  cache.set(KEY, result, TTL.MENU_ITEMS)
+  res.json(result)
 })
 
 // ─── Featured ─────────────────────────────────────────────────────────────────
 menuRouter.get('/featured', async (_, res) => {
+  const KEY = 'menu:featured'
+  const cached = cache.get<any[]>(KEY)
+  if (cached) {
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30')
+    return res.json(cached)
+  }
+
   const { data, error } = await supabase
     .from('menu_items')
     .select('*')
@@ -77,6 +105,7 @@ menuRouter.get('/featured', async (_, res) => {
     .order('sort_order')
 
   if (error) return res.status(500).json({ error: 'Failed to fetch featured' })
+  cache.set(KEY, data, TTL.MENU_FEATURED)
   res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30')
   res.json(data)
 })
