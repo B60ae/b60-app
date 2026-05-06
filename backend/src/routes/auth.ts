@@ -55,6 +55,7 @@ authRouter.post('/otp/send',
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })
 
     const email = (req.body.email as string).toLowerCase().trim()
+    console.log('[OTP send] storing for email:', JSON.stringify(email))
 
     // Check if currently locked out
     const { data: existing } = await supabase
@@ -104,13 +105,16 @@ authRouter.post('/otp/verify',
 
     const email = (req.body.email as string).toLowerCase().trim()
     const { otp } = req.body
+    console.log('[OTP verify] looking up email:', JSON.stringify(email), 'otp len:', otp?.length)
 
     // Fetch OTP record
-    const { data: record } = await supabase
+    const { data: record, error: fetchErr } = await supabase
       .from('otp_store')
       .select('otp_hash, attempts, locked_until, expires_at')
       .eq('email', email)
       .single()
+
+    console.log('[OTP verify] record found:', !!record, 'fetchErr:', fetchErr?.message ?? null)
 
     // Generic error — don't reveal whether email exists
     const invalid = () => res.status(401).json({ error: 'Invalid or expired code' })
@@ -129,6 +133,7 @@ authRouter.post('/otp/verify',
     }
 
     // Check hash match
+    console.log('[OTP verify] hash match:', record.otp_hash === hashOtp(otp), 'expires_at:', record.expires_at)
     if (record.otp_hash !== hashOtp(otp)) {
       const newAttempts = (record.attempts ?? 0) + 1
       if (newAttempts >= MAX_OTP_ATTEMPTS) {
