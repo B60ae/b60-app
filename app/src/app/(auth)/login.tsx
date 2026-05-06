@@ -189,7 +189,7 @@ export default function LoginScreen() {
   }
 
   const handleVerifyOtp = async (codeOverride?: string) => {
-    const code = codeOverride ?? otpValueRef.current
+    const code = codeOverride ?? otpValueRef.current ?? otp
     if (code.length < OTP_LENGTH) {
       setError('Enter the full 6-digit code')
       shake()
@@ -210,6 +210,7 @@ export default function LoginScreen() {
     } catch {
       setError('Wrong code. Try again.')
       Events.LOGIN_FAILED('invalid_otp')
+      otpValueRef.current = ''
       setOtp('')
       shake()
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
