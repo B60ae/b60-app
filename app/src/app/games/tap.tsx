@@ -145,14 +145,15 @@ function RetroLoadingScreen() {
 
   useEffect(() => {
     dot1.value = withRepeat(withSequence(withTiming(1, { duration: 400 }), withTiming(0.3, { duration: 400 })), -1, false)
-    setTimeout(() => {
+    const t2 = setTimeout(() => {
       dot2.value = withRepeat(withSequence(withTiming(1, { duration: 400 }), withTiming(0.3, { duration: 400 })), -1, false)
     }, 150)
-    setTimeout(() => {
+    const t3 = setTimeout(() => {
       dot3.value = withRepeat(withSequence(withTiming(1, { duration: 400 }), withTiming(0.3, { duration: 400 })), -1, false)
     }, 300)
     burgerY.value = withRepeat(withSequence(withTiming(-12, { duration: 500, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 500, easing: Easing.in(Easing.quad) })), -1, false)
     return () => {
+      clearTimeout(t2); clearTimeout(t3)
       cancelAnimation(dot1); cancelAnimation(dot2); cancelAnimation(dot3); cancelAnimation(burgerY)
     }
   }, [])
@@ -332,7 +333,7 @@ export default function TapScreen() {
     } finally {
       setSubmitting(false)
     }
-  }, [])
+  }, [refetchStatus, queryClient])
 
   const handleBurgerTap = () => {
     if (gameStateRef.current !== 'playing') return

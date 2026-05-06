@@ -398,7 +398,11 @@ export default function HomeScreen() {
                 <Pressable
                   key={loc.id}
                   style={[styles.locationCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                  onPress={() => Linking.openURL(getMapsUrl(loc.name, loc.address ?? ''))}
+                  onPress={async () => {
+                    const url = getMapsUrl(loc.name, loc.address ?? '')
+                    const supported = await Linking.canOpenURL(url)
+                    Linking.openURL(supported ? url : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.name)}`)
+                  }}
                 >
                   {/* Left accent bar */}
                   <View style={[styles.locationAccent, { backgroundColor: isOpen ? theme.primary : theme.textMuted }]} />

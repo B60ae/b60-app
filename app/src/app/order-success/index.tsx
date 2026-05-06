@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useCallback } from 'react'
 import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useLocalSearchParams, router } from 'expo-router'
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import Animated, {
@@ -83,7 +83,16 @@ export default function OrderSuccessScreen() {
 
   const pts = Number(pointsEarned ?? 0)
 
-  useEffect(() => {
+  const runAnimations = useCallback(() => {
+    checkScale.value = 0
+    checkOpacity.value = 0
+    ringScale.value = 1
+    contentY.value = 40
+    contentOpacity.value = 0
+    pointsY.value = 40
+    pointsOpacity.value = 0
+    coinRotate.value = 0
+
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
 
     checkScale.value = withSpring(1, { damping: 8, stiffness: 60 })
@@ -109,7 +118,11 @@ export default function OrderSuccessScreen() {
       pointsOpacity.value = withDelay(600, withTiming(1, { duration: 350 }))
       coinRotate.value = withDelay(700, withTiming(360, { duration: 800, easing: Easing.out(Easing.cubic) }))
     }
-  }, [])
+  }, [pts])
+
+  useFocusEffect(useCallback(() => {
+    runAnimations()
+  }, [runAnimations]))
 
   const checkAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: checkScale.value }],
@@ -171,7 +184,7 @@ export default function OrderSuccessScreen() {
 
         {/* Order number card */}
         {orderId && (
-          <View style={[styles.orderIdCard, { backgroundColor: T.surface }]}>
+          <View style={[styles.orderIdCard, { backgroundColor: T.surfaceElevated ?? T.surface }]}>
             <Text style={[styles.orderIdLabel, { color: T.textMuted }]}>YOUR ORDER</Text>
             <Text style={[styles.orderIdValue, { color: T.text }]}>#{orderId.slice(-6).toUpperCase()}</Text>
             <Text style={[styles.orderIdSub, { color: T.textMuted }]}>Flash this at the counter to collect</Text>
@@ -282,7 +295,6 @@ const styles = StyleSheet.create({
   },
 
   orderIdCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: Radius.xl,
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.xl,

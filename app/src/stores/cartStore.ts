@@ -26,10 +26,21 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   addItem: (menuItem, quantity, selectedOptions, notes) => {
     const optionsCost = selectedOptions.reduce((sum, o) => sum + o.price_delta, 0)
-    const lineTotal = (menuItem.price + optionsCost) * quantity
-    set((state) => ({
-      items: [...state.items, { menu_item: menuItem, quantity, selected_options: selectedOptions, notes, line_total: lineTotal }],
-    }))
+    const optionKey = selectedOptions.map((o) => o.id).sort().join(',')
+    set((state) => {
+      const existing = state.items.findIndex(
+        (ci) => ci.menu_item.id === menuItem.id && ci.selected_options.map((o) => o.id).sort().join(',') === optionKey
+      )
+      if (existing !== -1) {
+        const items = [...state.items]
+        const item = items[existing]
+        const newQty = item.quantity + quantity
+        items[existing] = { ...item, quantity: newQty, line_total: (menuItem.price + optionsCost) * newQty }
+        return { items }
+      }
+      const lineTotal = (menuItem.price + optionsCost) * quantity
+      return { items: [...state.items, { menu_item: menuItem, quantity, selected_options: selectedOptions, notes, line_total: lineTotal }] }
+    })
   },
 
   removeItem: (index) =>

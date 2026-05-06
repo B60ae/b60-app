@@ -126,6 +126,7 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
   const maxRedeemable = Math.min(
     Math.floor((user?.loyalty_points ?? 0) / MIN_REDEEM_POINTS) * MIN_REDEEM_POINTS,
     Math.floor(subtotal() / POINTS_TO_AED / MIN_REDEEM_POINTS) * MIN_REDEEM_POINTS,
+    Math.floor(subtotal() / POINTS_TO_AED),
   )
   const togglePoints = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)

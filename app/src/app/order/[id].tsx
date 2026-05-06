@@ -57,11 +57,13 @@ export default function OrderTrackingScreen() {
   }, [order?.status])
 
   useEffect(() => {
+    const terminal = order?.status === 'ready' || order?.status === 'completed' || order?.status === 'cancelled'
+    if (terminal) return
     const interval = setInterval(() => {
       setSecsSinceUpdate(Math.floor((Date.now() - lastUpdatedAt.current.getTime()) / 1000))
     }, 5000)
     return () => clearInterval(interval)
-  }, [])
+  }, [order?.status])
 
   if (isError) {
     return (
@@ -220,7 +222,7 @@ export default function OrderTrackingScreen() {
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
               reorderItems(order.items)
-              router.push('/(tabs)/cart')
+              router.push('/(tabs)/menu')
             }}
             variant="outline"
             fullWidth

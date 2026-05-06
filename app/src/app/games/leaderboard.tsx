@@ -28,10 +28,11 @@ function RankBadge({ rank }: { rank: number }) {
   )
 }
 
-function LeaderboardRow({ entry, rank, isYou }: { entry: LeaderboardEntry; rank: number; isYou: boolean }) {
+function LeaderboardRow({ entry, rank, isYou, theme }: { entry: LeaderboardEntry; rank: number; isYou: boolean; theme: any }) {
   return (
     <View style={[
       styles.row,
+      { backgroundColor: theme.surface },
       isYou && styles.rowHighlight,
       rank <= 3 && styles.rowTop,
     ]}>
@@ -44,7 +45,7 @@ function LeaderboardRow({ entry, rank, isYou }: { entry: LeaderboardEntry; rank:
       ) : null}
       <RankBadge rank={rank} />
       <View style={styles.rowInfo}>
-        <Text style={[styles.rowName, rank <= 3 && { color: '#000' }]} numberOfLines={1}>
+        <Text style={[styles.rowName, { color: rank <= 3 ? '#000' : theme.text }]} numberOfLines={1}>
           {entry.display_name}{isYou ? ' (you)' : ''}
         </Text>
         <View style={styles.rowScores}>
@@ -62,7 +63,7 @@ function LeaderboardRow({ entry, rank, isYou }: { entry: LeaderboardEntry; rank:
           </View>
         </View>
       </View>
-      <Text style={[styles.rowTotal, rank <= 3 && { color: '#000' }]}>{entry.total_score}</Text>
+      <Text style={[styles.rowTotal, { color: rank <= 3 ? '#000' : theme.text }]}>{entry.total_score}</Text>
     </View>
   )
 }
@@ -142,6 +143,7 @@ export default function LeaderboardScreen() {
               entry={entry}
               rank={i + 1}
               isYou={entry.user_id === userId}
+              theme={theme}
             />
           ))
         )}

@@ -15,11 +15,11 @@ client.interceptors.request.use(async (config) => {
 let loggingOut = false
 client.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401 && useAuthStore.getState().isAuthenticated && !loggingOut) {
       loggingOut = true
-      useAuthStore.getState().logout()
-      setTimeout(() => { loggingOut = false }, 2000)
+      await useAuthStore.getState().logout()
+      loggingOut = false
     }
     return Promise.reject(error)
   }
@@ -36,7 +36,6 @@ export const menuApi = {
 
 // ─── Orders ───────────────────────────────────────────────────────────────
 export const ordersApi = {
-  create: (cart: Cart) => client.post<Order>('/orders', cart).then(r => r.data),
   createOrder: (cart: Cart) => client.post<Order>('/orders', cart).then(r => r.data),
   get: (id: string) => client.get<Order>(`/orders/${id}`).then(r => r.data),
   getHistory: () => client.get<Order[]>('/orders/history').then(r => r.data),
