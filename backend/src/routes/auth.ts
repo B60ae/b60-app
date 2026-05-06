@@ -44,7 +44,7 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
 // ─── POST /otp/send ───────────────────────────────────────────────────────────
 
 authRouter.post('/otp/send',
-  body('email').isEmail().normalizeEmail().withMessage('Invalid email address'),
+  body('email').isEmail().withMessage('Invalid email address'),
   async (req, res) => {
     const errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })
@@ -90,7 +90,7 @@ authRouter.post('/otp/send',
 // ─── POST /otp/verify ─────────────────────────────────────────────────────────
 
 authRouter.post('/otp/verify',
-  body('email').isEmail().normalizeEmail(),
+  body('email').isEmail(),
   body('otp').isLength({ min: 6, max: 6 }).isNumeric(),
   async (req, res) => {
     const errors = validationResult(req)
