@@ -26,7 +26,7 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
   }
   const { Resend } = await import('resend')
   const resend = new Resend(resendApiKey)
-  await resend.emails.send({
+  const result = await resend.emails.send({
     from: 'B60 Burgers <noreply@b60.ae>',
     to: email,
     subject: 'Your B60 login code',
@@ -39,6 +39,11 @@ async function sendOtpEmail(email: string, otp: string): Promise<void> {
       </div>
     `,
   })
+  if (result.error) {
+    console.error('[Resend error]', JSON.stringify(result.error))
+    throw new Error(result.error.message)
+  }
+  console.log('[Resend OK] id=', result.data?.id)
 }
 
 // ─── POST /otp/send ───────────────────────────────────────────────────────────
@@ -77,8 +82,9 @@ authRouter.post('/otp/send',
 
     try {
       await sendOtpEmail(email, otp)
-    } catch (err) {
-      console.error('[OTP email failed]', err)
+      console.log(`[OTP sent] ${email}`)
+    } catch (err: any) {
+      console.error('[OTP email failed]', err?.message ?? err)
       console.log(`[OTP FALLBACK] ${email} → ${otp}`)
     }
 
