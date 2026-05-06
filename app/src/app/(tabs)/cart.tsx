@@ -16,6 +16,7 @@ import { useCartStore } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { ordersApi, locationsApi } from '../../services/api'
+import { Events } from '../../services/analytics'
 import { Button } from '../../components/ui/Button'
 import { Toast } from '../../components/ui/Toast'
 import { DirhamSymbol } from '../../components/ui/DirhamSymbol'
@@ -150,6 +151,8 @@ export default function CartScreen() {
     }
     setPlacing(true)
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+    Events.CHECKOUT_STARTED(total(), items.length)
+    if (pointsToRedeem > 0) Events.POINTS_REDEEMED(pointsToRedeem)
     try {
       const earned = pointsEarned()
       const order = await ordersApi.create({
@@ -160,6 +163,7 @@ export default function CartScreen() {
         discount: discount(),
         total: total(),
       })
+      Events.ORDER_PLACED(order.id, total(), locationId)
       clearCart()
       router.push({
         pathname: '/order-success',

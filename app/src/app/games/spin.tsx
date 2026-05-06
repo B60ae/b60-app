@@ -17,6 +17,7 @@ import Svg, {
   Defs, RadialGradient, LinearGradient as SvgLinearGradient, Stop, Line,
 } from 'react-native-svg'
 import { gamesApi } from '../../services/api'
+import { Events } from '../../services/analytics'
 import { useAuthStore } from '../../stores/authStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { Colors, LightTheme, DarkTheme, Spacing, Radius, Shadows } from '../../utils/theme'
@@ -479,6 +480,7 @@ export default function SpinScreen() {
     setShowModal(false)
     try {
       const res = await gamesApi.spin()
+      Events.SPIN_PLAYED(res.prize_type, res.prize_value)
       const extraSpins = 5 + Math.floor(Math.random() * 3)
       const segIdx = res.segment_index ?? 0
       const segMid = segIdx * SEG_DEG + SEG_DEG / 2

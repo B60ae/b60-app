@@ -58,7 +58,7 @@ export const locationsApi = {
 // ─── Games ────────────────────────────────────────────────────────────────
 export const gamesApi = {
   spinStatus: () => client.get<{ can_spin: boolean; spins_left: number; spins_used: number }>('/games/spin/status').then(r => r.data),
-  spin: () => client.post<{ prize_type: string; prize_value: string; voucher_code: string | null }>('/games/spin').then(r => r.data),
+  spin: () => client.post<{ prize_type: string; prize_value: string; voucher_code: string | null; segment_index: number }>('/games/spin').then(r => r.data),
   tapStatus: () => client.get<{ plays_left: number; best_score: number }>('/games/tap/status').then(r => r.data),
   submitTap: (score: number) => client.post<{ points_earned: number; score: number }>('/games/tap', { score }).then(r => r.data),
   leaderboard: () => client.get<{ leaderboard: LeaderboardEntry[]; your_rank: number | null; week_start: string }>('/games/leaderboard').then(r => r.data),
@@ -72,4 +72,10 @@ export const authApi = {
     client.post<{ token: string; user: User }>('/auth/otp/verify', { email, otp }).then(r => r.data),
   updateProfile: (data: { name?: string; email?: string; phone?: string }) =>
     client.patch<User>('/auth/profile', data).then(r => r.data),
+}
+
+// ─── Analytics (internal — prefer analytics.ts service directly) ──────────
+export const analyticsApi = {
+  recordConsent: (version: string, platform?: string) =>
+    client.post('/analytics/consent', { version, platform }).then(r => r.data),
 }

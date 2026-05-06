@@ -15,6 +15,7 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, FadeInDown, FadeOutDown,
 } from 'react-native-reanimated'
 import { menuApi, locationsApi, ordersApi } from '../../services/api'
+import { Events } from '../../services/analytics'
 import { SkeletonGrid } from '../../components/ui/SkeletonLoader'
 import { useCartStore } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
@@ -135,6 +136,8 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
     if (!locationId) { setToast({ message: 'Select a location first', type: 'error' }); return }
     if (items.length === 0) return
     setPlacing(true)
+    Events.CHECKOUT_STARTED(total(), items.length)
+    if (pointsToRedeem > 0) Events.POINTS_REDEEMED(pointsToRedeem)
     try {
       const order = await ordersApi.createOrder({
         location_id: locationId,
@@ -145,6 +148,7 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
         points_redeemed: pointsToRedeem,
       })
       const earned = Math.floor(total())
+      Events.ORDER_PLACED(order.id, total(), locationId)
       updatePoints((user?.loyalty_points ?? 0) - pointsToRedeem + earned)
       clearCart()
       onClose()

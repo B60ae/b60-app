@@ -12,6 +12,9 @@ import { Spacing, Radius } from '../../utils/theme'
 import { authApi } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
 import { IMAGES } from '../../utils/constants'
+import { Events, recordConsent } from '../../services/analytics'
+
+const TERMS_VERSION = '2026-05'
 
 const { width: W, height: H } = Dimensions.get('window')
 const OTP_LENGTH = 6
@@ -108,6 +111,7 @@ const stepStyles = StyleSheet.create({
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
+  const otpValueRef = useRef('')
   const [step, setStep] = useState<'email' | 'otp'>('email')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -164,16 +168,19 @@ export default function LoginScreen() {
     }
     setError('')
     setLoading(true)
+    Events.LOGIN_STARTED()
     try {
       await authApi.sendOtp(trimmed)
       setEmail(trimmed)
       setStep('otp')
       setResendCooldown(60)
+      Events.LOGIN_OTP_SENT()
       Animated.timing(stepAnim, { toValue: 1, duration: 280, useNativeDriver: true }).start()
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       setTimeout(() => otpRef.current?.focus(), 350)
     } catch {
       setError('Could not send code. Try again.')
+      Events.LOGIN_FAILED('otp_send_failed')
       shake()
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
     } finally {
@@ -182,7 +189,7 @@ export default function LoginScreen() {
   }
 
   const handleVerifyOtp = async (codeOverride?: string) => {
-    const code = codeOverride ?? otp
+    const code = codeOverride ?? otpValueRef.current
     if (code.length < OTP_LENGTH) {
       setError('Enter the full 6-digit code')
       shake()
@@ -194,10 +201,15 @@ export default function LoginScreen() {
     try {
       const { token, user } = await authApi.verifyOtp(email, code)
       await setUser(user, token)
+      Events.LOGIN_SUCCESS()
+      Events.TERMS_ACCEPTED(TERMS_VERSION)
+      // Fire consent audit log — non-blocking
+      recordConsent(TERMS_VERSION)
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       router.replace('/(tabs)')
     } catch {
       setError('Wrong code. Try again.')
+      Events.LOGIN_FAILED('invalid_otp')
       setOtp('')
       shake()
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
@@ -209,6 +221,7 @@ export default function LoginScreen() {
   const handleBack = () => {
     setStep('email')
     setOtp('')
+    otpValueRef.current = ''
     setError('')
     Animated.timing(stepAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start()
   }
@@ -295,6 +308,7 @@ export default function LoginScreen() {
               value={otp}
               onChangeText={(t) => {
                 const clean = t.replace(/\D/g, '').slice(0, OTP_LENGTH)
+                otpValueRef.current = clean
                 setOtp(clean)
                 setError('')
                 if (clean.length === OTP_LENGTH) handleVerifyOtp(clean)
@@ -344,11 +358,11 @@ export default function LoginScreen() {
             </View>
             <Text style={styles.terms}>
               I agree to B60's{' '}
-              <Text style={styles.termsLink} onPress={(e) => { e.stopPropagation?.(); router.push('/legal/index' as any) }}>
+              <Text style={styles.termsLink} onPress={(e) => { e.stopPropagation?.(); router.push('/legal' as any) }}>
                 Terms & Conditions
               </Text>
               {' '}and{' '}
-              <Text style={styles.termsLink} onPress={(e) => { e.stopPropagation?.(); router.push('/legal/index' as any) }}>
+              <Text style={styles.termsLink} onPress={(e) => { e.stopPropagation?.(); router.push('/legal' as any) }}>
                 Privacy Policy
               </Text>
             </Text>

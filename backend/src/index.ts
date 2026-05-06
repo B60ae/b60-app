@@ -36,6 +36,7 @@ import { ordersRouter } from './routes/orders'
 import { loyaltyRouter } from './routes/loyalty'
 import { locationsRouter } from './routes/locations'
 import { gamesRouter } from './routes/games'
+import { analyticsRouter } from './routes/analytics'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
@@ -57,14 +58,22 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, l
 
 // Auth endpoints get stricter limit
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 })
+// Orders: 5 per minute per user (anti-spam)
+const ordersLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 5,
+  keyGenerator: (req: any) => req.userId ?? req.ip,
+  skip: (req) => req.method === 'GET',
+})
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/auth', authLimiter, authRouter)
 app.use('/api/menu', menuRouter)
-app.use('/api/orders', ordersRouter)
+app.use('/api/orders', ordersLimiter, ordersRouter)
 app.use('/api/loyalty', loyaltyRouter)
 app.use('/api/locations', locationsRouter)
 app.use('/api/games', gamesRouter)
+app.use('/api/analytics', analyticsRouter)
 
 // Health check — includes DB ping
 app.get('/health', async (_, res) => {

@@ -1,5 +1,5 @@
 import { useEffect, useState, Component, ReactNode } from 'react'
-import { View, Text, Pressable } from 'react-native'
+import { View, Text, Pressable, AppState } from 'react-native'
 import { Stack, router } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
@@ -10,6 +10,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { ONBOARDING_KEY } from './onboarding/index'
 import { DarkTheme, LightTheme } from '../utils/theme'
+import { analytics } from '../services/analytics'
 
 // ─── Error Boundary ───────────────────────────────────────────────────────────
 class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -56,15 +57,13 @@ export default function RootLayout() {
       setNeedsOnboarding(!val)
       setOnboardingChecked(true)
     })
-  }, [])
 
-  // Fire redirect only after Stack is mounted
-  useEffect(() => {
-    if (!onboardingChecked) return
-    if (needsOnboarding) {
-      router.replace('/onboarding/index' as any)
-    }
-  }, [onboardingChecked, needsOnboarding])
+    // Flush analytics queue when app goes to background
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'background' || state === 'inactive') analytics.flush()
+    })
+    return () => sub.remove()
+  }, [])
 
   const themeMode = useThemeStore((s) => s.themeMode)
   const theme = themeMode === 'light' ? LightTheme : DarkTheme
@@ -79,6 +78,7 @@ export default function RootLayout() {
           <StatusBar style={themeMode === 'light' ? 'dark' : 'light'} backgroundColor={theme.background} />
           <Stack
             screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.background } }}
+            initialRouteName={needsOnboarding ? 'onboarding/index' : '(tabs)'}
           >
             <Stack.Screen name="onboarding/index" />
             <Stack.Screen name="(auth)" />

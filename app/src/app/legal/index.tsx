@@ -44,22 +44,23 @@ For queries: info@b60.ae`
 
 const PRIVACY = `PRIVACY POLICY
 
-Last updated: April 2026
+Last updated: May 2026
 
 1. WHAT WE COLLECT
 - Name and email address (for your account)
 - Phone number (optional, for order updates)
 - Order history and loyalty points
-- App usage data (anonymous)
+- In-app behaviour: screens viewed, orders placed, games played (tied to your account)
+- Consent records: which version of these policies you accepted and when
 
 2. HOW WE USE IT
 - To process your orders and send confirmations
-- To manage your loyalty rewards
-- To improve the app experience
+- To manage your loyalty rewards and arcade games
+- To improve the app experience using anonymised analytics
 - We do NOT sell your data to third parties
 
 3. DATA STORAGE
-Your data is stored securely on Supabase (EU region). We use industry-standard encryption for all sensitive data.
+Your data is stored securely on Supabase (EU region). We use industry-standard encryption. Analytics events are stored on our own servers — no data is sent to third-party analytics platforms.
 
 4. AUTHENTICATION
 We use email OTP (one-time passwords) for login — no passwords are stored. OTPs expire in 5 minutes.
@@ -68,13 +69,13 @@ We use email OTP (one-time passwords) for login — no passwords are stored. OTP
 You can request deletion of your account and all associated data by emailing info@b60.ae. We will process requests within 30 days.
 
 6. COOKIES & TRACKING
-The app does not use browser cookies. We collect anonymous crash and performance data to improve stability.
+The app does not use browser cookies. We collect in-app usage events (e.g. screen views, order events) to improve the service. Your IP address is never stored — only a one-way hash used for fraud detection.
 
 7. CHILDREN
 The app is not directed at children under 13. We do not knowingly collect data from children.
 
 8. CHANGES
-We may update this policy. We will notify you of significant changes through the app.
+We may update this policy. We will notify you through the app when a new version requires re-acceptance.
 
 CONTACT
 Data queries: info@b60.ae`
