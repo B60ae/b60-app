@@ -111,6 +111,8 @@ type ListRow = { type: 'header'; label: string; key: string } | { type: 'item'; 
 
 // ─── Cart Sheet ────────────────────────────────────────────────────────────────
 
+const STEP = 20 // points step for stepper
+
 function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
   visible: boolean; onClose: () => void; T: any; theme: any; onOrderPlaced: () => void
 }) {
@@ -123,14 +125,23 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
   const [placing, setPlacing] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
+  const userPoints = user?.loyalty_points ?? 0
+  // max redeemable: can't exceed what user has, and can't exceed subtotal value
   const maxRedeemable = Math.min(
-    Math.floor((user?.loyalty_points ?? 0) / MIN_REDEEM_POINTS) * MIN_REDEEM_POINTS,
-    Math.floor(subtotal() / POINTS_TO_AED / MIN_REDEEM_POINTS) * MIN_REDEEM_POINTS,
-    Math.floor(subtotal() / POINTS_TO_AED),
+    Math.floor(userPoints / STEP) * STEP,
+    Math.floor(subtotal() / POINTS_TO_AED / STEP) * STEP,
   )
-  const togglePoints = () => {
+  const canRedeem = userPoints >= STEP && maxRedeemable >= STEP
+
+  const stepDown = () => {
+    const next = Math.max(0, pointsToRedeem - STEP)
+    setPointsToRedeem(next)
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    setPointsToRedeem(pointsToRedeem > 0 ? 0 : maxRedeemable)
+  }
+  const stepUp = () => {
+    const next = Math.min(maxRedeemable, pointsToRedeem + STEP)
+    setPointsToRedeem(next)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
   }
 
   const handlePlaceOrder = async () => {
@@ -150,7 +161,7 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
       })
       const earned = Math.floor(total())
       Events.ORDER_PLACED(order.id, total(), locationId)
-      updatePoints((user?.loyalty_points ?? 0) - pointsToRedeem + earned)
+      updatePoints(userPoints - pointsToRedeem + earned)
       clearCart()
       onClose()
       router.push({ pathname: '/order-success', params: { orderId: order.id, pointsEarned: earned } } as any)
@@ -166,6 +177,7 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.sheetBackdrop} onPress={onClose} />
       <View style={[styles.sheet, { backgroundColor: T.background, paddingBottom: insets.bottom + 16 }]}>
+
         {/* Handle */}
         <View style={styles.sheetHandle}>
           <View style={[styles.handleBar, { backgroundColor: T.border }]} />
@@ -173,13 +185,15 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
 
         {/* Header */}
         <View style={[styles.sheetHeader, { borderBottomColor: T.border }]}>
-          <Text style={[styles.sheetTitle, { color: T.text }]}>Your Order</Text>
-          {selectedLocation && (
-            <View style={styles.sheetLocRow}>
-              <MapPin size={12} color={Colors.primary} />
-              <Text style={[styles.sheetLocText, { color: T.textSecondary }]}>{selectedLocation.name}</Text>
-            </View>
-          )}
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.sheetTitle, { color: T.text }]}>Your Order</Text>
+            {selectedLocation && (
+              <View style={styles.sheetLocRow}>
+                <MapPin size={11} color={Colors.primary} />
+                <Text style={[styles.sheetLocText, { color: T.textMuted }]}>{selectedLocation.name}</Text>
+              </View>
+            )}
+          </View>
           <Pressable onPress={onClose} hitSlop={12} style={styles.sheetClose}>
             <X size={20} color={T.textMuted} />
           </Pressable>
@@ -192,91 +206,150 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
           </View>
         ) : (
           <>
-            <ScrollView style={styles.sheetItems} showsVerticalScrollIndicator={false}>
-              {items.map((ci, idx) => (
-                <View key={`${ci.menu_item.id}-${idx}`} style={[styles.sheetItem, { borderBottomColor: T.border }]}>
-                  {ci.menu_item.image_url
-                    ? <Image source={{ uri: ci.menu_item.image_url }} style={styles.sheetThumb} contentFit="cover" />
-                    : <View style={[styles.sheetThumb, { backgroundColor: T.border }]} />
-                  }
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.sheetItemName, { color: T.text }]} numberOfLines={1}>{ci.menu_item.name}</Text>
-                    {ci.selected_options?.length > 0 && (
-                      <Text style={[styles.sheetItemSub, { color: T.textMuted }]} numberOfLines={1}>
-                        {ci.selected_options.map((o) => o.name).join(', ')}
-                      </Text>
-                    )}
-                    <Text style={[styles.sheetItemPrice, { color: Colors.primary }]}>AED {ci.line_total.toFixed(0)}</Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+
+              {/* ── Items ── */}
+              <View style={[styles.itemsCard, { borderColor: T.border }]}>
+                {items.map((ci, idx) => (
+                  <View key={`${ci.menu_item.id}-${idx}`} style={[
+                    styles.sheetItem,
+                    { borderBottomColor: T.border },
+                    idx === items.length - 1 && { borderBottomWidth: 0 },
+                  ]}>
+                    {ci.menu_item.image_url
+                      ? <Image source={{ uri: ci.menu_item.image_url }} style={styles.sheetThumb} contentFit="cover" />
+                      : <View style={[styles.sheetThumb, { backgroundColor: T.surface }]}><Text style={{ fontSize: 9, color: T.textMuted, fontWeight: '900' }}>B60</Text></View>
+                    }
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={[styles.sheetItemName, { color: T.text }]} numberOfLines={1}>{ci.menu_item.name}</Text>
+                      {ci.selected_options?.length > 0 && (
+                        <Text style={[styles.sheetItemSub, { color: T.textMuted }]} numberOfLines={1}>
+                          {ci.selected_options.map((o) => o.name).join(' · ')}
+                        </Text>
+                      )}
+                      <Text style={[styles.sheetItemPrice, { color: Colors.primary }]}>AED {ci.line_total.toFixed(0)}</Text>
+                    </View>
+                    <View style={styles.sheetQty}>
+                      <Pressable
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); ci.quantity > 1 ? updateQuantity(idx, ci.quantity - 1) : removeItem(idx) }}
+                        style={[styles.qtyBtn, { borderColor: T.border, backgroundColor: T.surface }]}
+                        hitSlop={8}
+                      >
+                        {ci.quantity === 1 ? <Trash2 size={13} color="#EF4444" /> : <Minus size={13} color={T.text} />}
+                      </Pressable>
+                      <Text style={[styles.qtyNum, { color: T.text }]}>{ci.quantity}</Text>
+                      <Pressable
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); updateQuantity(idx, ci.quantity + 1) }}
+                        style={[styles.qtyBtn, { borderColor: T.border, backgroundColor: T.surface }]}
+                        hitSlop={8}
+                      >
+                        <Plus size={13} color={T.text} />
+                      </Pressable>
+                    </View>
                   </View>
-                  <View style={styles.sheetQty}>
+                ))}
+              </View>
+
+              {/* ── Points stepper ── */}
+              {canRedeem && (
+                <View style={[styles.pointsCard, { backgroundColor: T.surface, borderColor: pointsToRedeem > 0 ? Colors.primary : T.border }]}>
+                  <View style={styles.pointsCardTop}>
+                    <View style={[styles.pointsIconWrap, { backgroundColor: 'rgba(240,90,26,0.12)' }]}>
+                      <Text style={{ fontSize: 16 }}>⚡</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.pointsLabel, { color: T.text }]}>Redeem Points</Text>
+                      <Text style={[styles.pointsSub, { color: T.textMuted }]}>
+                        You have <Text style={{ color: Colors.primary, fontWeight: '800' }}>{userPoints}</Text> pts · 20 pts = AED {(20 * POINTS_TO_AED).toFixed(2)}
+                      </Text>
+                    </View>
+                    {pointsToRedeem > 0 && (
+                      <View style={styles.savingBadge}>
+                        <Text style={styles.savingBadgeText}>-AED {discount().toFixed(0)}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.stepperRow}>
                     <Pressable
-                      onPress={() => ci.quantity > 1 ? updateQuantity(idx, ci.quantity - 1) : removeItem(idx)}
-                      style={[styles.qtyBtn, { borderColor: T.border, backgroundColor: T.surface }]}
+                      onPress={stepDown}
+                      disabled={pointsToRedeem <= 0}
+                      style={[styles.stepperBtn, { borderColor: T.border, backgroundColor: T.background, opacity: pointsToRedeem <= 0 ? 0.35 : 1 }]}
                       hitSlop={8}
                     >
-                      {ci.quantity === 1
-                        ? <Trash2 size={13} color="#EF4444" />
-                        : <Minus size={13} color={T.text} />
-                      }
+                      <Minus size={16} color={T.text} />
                     </Pressable>
-                    <Text style={[styles.qtyNum, { color: T.text }]}>{ci.quantity}</Text>
+                    <View style={[styles.stepperValue, { borderColor: pointsToRedeem > 0 ? Colors.primary : T.border, backgroundColor: T.background }]}>
+                      <Text style={[styles.stepperValueText, { color: pointsToRedeem > 0 ? Colors.primary : T.textMuted }]}>
+                        {pointsToRedeem > 0 ? `${pointsToRedeem} pts` : '0 pts'}
+                      </Text>
+                    </View>
                     <Pressable
-                      onPress={() => updateQuantity(idx, ci.quantity + 1)}
-                      style={[styles.qtyBtn, { borderColor: T.border, backgroundColor: T.surface }]}
+                      onPress={stepUp}
+                      disabled={pointsToRedeem >= maxRedeemable}
+                      style={[styles.stepperBtn, { borderColor: T.border, backgroundColor: T.background, opacity: pointsToRedeem >= maxRedeemable ? 0.35 : 1 }]}
                       hitSlop={8}
                     >
-                      <Plus size={13} color={T.text} />
+                      <Plus size={16} color={T.text} />
                     </Pressable>
+                    <Pressable
+                      onPress={() => { setPointsToRedeem(maxRedeemable); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium) }}
+                      style={[styles.stepperMax, { backgroundColor: Colors.primary }]}
+                    >
+                      <Text style={styles.stepperMaxText}>MAX</Text>
+                    </Pressable>
+                    {pointsToRedeem > 0 && (
+                      <Pressable
+                        onPress={() => { setPointsToRedeem(0); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
+                        style={[styles.stepperClear, { borderColor: T.border }]}
+                      >
+                        <Text style={[styles.stepperClearText, { color: T.textMuted }]}>Clear</Text>
+                      </Pressable>
+                    )}
                   </View>
                 </View>
-              ))}
-
-              {/* Points redemption */}
-              {(user?.loyalty_points ?? 0) >= MIN_REDEEM_POINTS && maxRedeemable > 0 && (
-                <Pressable
-                  style={[styles.pointsRow, { backgroundColor: T.surface, borderColor: pointsToRedeem > 0 ? Colors.primary : T.border }]}
-                  onPress={togglePoints}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.pointsLabel, { color: T.text }]}>Use {maxRedeemable} points</Text>
-                    <Text style={[styles.pointsSub, { color: T.textMuted }]}>Save AED {(maxRedeemable * POINTS_TO_AED).toFixed(0)}</Text>
-                  </View>
-                  <View style={[styles.pointsCheck, { backgroundColor: pointsToRedeem > 0 ? Colors.primary : T.border }]}>
-                    {pointsToRedeem > 0 && <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900' }}>✓</Text>}
-                  </View>
-                </Pressable>
               )}
 
-              {/* Totals */}
-              <View style={[styles.totalsBox, { borderTopColor: T.border }]}>
+              {/* ── Totals ── */}
+              <View style={[styles.totalsCard, { backgroundColor: T.surface, borderColor: T.border }]}>
                 <View style={styles.totalRow}>
                   <Text style={[styles.totalLabel, { color: T.textSecondary }]}>Subtotal</Text>
-                  <Text style={[styles.totalVal, { color: T.text }]}>AED {subtotal().toFixed(0)}</Text>
+                  <Text style={[styles.totalVal, { color: T.text }]}>AED {subtotal().toFixed(2)}</Text>
                 </View>
                 {discount() > 0 && (
                   <View style={styles.totalRow}>
-                    <Text style={[styles.totalLabel, { color: Colors.success }]}>Points discount</Text>
-                    <Text style={[styles.totalVal, { color: Colors.success }]}>-AED {discount().toFixed(0)}</Text>
+                    <Text style={[styles.totalLabel, { color: Colors.success }]}>Points ({pointsToRedeem} pts)</Text>
+                    <Text style={[styles.totalVal, { color: Colors.success, fontWeight: '800' }]}>-AED {discount().toFixed(2)}</Text>
                   </View>
                 )}
-                <View style={[styles.totalRow, { marginTop: 4 }]}>
+                <View style={[styles.totalDivider, { backgroundColor: T.border }]} />
+                <View style={styles.totalRow}>
                   <Text style={[styles.totalLabel, { color: T.text, fontWeight: '900', fontSize: 16 }]}>Total</Text>
-                  <Text style={[styles.totalVal, { color: Colors.primary, fontWeight: '900', fontSize: 18 }]}>AED {total().toFixed(0)}</Text>
+                  <Text style={[styles.totalVal, { color: Colors.primary, fontWeight: '900', fontSize: 20 }]}>AED {total().toFixed(2)}</Text>
                 </View>
               </View>
+
             </ScrollView>
 
-            {/* Place order */}
-            <Pressable
-              style={[styles.placeOrderBtn, { opacity: placing ? 0.7 : 1 }]}
-              onPress={handlePlaceOrder}
-              disabled={placing}
-            >
-              <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.placeOrderGradient}>
-                <Text style={styles.placeOrderText}>{placing ? 'PLACING ORDER...' : 'PLACE ORDER'}</Text>
-                <Text style={styles.placeOrderTotal}>AED {total().toFixed(0)}</Text>
-              </LinearGradient>
-            </Pressable>
+            {/* ── Place Order ── */}
+            <View style={styles.placeOrderWrap}>
+              <Pressable
+                style={{ opacity: placing ? 0.7 : 1 }}
+                onPress={handlePlaceOrder}
+                disabled={placing}
+              >
+                <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.placeOrderGradient}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.placeOrderText}>{placing ? 'PLACING ORDER...' : 'PLACE ORDER'}</Text>
+                    {discount() > 0 && (
+                      <Text style={styles.placeOrderSaving}>Saving AED {discount().toFixed(0)} with points</Text>
+                    )}
+                  </View>
+                  <View style={styles.placeOrderPricePill}>
+                    <Text style={styles.placeOrderTotal}>AED {total().toFixed(0)}</Text>
+                  </View>
+                </LinearGradient>
+              </Pressable>
+            </View>
           </>
         )}
 
@@ -761,4 +834,55 @@ const styles = StyleSheet.create({
   placeOrderGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: 18 },
   placeOrderText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
   placeOrderTotal: { color: 'rgba(255,255,255,0.85)', fontSize: 16, fontWeight: '900' },
+
+  // Cart redesign
+  itemsCard: {
+    marginHorizontal: Spacing.md, marginTop: Spacing.md,
+    borderRadius: Radius.lg, borderWidth: 1, overflow: 'hidden',
+  },
+  pointsCard: {
+    marginHorizontal: Spacing.md, marginTop: Spacing.md,
+    borderRadius: Radius.lg, borderWidth: 1.5,
+    padding: Spacing.md, gap: Spacing.sm,
+  },
+  pointsCardTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  pointsIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  savingBadge: {
+    backgroundColor: Colors.success, borderRadius: Radius.full,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  savingBadgeText: { color: '#fff', fontSize: 12, fontWeight: '900' },
+  stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stepperBtn: {
+    width: 40, height: 40, borderRadius: 12, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepperValue: {
+    flex: 1, height: 40, borderRadius: 12, borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepperValueText: { fontSize: 15, fontWeight: '800' },
+  stepperMax: {
+    paddingHorizontal: 14, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepperMaxText: { color: '#fff', fontSize: 13, fontWeight: '900' },
+  stepperClear: {
+    paddingHorizontal: 12, height: 40, borderRadius: 12, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepperClearText: { fontSize: 13, fontWeight: '700' },
+  totalsCard: {
+    marginHorizontal: Spacing.md, marginTop: Spacing.md,
+    borderRadius: Radius.lg, borderWidth: 1,
+    padding: Spacing.md, gap: 8,
+  },
+  totalDivider: { height: StyleSheet.hairlineWidth, marginVertical: 4 },
+  placeOrderWrap: { marginHorizontal: Spacing.md, marginTop: Spacing.sm },
+  placeOrderSaving: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  placeOrderPricePill: {
+    backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: Radius.md,
+    paddingHorizontal: 14, paddingVertical: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
 })
