@@ -106,10 +106,30 @@ export async function pushOrderToDart(payload: DartOrderPayload): Promise<DartOr
 }
 
 // ─── Get Order Status ─────────────────────────────────────────────────────────
-// DartPOS doesn't have a status polling endpoint in the docs yet
-// Return null so our backend falls back to internal status tracking
+// Maps DartPOS signals → our status:
+//   IsTheOrderProceedToKitchen = true  →  'preparing'
+//   IsOrderSettled = true              →  'completed'
+//   otherwise                          →  null (no change)
 
 export async function getOrderStatusFromDart(posOrderId: string): Promise<{ status: string } | null> {
-  // Not yet available in DartPOS API — status is pushed via KOT
-  return null
+  try {
+    const orderNo = parseInt(posOrderId, 10)
+    if (!orderNo) return null
+
+    // Check kitchen
+    const [kitchenRes, settledRes] = await Promise.all([
+      dartClient.get<[{ Status: string }]>(`/api/Tablet/IsTheOrderProceedToKitchen?OrderNo=${orderNo}`),
+      dartClient.get<[{ Status: boolean }]>(`/api/Tablet/IsOrderSettled?OrderNo=${orderNo}`),
+    ])
+
+    const inKitchen = kitchenRes.data?.[0]?.Status === 'True'
+    const settled   = settledRes.data?.[0]?.Status === true
+
+    if (settled) return { status: 'completed' }
+    if (inKitchen) return { status: 'preparing' }
+    return null
+  } catch (err: any) {
+    console.error('[Dart POS] getOrderStatusFromDart error:', err?.message ?? err)
+    return null
+  }
 }

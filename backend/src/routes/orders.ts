@@ -2,8 +2,9 @@ import { Router } from 'express'
 import { body, param, validationResult } from 'express-validator'
 import { supabase } from '../config/supabase'
 import { requireAuth, AuthRequest } from '../middleware/auth'
-import { pushOrderToDart, getOrderStatusFromDart, isLocationExcludedFromDart } from '../services/dartPos'
-import { awardPoints, redeemPoints } from '../services/loyalty'
+import { getOrderStatusFromDart } from '../services/dartPos'
+import { processOrder } from '../agents/order'
+import { award as awardLoyalty } from '../agents/loyalty'
 
 export const ordersRouter = Router()
 ordersRouter.use(requireAuth)
@@ -22,143 +23,56 @@ ordersRouter.post('/',
     const errors = validationResult(req)
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() })
 
-    const { items, location_id, subtotal, points_redeemed, discount, total } = req.body
+    const { items, location_id, subtotal, points_redeemed, discount, total, voucher_code } = req.body
     const userId = req.userId!
 
-    try {
-      const finalDiscount = discount ?? 0
+    const result = await processOrder({
+      userId,
+      locationId: location_id,
+      items: items.map((i: any) => ({
+        id: i.menu_item.id,
+        name: i.menu_item.name,
+        price: i.menu_item.price,
+        quantity: i.quantity,
+        customizations: i.selected_options,
+      })),
+      subtotal,
+      discount: discount ?? 0,
+      total,
+      pointsRedeemed: points_redeemed ?? 0,
+      voucherCode: voucher_code,
+      customerName: req.user?.name,
+      customerPhone: req.user?.phone,
+    })
 
-      // Validate that submitted item prices match the menu (prevents price injection)
-      const itemIds = items.map((i: any) => i.menu_item.id)
-      const { data: menuItems } = await supabase
-        .from('menu_items')
-        .select('id, price')
-        .in('id', itemIds)
-
-      if (menuItems) {
-        const priceMap = new Map(menuItems.map((m: any) => [m.id, Number(m.price)]))
-        for (const item of items) {
-          const realPrice = priceMap.get(item.menu_item.id)
-          if (realPrice === undefined) {
-            return res.status(400).json({ error: `Unknown item: ${item.menu_item.id}` })
-          }
-          const submittedPrice = Number(item.menu_item.price)
-          if (Math.abs(submittedPrice - realPrice) > 0.01) {
-            return res.status(400).json({ error: 'Price mismatch detected. Please refresh and try again.' })
-          }
-        }
-      }
-
-      // Validate points balance before creating order
-      if (points_redeemed > 0) {
-        const { data: balanceUser } = await supabase
-          .from('users').select('loyalty_points').eq('id', userId).single()
-        if (!balanceUser || balanceUser.loyalty_points < points_redeemed) {
-          return res.status(400).json({ error: 'Insufficient points' })
-        }
-      }
-
-      // Create order in Supabase
-      const { data: order, error } = await supabase
-        .from('orders')
-        .insert({
-          user_id: userId,
-          location_id,
-          items,
-          status: 'pending',
-          subtotal,
-          points_redeemed: points_redeemed ?? 0,
-          discount: finalDiscount,
-          total,
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      // Redeem points now that we have a real order id
-      if (points_redeemed > 0) {
-        await redeemPoints(userId, order.id, points_redeemed)
-      }
-
-      // Push to Dart POS (skip excluded locations e.g. Ghurair)
-      let dartResponse
-      if (!isLocationExcludedFromDart(location_id)) {
-        // Fetch dart_food_id mappings for all items in this order
-        const { data: dartItems } = await supabase
-          .from('menu_items')
-          .select('id, dart_food_id, dart_variant_id')
-          .in('id', items.map((i: any) => i.menu_item.id))
-
-        const dartIdMap = new Map((dartItems ?? []).map((d: any) => [d.id, d]))
-
-        // Only push items that have a dart_food_id mapped
-        const mappedItems: { sku: string; variant_id: string; name: string; quantity: number; unit_price: number; modifiers: { name: string; price: number }[] }[] = []
-        for (const i of items as any[]) {
-          const dart = dartIdMap.get(i.menu_item.id)
-          if (!dart?.dart_food_id) continue
-          mappedItems.push({
-            sku: dart.dart_food_id,
-            variant_id: dart.dart_variant_id ?? dart.dart_food_id,
-            name: i.menu_item.name,
-            quantity: i.quantity,
-            unit_price: i.menu_item.price,
-            modifiers: (i.selected_options ?? []).map((o: any) => ({ name: o.name, price: o.price_delta })),
-          })
-        }
-
-        const skippedItems = items.filter((i: any) => !dartIdMap.get(i.menu_item.id)?.dart_food_id)
-        if (skippedItems.length > 0) {
-          console.log(`[Orders] Skipping ${skippedItems.length} unmapped items from DartPOS: ${skippedItems.map((i: any) => i.menu_item.name).join(', ')}`)
-        }
-
-        const dartPayload = {
-          external_id: order.id,
-          location_id,
-          items: mappedItems,
-          total,
-          customer_name: req.user?.name,
-          customer_phone: req.user?.phone,
-        }
-        try {
-          dartResponse = await pushOrderToDart(dartPayload)
-        } catch {
-          console.error(`[Orders] Dart POS push failed for order ${order.id}`)
-        }
-      } else {
-        console.log(`[Orders] Skipping Dart POS for excluded location ${location_id} (order ${order.id})`)
-      }
-
-      // Update with POS data
-      const readyMinutes = Number.isFinite(dartResponse?.estimated_ready_minutes) && dartResponse!.estimated_ready_minutes > 0
-        ? dartResponse!.estimated_ready_minutes
-        : 15
-      const estimatedReadyAt = new Date(Date.now() + readyMinutes * 60000).toISOString()
-
-      // Award points (net of redemption)
-      const pointsEarned = await awardPoints(userId, order.id, total)
-
-      const { data: updatedOrder } = await supabase
-        .from('orders')
-        .update({
-          dart_pos_order_id: dartResponse?.pos_order_id,
-          status: 'confirmed',
-          estimated_ready_at: estimatedReadyAt,
-          points_earned: pointsEarned,
-        })
-        .eq('id', order.id)
-        .select()
-        .single()
-
-      // Update order streak for games leaderboard
-      updateOrderStreak(userId).catch(e => console.error('[Orders] Streak update failed:', e))
-
-      res.status(201).json({ ...(updatedOrder ?? order), points_earned: pointsEarned })
-
-    } catch (err: any) {
-      console.error('[Orders] Error:', err.message)
-      res.status(500).json({ error: 'Failed to create order' })
+    if (!result.success) {
+      const statusCode = result.code === 'PRICE_MISMATCH' || result.code === 'INSUFFICIENT_POINTS'
+        ? 400
+        : result.code === 'SUSPENDED'
+        ? 403
+        : 500
+      return res.status(statusCode).json({ error: result.error, code: result.code })
     }
+
+    // Award points via Loyalty Agent (fire-and-forget — failure is queued internally)
+    awardLoyalty({
+      userId,
+      sourceId: result.orderId!,
+      amount: total,
+      source: 'order',
+    }).catch(e => console.error('[Orders] Loyalty award error:', e))
+
+    // Update order streak for games leaderboard
+    updateOrderStreak(userId).catch(e => console.error('[Orders] Streak update failed:', e))
+
+    res.status(201).json({
+      id: result.orderId,
+      status: result.status,
+      total: result.total,
+      estimated_ready_at: result.estimatedReadyAt,
+      dart_pos_order_id: result.dartPosOrderId,
+      dart_pending: result.dartPending,
+    })
   }
 )
 
@@ -186,12 +100,22 @@ ordersRouter.get('/:id',
 
     const { data, error } = await supabase
       .from('orders')
-      .select('id, status, total, subtotal, points_earned, points_redeemed, discount, created_at, location_id, estimated_ready_at, items')
+      .select('id, status, total, subtotal, points_earned, points_redeemed, discount, created_at, location_id, estimated_ready_at, items, dart_pos_order_id')
       .eq('id', req.params.id)
       .eq('user_id', req.userId!)
       .single()
 
     if (error || !data) return res.status(404).json({ error: 'Order not found' })
+
+    // Sync status from Dart POS on every fetch while order is active
+    if (data.dart_pos_order_id && !['ready', 'completed', 'cancelled'].includes(data.status)) {
+      const posStatus = await getOrderStatusFromDart(data.dart_pos_order_id)
+      if (posStatus?.status && posStatus.status !== data.status) {
+        await supabase.from('orders').update({ status: posStatus.status }).eq('id', req.params.id)
+        data.status = posStatus.status
+      }
+    }
+
     res.json(data)
   }
 )
