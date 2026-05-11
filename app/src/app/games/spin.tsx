@@ -506,86 +506,82 @@ export default function SpinScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Full-screen dark gradient background */}
-      <LinearGradient
-        colors={['#1A0600', '#2C0E00', '#0A0A0A']}
-        style={StyleSheet.absoluteFill}
-      />
 
-      {/* Header */}
-      <View style={styles.header}>
+      {/* ── Orange curved header ── */}
+      <View style={styles.headerBlock}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
-          <ArrowLeft size={22} color="#fff" />
+          <ArrowLeft size={20} color="#fff" />
         </Pressable>
-        <Text style={styles.title}>SPIN THE WHEEL</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.title}>SPIN THE WHEEL</Text>
+          <Text style={styles.titleSub}>Win every time you spin</Text>
+        </View>
         <View style={{ width: 44 }} />
+
+        {/* Yellow spins badge */}
+        <View style={styles.spinsBadge}>
+          <Zap size={12} color="#1B2A4A" fill="#1B2A4A" />
+          <Text style={styles.spinsBadgeText}>
+            {spinning ? 'Spinning...' : spinsLeft > 0 ? `${spinsLeft} spin${spinsLeft !== 1 ? 's' : ''} left today` : 'No spins left — come back tomorrow'}
+          </Text>
+        </View>
       </View>
 
-      {/* Spins pill */}
-      <View style={[
-        styles.spinsPill,
-        { borderColor: canSpin ? Colors.primary : 'rgba(255,255,255,0.15)', backgroundColor: canSpin ? 'rgba(240,90,26,0.15)' : 'rgba(255,255,255,0.06)' },
-      ]}>
-        <Zap size={13} color={canSpin ? Colors.primary : 'rgba(255,255,255,0.4)'} fill={canSpin ? Colors.primary : 'none'} />
-        <Text style={[styles.spinsPillText, { color: canSpin ? Colors.primary : 'rgba(255,255,255,0.5)' }]}>
-          {spinning
-            ? 'Spinning...'
-            : spinsLeft > 0
-              ? `${spinsLeft} spin${spinsLeft !== 1 ? 's' : ''} left today`
-              : 'No spins left — come back tomorrow'}
-        </Text>
-      </View>
-
-      {/* Pointer + Wheel zone */}
+      {/* ── Wheel zone ── */}
       <View style={styles.wheelZone}>
         <Pointer />
-
-        {/* Wheel container — animated rotation applied here */}
         <View style={{ width: containerSize, height: containerSize, alignItems: 'center', justifyContent: 'center' }}>
-          {/* Static bulb ring */}
           <BulbRing bulbOn={bulbOn} />
-
-          {/* Rotating wheel */}
           <Animated.View style={[{ width: containerSize, height: containerSize }, wheelAnimStyle]}>
             <WheelSvg />
           </Animated.View>
-
-          {/* Hub label — static overlay */}
           <View style={styles.hubLabel} pointerEvents="none">
             <Text style={styles.hubText}>B60</Text>
           </View>
         </View>
       </View>
 
-      {error && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-
-      {/* Spin button */}
+      {/* ── Bottom area ── */}
       <View style={[styles.bottomArea, { paddingBottom: insets.bottom + 16 }]}>
-        <Pressable
-          onPress={doSpin}
-          disabled={!canSpin}
-          style={[styles.spinBtnWrap, !canSpin && { opacity: 0.45 }]}
-        >
-          <LinearGradient
-            colors={canSpin ? [Colors.primary, Colors.primaryDark] : ['#444', '#222']}
-            style={styles.spinBtn}
-          >
-            <Zap size={20} color="#fff" fill={canSpin ? '#fff' : 'none'} />
-            <Text style={styles.spinBtnText}>
-              {spinning ? 'SPINNING...' : 'SPIN NOW'}
-            </Text>
-          </LinearGradient>
+
+        {error && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {/* Last win card — brutalist */}
+        {result && (
+          <View style={styles.lastWinCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.lastWinLabel}>LAST WIN</Text>
+              <Text style={styles.lastWinValue}>
+                {result.type === 'points' ? `${result.prize_value} PTS` : 'FREE BURGER'}
+              </Text>
+            </View>
+            <View style={styles.lastWinBadge}>
+              <Text style={styles.lastWinBadgeText}>
+                {Number(result.prize_value) >= 250 ? 'GOLD' : Number(result.prize_value) >= 100 ? 'SILVER' : 'WIN'}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* SPIN NOW — brutalist button */}
+        <Pressable onPress={doSpin} disabled={!canSpin} style={[styles.spinBtnWrap, !canSpin && { opacity: 0.45 }]}>
+          <View style={styles.spinBtnShadow} />
+          <View style={[styles.spinBtn, !canSpin && { backgroundColor: '#ccc' }]}>
+            <View style={styles.spinBtnHighlight} />
+            <Zap size={20} color="#fff" fill="#fff" />
+            <Text style={styles.spinBtnText}>{spinning ? 'SPINNING...' : 'SPIN NOW'}</Text>
+          </View>
         </Pressable>
 
-        {/* Quick info row */}
+        {/* Info pills */}
         <View style={styles.infoRow}>
-          {['1 free spin/day', 'Resets midnight', 'Win food & points'].map((t, i) => (
+          {['1 free spin/day', 'Resets midnight', 'Win food & points'].map((txt, i) => (
             <View key={i} style={styles.infoChip}>
-              <Text style={styles.infoChipText}>{t}</Text>
+              <Text style={styles.infoChipText}>{txt}</Text>
             </View>
           ))}
         </View>
@@ -598,28 +594,46 @@ export default function SpinScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0A' },
+  container: { flex: 1, backgroundColor: '#FFF8F3' },
 
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, paddingVertical: 10,
+  // Header
+  headerBlock: {
+    backgroundColor: Colors.primary,
+    paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: 36,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 4,
   },
-  backBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 16, fontWeight: '900', letterSpacing: 2, color: '#fff', textTransform: 'uppercase' },
+  backBtn: {
+    width: 40, height: 40, borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  headerCenter: { flex: 1, alignItems: 'center', paddingTop: 4 },
+  title: { fontSize: 18, fontWeight: '900', color: '#fff', letterSpacing: 1 },
+  titleSub: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
 
-  spinsPill: {
-    alignSelf: 'center',
+  // Yellow spins badge
+  spinsBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 18, paddingVertical: 8,
-    borderRadius: Radius.full, borderWidth: 1.5,
-    marginBottom: 4,
+    backgroundColor: '#FFE500',
+    borderRadius: 6, paddingHorizontal: 14, paddingVertical: 7,
+    alignSelf: 'center',
+    width: '100%',
+    justifyContent: 'center',
+    marginTop: 8,
+    borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.15)',
+    elevation: 2,
   },
-  spinsPillText: { fontSize: 13, fontWeight: '700' },
+  spinsBadgeText: { fontSize: 13, fontWeight: '700', color: '#1B2A4A' },
 
-  wheelZone: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-  },
-
+  // Wheel
+  wheelZone: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: -20 },
   hubLabel: {
     position: 'absolute',
     width: INNER_R * 2, height: INNER_R * 2, borderRadius: INNER_R,
@@ -627,27 +641,59 @@ const styles = StyleSheet.create({
   },
   hubText: { fontSize: 14, fontWeight: '900', color: '#fff', letterSpacing: 1 },
 
+  // Bottom
+  bottomArea: { paddingHorizontal: Spacing.md, gap: 10 },
+
   errorBox: {
-    marginHorizontal: Spacing.lg, borderRadius: Radius.md,
-    padding: Spacing.sm, backgroundColor: 'rgba(239,68,68,0.12)',
+    borderRadius: Radius.md, padding: Spacing.sm,
+    backgroundColor: 'rgba(239,68,68,0.1)',
     borderWidth: 1, borderColor: Colors.error,
   },
   errorText: { fontSize: 13, color: Colors.error, fontWeight: '600', textAlign: 'center' },
 
-  bottomArea: { paddingHorizontal: Spacing.lg, gap: 10 },
-  spinBtnWrap: {},
-  spinBtn: {
-    borderRadius: Radius.lg, paddingVertical: 18,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    ...Shadows.glowStrong,
+  // Last win card — brutalist
+  lastWinCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10, borderWidth: 2.5, borderColor: '#000',
+    paddingHorizontal: 16, paddingVertical: 12,
+    elevation: 4,
+    shadowColor: '#000', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0,
   },
-  spinBtnText: { fontSize: 18, fontWeight: '900', color: '#fff', letterSpacing: 1.5 },
+  lastWinLabel: { fontSize: 9, fontWeight: '800', color: '#999', letterSpacing: 2 },
+  lastWinValue: { fontSize: 22, fontWeight: '900', color: Colors.primary, marginTop: 2 },
+  lastWinBadge: {
+    backgroundColor: '#FFE500', borderRadius: 5, borderWidth: 2, borderColor: '#000',
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  lastWinBadgeText: { fontSize: 10, fontWeight: '900', color: '#000' },
 
-  infoRow: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
-  infoChip: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 5,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+  // Spin button — brutalist
+  spinBtnWrap: { position: 'relative' },
+  spinBtnShadow: {
+    position: 'absolute', top: 4, left: 4,
+    right: -4, bottom: -4,
+    backgroundColor: '#000', borderRadius: 12,
   },
-  infoChipText: { fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: '600' },
+  spinBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12, borderWidth: 3, borderColor: '#000',
+    paddingVertical: 17,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    overflow: 'hidden',
+  },
+  spinBtnHighlight: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 14,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  spinBtnText: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: 1 },
+
+  // Info pills
+  infoRow: { flexDirection: 'row', gap: 6, justifyContent: 'center' },
+  infoChip: {
+    borderRadius: 4, paddingHorizontal: 10, paddingVertical: 5,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  infoChipText: { fontSize: 10, color: '#aaa', fontWeight: '500' },
 })
