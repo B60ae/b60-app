@@ -84,6 +84,7 @@ export async function processSpin(userId: string): Promise<SpinResult> {
     .single();
 
   if (spinErr || !spinRecord) {
+    console.error('[Games] spin insert failed:', spinErr?.message ?? spinErr);
     return { success: false, error: 'Failed to record spin', code: 'DB_ERROR' };
   }
 

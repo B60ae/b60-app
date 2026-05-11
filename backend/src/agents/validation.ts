@@ -116,12 +116,10 @@ async function checkRule(rule: ValidationRule): Promise<ValidationResult> {
     }
 
     case 'tap_score': {
-      // max 120 taps in 10s is humanly impossible above — cap at 200 per validation
-      if (rule.score < 0 || rule.score > 200) {
+      if (rule.score < 0 || rule.score > 300) {
         return fail('INVALID_TAP_SCORE', 'Score out of valid range');
       }
-      // anti-cheat: flag suspiciously perfect scores
-      if (rule.score > 150) {
+      if (rule.score > 200) {
         console.warn(`[ValidationAgent] Suspicious tap score: ${rule.score}`);
       }
       return { valid: true };

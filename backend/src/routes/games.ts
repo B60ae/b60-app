@@ -62,8 +62,8 @@ gamesRouter.get('/tap/status', async (req: AuthRequest, res) => {
 
 // POST /api/games/tap
 gamesRouter.post('/tap', async (req: AuthRequest, res) => {
-  const { score } = req.body
-  if (typeof score !== 'number') {
+  const score = Number(req.body?.score)
+  if (!Number.isFinite(score) || score < 0) {
     return res.status(400).json({ error: 'Invalid score' })
   }
 
