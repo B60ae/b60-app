@@ -41,29 +41,21 @@ export interface TapResult {
 // ─── SPIN ────────────────────────────────────────────────────────────────────
 
 export async function processSpin(userId: string): Promise<SpinResult> {
-  // Count spins + orders today
+  // 1 free spin per day
   const today = new Date().toISOString().split('T')[0];
 
-  const [{ count: spinsUsed }, { count: ordersToday }] = await Promise.all([
-    supabase
-      .from('game_spins')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', `${today}T00:00:00.000Z`),
-    supabase
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('status', 'confirmed')
-      .gte('created_at', `${today}T00:00:00.000Z`),
-  ]);
+  const { count: spinsUsed } = await supabase
+    .from('game_spins')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', `${today}T00:00:00.000Z`);
 
   const validation = await validate([
     {
       type: 'spin_available',
       userId,
       spinsUsed: spinsUsed ?? 0,
-      ordersToday: ordersToday ?? 0,
+      ordersToday: 0,
     },
   ]);
 
@@ -71,8 +63,7 @@ export async function processSpin(userId: string): Promise<SpinResult> {
     return { success: false, error: validation.reason, code: validation.code };
   }
 
-  const spinsAllowed = 1 + (ordersToday ?? 0);
-  const spinsRemaining = spinsAllowed - (spinsUsed ?? 0) - 1;
+  const spinsRemaining = Math.max(0, 1 - (spinsUsed ?? 0) - 1);
 
   // Weighted random prize selection
   const prize = pickWeightedPrize();

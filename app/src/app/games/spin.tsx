@@ -583,7 +583,7 @@ export default function SpinScreen() {
 
         {/* Quick info row */}
         <View style={styles.infoRow}>
-          {['1 free spin/day', '+1 per order', 'Win food & points'].map((t, i) => (
+          {['1 free spin/day', 'Resets midnight', 'Win food & points'].map((t, i) => (
             <View key={i} style={styles.infoChip}>
               <Text style={styles.infoChipText}>{t}</Text>
             </View>

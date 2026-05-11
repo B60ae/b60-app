@@ -12,21 +12,17 @@ gamesRouter.use(gameLimiter)
 
 // ─── Spin Wheel ───────────────────────────────────────────────────────────────
 
-// GET /api/games/spin/status — 1 free spin/day + 1 per order
+// GET /api/games/spin/status — 1 free spin/day
 gamesRouter.get('/spin/status', async (req: AuthRequest, res) => {
   const userId = req.userId!
   const today = new Date().toISOString().split('T')[0]
 
-  const [{ count: spinsUsed }, { count: ordersToday }] = await Promise.all([
-    supabase.from('game_spins').select('*', { count: 'exact', head: true })
-      .eq('user_id', userId).gte('created_at', `${today}T00:00:00.000Z`),
-    supabase.from('orders').select('*', { count: 'exact', head: true })
-      .eq('user_id', userId).eq('status', 'confirmed').gte('created_at', `${today}T00:00:00.000Z`),
-  ])
+  const { count: spinsUsed } = await supabase
+    .from('game_spins').select('*', { count: 'exact', head: true })
+    .eq('user_id', userId).gte('created_at', `${today}T00:00:00.000Z`)
 
-  const totalAllowed = 1 + (ordersToday ?? 0)
   const used = spinsUsed ?? 0
-  res.json({ can_spin: used < totalAllowed, spins_left: Math.max(0, totalAllowed - used), spins_used: used })
+  res.json({ can_spin: used < 1, spins_left: Math.max(0, 1 - used), spins_used: used })
 })
 
 // POST /api/games/spin
