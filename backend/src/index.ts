@@ -35,6 +35,8 @@ import { locationsRouter } from './routes/locations'
 import { gamesRouter } from './routes/games'
 import { analyticsRouter } from './routes/analytics'
 import { cache } from './services/cache'
+import { retryFailedAwards } from './agents/loyalty'
+import { retryFailedPrizes, resetLeaderboard } from './agents/games'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
@@ -105,6 +107,29 @@ app.get('/health', async (_, res) => {
 
 // 404
 app.use((_, res) => res.status(404).json({ error: 'Not found' }))
+
+// ─── Agent Cron Jobs ──────────────────────────────────────────────────────────
+
+// Retry failed loyalty awards every 15 min
+setInterval(async () => {
+  try { await retryFailedAwards() } catch (e) { console.error('[Cron] retryFailedAwards:', e) }
+}, 15 * 60 * 1000)
+
+// Retry failed game prizes every 15 min
+setInterval(async () => {
+  try { await retryFailedPrizes() } catch (e) { console.error('[Cron] retryFailedPrizes:', e) }
+}, 15 * 60 * 1000)
+
+// Leaderboard weekly reset — check every hour, fire on Monday GST
+setInterval(async () => {
+  const now = new Date()
+  const gst = new Date(now.getTime() + 4 * 60 * 60 * 1000)
+  const isMonday = gst.getUTCDay() === 1
+  const isMidnight = gst.getUTCHours() === 0
+  if (isMonday && isMidnight) {
+    try { await resetLeaderboard() } catch (e) { console.error('[Cron] resetLeaderboard:', e) }
+  }
+}, 60 * 60 * 1000)
 
 const server = app.listen(PORT, () =>
   console.log(`[B60] API running on port ${PORT} | instance=${INSTANCE_ID} | env=${process.env.NODE_ENV ?? 'development'}`)
