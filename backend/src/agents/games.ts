@@ -50,7 +50,7 @@ export async function processSpin(userId: string): Promise<SpinResult> {
     .from('game_spins')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .gte('created_at', `${today}T00:00:00.000Z`);
+    .gte('spun_at', `${today}T00:00:00.000Z`);
 
   const validation = await validate([
     {
@@ -78,7 +78,7 @@ export async function processSpin(userId: string): Promise<SpinResult> {
       user_id: userId,
       prize_type: prize.type,
       prize_value: prize.value,
-      created_at: new Date().toISOString(),
+      spun_at: new Date().toISOString(),
     })
     .select('id')
     .single();
@@ -136,7 +136,7 @@ export async function processTap(userId: string, score: number): Promise<TapResu
     .from('game_tap_scores')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .gte('created_at', `${today}T00:00:00.000Z`);
+    .gte('played_at', `${today}T00:00:00.000Z`);
 
   const validation = await validate([
     { type: 'tap_score', score },
@@ -157,7 +157,6 @@ export async function processTap(userId: string, score: number): Promise<TapResu
       score,
       points_earned: pointsEarned,
       played_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
     })
     .select('id')
     .single();
