@@ -33,16 +33,14 @@ const OUTER_R = R - 2
 const INNER_R = 38  // hub radius
 
 const SEGMENTS = [
-  { label: '10 PTS',       color: '#C93D08', textColor: '#fff' },
-  { label: '25 PTS',       color: '#1B2A4A', textColor: '#fff' },
-  { label: '50 PTS',       color: '#E04A18', textColor: '#fff' },
-  { label: '10% OFF',      color: '#166534', textColor: '#fff' },
-  { label: '100 PTS',      color: '#F05A1A', textColor: '#fff' },
-  { label: '25 PTS',       color: '#1B2A4A', textColor: '#fff' },
-  { label: 'FREE\nBURGER', color: '#F5C400', textColor: '#1B2A4A' },
-  { label: '50 PTS',       color: '#C93D08', textColor: '#fff' },
-  { label: '250 PTS',      color: '#F05A1A', textColor: '#fff' },
-  { label: '15% OFF',      color: '#166534', textColor: '#fff' },
+  { label: '10 PTS',        color: '#F05A1A', textColor: '#fff'    },
+  { label: '25 PTS',        color: '#1B2A4A', textColor: '#fff'    },
+  { label: '50 PTS',        color: '#2E6B3E', textColor: '#fff'    },
+  { label: '100 PTS',       color: '#CC3D00', textColor: '#fff'    },
+  { label: '250 PTS',       color: '#FFE500', textColor: '#1B2A4A' },
+  { label: '10 PTS',        color: '#1B2A4A', textColor: '#fff'    },
+  { label: '50 PTS',        color: '#2E6B3E', textColor: '#fff'    },
+  { label: 'FREE\nBURGER',  color: '#F05A1A', textColor: '#fff'    },
 ]
 
 const N = SEGMENTS.length
@@ -327,8 +325,7 @@ function WinModal({
 
   const isNothing = result.type === 'nothing'
   const prizeText = result.type === 'points' ? `+${result.prize_value} PTS`
-    : result.type === 'discount' ? `${result.prize_value} OFF`
-    : result.type === 'free_item' ? `FREE ${result.prize_value.toUpperCase()}`
+    : result.type === 'free_item' ? 'FREE BURGER'
     : '—'
 
   return (

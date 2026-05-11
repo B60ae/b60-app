@@ -2,21 +2,19 @@ import { supabase } from '../config/supabase';
 import { awardPoints } from '../services/loyalty';
 import { validate } from './validation';
 
-// Prize distribution (weights must sum to same pool for weighted RNG)
+// 8 segments — matches wheel UI exactly (index = segment position)
 const SPIN_PRIZES = [
-  { type: 'points', value: 10,   weight: 30, label: '10 Points' },
-  { type: 'points', value: 25,   weight: 25, label: '25 Points' },
-  { type: 'points', value: 25,   weight: 25, label: '25 Points' },
-  { type: 'points', value: 50,   weight: 15, label: '50 Points' },
-  { type: 'points', value: 50,   weight: 15, label: '50 Points' },
-  { type: 'points', value: 100,  weight: 10, label: '100 Points' },
-  { type: 'points', value: 250,  weight: 5,  label: '250 Points' },
-  { type: 'voucher', value: 10,  weight: 6,  label: '10% OFF',     voucherType: 'discount' },
-  { type: 'voucher', value: 15,  weight: 3,  label: '15% OFF',     voucherType: 'discount' },
-  { type: 'free_item', value: 0, weight: 2,  label: 'FREE BURGER', voucherType: 'free_item' },
+  { type: 'points',    value: 10,  weight: 30, label: '10 PTS'       },
+  { type: 'points',    value: 25,  weight: 25, label: '25 PTS'       },
+  { type: 'points',    value: 50,  weight: 20, label: '50 PTS'       },
+  { type: 'points',    value: 100, weight: 15, label: '100 PTS'      },
+  { type: 'points',    value: 250, weight: 5,  label: '250 PTS'      },
+  { type: 'points',    value: 10,  weight: 30, label: '10 PTS'       },
+  { type: 'points',    value: 50,  weight: 20, label: '50 PTS'       },
+  { type: 'free_item', value: 0,   weight: 2,  label: 'FREE BURGER', voucherType: 'free_item' },
 ] as const;
 
-type PrizeType = 'points' | 'voucher' | 'free_item';
+type PrizeType = 'points' | 'free_item';
 
 export interface SpinResult {
   success: boolean;
@@ -104,18 +102,17 @@ export async function processSpin(userId: string): Promise<SpinResult> {
     const result = await creditPrize(userId, spinRecord.id, 'spin', prize.type, prize.value, prize.value);
     pointsAwarded = result.pointsAwarded ?? 0;
   } else {
-    // voucher or free_item
+    // free_item
     voucherCode = generateVoucherCode();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const { error: voucherErr } = await supabase.from('game_vouchers').insert({
       user_id: userId,
       code: voucherCode,
-      voucher_type: (prize as { voucherType?: string }).voucherType ?? prize.type,
-      value: prize.value,
+      voucher_type: 'free_item',
+      value: 0,
       is_used: false,
       expires_at: expiresAt,
     });
-
     if (voucherErr) {
       await queueFailedPrize(userId, spinRecord.id, 'spin', prize.type, prize.value);
     }
