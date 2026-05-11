@@ -336,7 +336,7 @@ async function updateLeaderboard(userId: string, scoreType: 'spin' | 'tap', valu
 
   const displayName = user?.name || user?.email?.split('@')[0] || 'Player';
 
-  await supabase.from('game_leaderboard').upsert(
+  const { error } = await supabase.from('game_leaderboard').upsert(
     {
       user_id: userId,
       week_start: weekStart,
@@ -349,6 +349,7 @@ async function updateLeaderboard(userId: string, scoreType: 'spin' | 'tap', valu
     },
     { onConflict: 'user_id,week_start' }
   );
+  if (error) console.error('[Games] leaderboard upsert failed:', error.message);
 }
 
 function pickWeightedPrize(): typeof SPIN_PRIZES[number] {
