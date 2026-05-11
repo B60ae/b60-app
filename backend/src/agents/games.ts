@@ -3,15 +3,17 @@ import { awardPoints } from '../services/loyalty';
 import { validate } from './validation';
 
 // 8 segments — matches wheel UI exactly (index = segment position)
+// EV ~1.25 AED/spin (20 pts = 1 AED). Points only cost if redeemed at checkout.
+// Free burger: 1 in 168 spins (~every 6 months for daily spinners)
 const SPIN_PRIZES = [
-  { type: 'points',    value: 10,  weight: 30, label: '10 PTS'       },
-  { type: 'points',    value: 25,  weight: 25, label: '25 PTS'       },
-  { type: 'points',    value: 50,  weight: 20, label: '50 PTS'       },
-  { type: 'points',    value: 100, weight: 15, label: '100 PTS'      },
-  { type: 'points',    value: 250, weight: 5,  label: '250 PTS'      },
-  { type: 'points',    value: 10,  weight: 30, label: '10 PTS'       },
-  { type: 'points',    value: 50,  weight: 20, label: '50 PTS'       },
-  { type: 'free_item', value: 0,   weight: 2,  label: 'FREE BURGER', voucherType: 'free_item' },
+  { type: 'points',    value: 10,  weight: 60, label: '10 PTS'       },
+  { type: 'points',    value: 25,  weight: 20, label: '25 PTS'       },
+  { type: 'points',    value: 50,  weight: 10, label: '50 PTS'       },
+  { type: 'points',    value: 100, weight: 5,  label: '100 PTS'      },
+  { type: 'points',    value: 250, weight: 2,  label: '250 PTS'      },
+  { type: 'points',    value: 10,  weight: 60, label: '10 PTS'       },
+  { type: 'points',    value: 50,  weight: 10, label: '50 PTS'       },
+  { type: 'free_item', value: 0,   weight: 1,  label: 'FREE BURGER', voucherType: 'free_item' },
 ] as const;
 
 type PrizeType = 'points' | 'free_item';
