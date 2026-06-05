@@ -5,7 +5,6 @@ import {
 } from 'react-native'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
 import { Button } from '../../components/ui/Button'
 import { Spacing, Radius } from '../../utils/theme'
@@ -15,26 +14,26 @@ import { IMAGES } from '../../utils/constants'
 import { Events, recordConsent } from '../../services/analytics'
 
 const TERMS_VERSION = '2026-05'
-
 const { width: W, height: H } = Dimensions.get('window')
 const OTP_LENGTH = 6
 
 const C = {
-  bg: '#000000',
-  surface: '#0D0D0D',
-  card: '#111111',
-  input: '#1A1A1A',
-  border: '#2A2A2A',
+  bg: '#FFF8F3',
+  surface: '#FFFFFF',
+  card: '#FFFFFF',
+  input: '#FFFFFF',
+  border: '#000000',
   borderActive: '#F05A1A',
-  text: '#FFFFFF',
-  textSub: '#888888',
-  textMuted: '#444444',
+  text: '#1B2A4A',
+  textSub: '#555555',
+  textMuted: '#888888',
   primary: '#F05A1A',
   primaryDark: '#C94400',
   error: '#EF4444',
   success: '#22C55E',
   white: '#FFFFFF',
   yellow: '#FFE500',
+  navy: '#1B2A4A',
 }
 
 // ─── OTP Box Display ──────────────────────────────────────────────────────────
@@ -70,14 +69,19 @@ const otpStyles = StyleSheet.create({
   box: {
     width: 46, height: 56,
     borderRadius: Radius.md,
-    borderWidth: 1.5,
+    borderWidth: 2.5,
     borderColor: C.border,
     backgroundColor: C.input,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 3,
   },
-  boxActive: { borderColor: C.primary, borderWidth: 2 },
-  boxFilled: { borderColor: '#333', backgroundColor: '#1A0A00' },
+  boxActive: { borderColor: C.primary, borderWidth: 3 },
+  boxFilled: { borderColor: C.navy, backgroundColor: 'rgba(240,90,26,0.06)' },
   boxError: { borderColor: C.error },
   digit: { fontSize: 28, fontWeight: '900', color: C.primary, lineHeight: 34 },
   cursor: {
@@ -100,9 +104,9 @@ function StepDots({ step }: { step: 'email' | 'otp' }) {
 }
 
 const stepStyles = StyleSheet.create({
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.border },
-  dotActive: { backgroundColor: C.primary },
-  line: { width: 28, height: 2, backgroundColor: C.border },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#DDD', borderWidth: 2, borderColor: C.border },
+  dotActive: { backgroundColor: C.primary, borderColor: C.primary },
+  line: { width: 32, height: 2.5, backgroundColor: '#DDD' },
   lineActive: { backgroundColor: C.primary },
 })
 
@@ -119,7 +123,6 @@ export default function LoginScreen() {
   const [termsAccepted, setTermsAccepted] = useState(false)
   const setUser = useAuthStore((s) => s.setUser)
 
-  // Resend cooldown countdown
   useEffect(() => {
     if (resendCooldown <= 0) return
     const t = setTimeout(() => setResendCooldown(c => c - 1), 1000)
@@ -135,7 +138,7 @@ export default function LoginScreen() {
   const otpRef = useRef<TextInput>(null)
 
   useEffect(() => {
-    StatusBar.setBarStyle('light-content')
+    StatusBar.setBarStyle('dark-content')
     Animated.parallel([
       Animated.spring(logoScale, { toValue: 1, useNativeDriver: true, tension: 60, friction: 8 }),
       Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
@@ -146,10 +149,10 @@ export default function LoginScreen() {
 
   const shake = () => {
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 10, duration: 55, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 10,  duration: 55, useNativeDriver: true }),
       Animated.timing(shakeAnim, { toValue: -10, duration: 55, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 6, duration: 55, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 55, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6,   duration: 55, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0,   duration: 55, useNativeDriver: true }),
     ]).start()
   }
 
@@ -203,12 +206,12 @@ export default function LoginScreen() {
       await setUser(user, token)
       Events.LOGIN_SUCCESS()
       Events.TERMS_ACCEPTED(TERMS_VERSION)
-      // Fire consent audit log — non-blocking
       recordConsent(TERMS_VERSION)
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
       router.replace('/(tabs)')
-    } catch {
-      setError('Wrong code. Try again.')
+    } catch (err: any) {
+      const msg = err?.response?.data?.error ?? ''
+      setError(msg.includes('expired') ? 'Code expired. Tap Resend.' : 'Wrong code. Try again.')
       Events.LOGIN_FAILED('invalid_otp')
       otpValueRef.current = ''
       setOtp('')
@@ -229,29 +232,24 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
 
-      {/* Full-bleed hero background */}
-      <Image source={{ uri: IMAGES.loginHero }} style={styles.bgImage} contentFit="cover" />
-      <LinearGradient
-        colors={['rgba(0,0,0,0.15)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.92)', C.bg]}
-        style={styles.bgGradient}
-        locations={[0, 0.35, 0.65, 1]}
-      />
+      {/* Orange header block */}
+      <View style={styles.heroBlock}>
+        <Animated.View style={[styles.logoArea, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
+          <View style={styles.iconWrapper}>
+            <Image
+              source={require('../../../assets/images/icon.png')}
+              style={styles.appIcon}
+              contentFit="contain"
+            />
+          </View>
+          <Text style={styles.brandName}>B60 BURGERS</Text>
+          <Text style={styles.brandSub}>SMASH BURGERS · DUBAI</Text>
+        </Animated.View>
+      </View>
 
-      {/* ── Logo + Brand ── */}
-      <Animated.View style={[styles.logoArea, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
-        {/* App icon */}
-        <Image
-          source={require('../../../assets/images/icon.png')}
-          style={styles.appIcon}
-          contentFit="contain"
-        />
-        <View style={styles.logoDivider} />
-        <Text style={styles.logoSub}>SMASH BURGERS · DUBAI</Text>
-      </Animated.View>
-
-      {/* ── Card ── */}
+      {/* Card */}
       <Animated.View
         style={[
           styles.card,
@@ -377,52 +375,46 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
-  bgImage: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    height: H * 0.58,
-  },
-  bgGradient: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    height: H * 0.72,
-  },
-
-  // Logo area
-  logoArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: H * 0.05,
-    gap: 12,
-  },
-  appIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-  },
-  logoDivider: {
-    width: 40, height: 2.5,
+  heroBlock: {
     backgroundColor: C.primary,
-    borderRadius: 2,
+    paddingTop: H * 0.08,
+    paddingBottom: 48,
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 6,
   },
-  logoSub: {
-    fontSize: 11, fontWeight: '900', color: 'rgba(255,255,255,0.7)',
-    letterSpacing: 4, textTransform: 'uppercase',
+  logoArea: {
+    alignItems: 'center',
+    gap: 10,
   },
+  iconWrapper: {
+    width: 80, height: 80,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: '#000',
+    backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1, shadowRadius: 0, elevation: 6,
+    overflow: 'hidden',
+  },
+  appIcon: { width: 72, height: 72 },
+  brandName: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: 2 },
+  brandSub: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.75)', letterSpacing: 4, textTransform: 'uppercase' },
 
-  // Card
   card: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: '#222',
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    flex: 1,
     padding: Spacing.lg,
+    paddingTop: Spacing.xl,
     paddingBottom: Spacing.xl,
     gap: Spacing.md,
   },
@@ -431,31 +423,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', marginBottom: 4,
   },
-  stepLabel: { fontSize: 11, fontWeight: '700', color: C.textSub, letterSpacing: 0.5 },
+  stepLabel: { fontSize: 11, fontWeight: '700', color: C.textMuted, letterSpacing: 0.5 },
 
   headlineRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  headline: { fontSize: 28, fontWeight: '900', color: C.text, letterSpacing: -0.5 },
+  headline: { fontSize: 30, fontWeight: '900', color: C.text, letterSpacing: -0.5 },
   changeLink: { fontSize: 13, fontWeight: '700', color: C.primary },
   sub: { fontSize: 13, color: C.textSub, lineHeight: 20, marginTop: -4 },
 
   input: {
     backgroundColor: C.input,
     borderRadius: Radius.md,
-    borderWidth: 1.5,
+    borderWidth: 2.5,
     borderColor: C.border,
     color: C.text,
     fontSize: 16,
     paddingHorizontal: Spacing.md,
     paddingVertical: 14,
     letterSpacing: 0.3,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1, shadowRadius: 0, elevation: 3,
   },
   inputError: { borderColor: C.error },
   hiddenInput: { position: 'absolute', opacity: 0, width: 1, height: 1, top: 0 },
 
   errorRow: {
-    backgroundColor: 'rgba(239,68,68,0.1)',
+    backgroundColor: 'rgba(239,68,68,0.08)',
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 8,
@@ -466,25 +461,19 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 13, color: C.error, fontWeight: '600' },
 
   resendBtn: { alignItems: 'center', paddingVertical: 4 },
-  resendText: {
-    fontSize: 13, color: C.textSub, fontWeight: '600', textDecorationLine: 'underline',
-  },
-  termsRow: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 4,
-  },
+  resendText: { fontSize: 13, color: C.textSub, fontWeight: '600', textDecorationLine: 'underline' },
+
+  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 4 },
   checkbox: {
-    width: 20, height: 20, borderRadius: 5,
-    borderWidth: 1.5, borderColor: C.border,
+    width: 22, height: 22, borderRadius: 5,
+    borderWidth: 2.5, borderColor: C.border,
     backgroundColor: C.input,
     alignItems: 'center', justifyContent: 'center',
     marginTop: 1,
+    shadowColor: '#000', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 2,
   },
   checkboxActive: { backgroundColor: C.primary, borderColor: C.primary },
-  checkmark: { color: '#fff', fontSize: 12, fontWeight: '900', lineHeight: 14 },
-  terms: {
-    flex: 1, fontSize: 11, color: C.textMuted, lineHeight: 16,
-  },
-  termsLink: {
-    color: C.primary, fontWeight: '700', textDecorationLine: 'underline',
-  },
+  checkmark: { color: '#fff', fontSize: 13, fontWeight: '900', lineHeight: 15 },
+  terms: { flex: 1, fontSize: 11, color: C.textMuted, lineHeight: 16 },
+  termsLink: { color: C.primary, fontWeight: '700', textDecorationLine: 'underline' },
 })

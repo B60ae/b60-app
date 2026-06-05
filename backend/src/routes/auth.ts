@@ -7,7 +7,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth'
 
 export const authRouter = Router()
 
-const OTP_TTL_MS        = 5 * 60 * 1000   // 5 minutes
+const OTP_TTL_MS        = 10 * 60 * 1000  // 10 minutes
 const MAX_OTP_ATTEMPTS  = 5
 const LOCKOUT_MS        = 15 * 60 * 1000  // 15 minutes after 5 wrong attempts
 const JWT_TTL           = '7d'
@@ -129,7 +129,7 @@ authRouter.post('/otp/verify',
     // Check expiry
     if (new Date(record.expires_at) < new Date()) {
       await supabase.from('otp_store').delete().eq('email', email)
-      return invalid()
+      return res.status(401).json({ error: 'Code expired. Request a new one.' })
     }
 
     // Check hash match
