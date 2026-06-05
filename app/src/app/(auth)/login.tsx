@@ -211,7 +211,9 @@ export default function LoginScreen() {
       router.replace('/(tabs)')
     } catch (err: any) {
       const msg = err?.response?.data?.error ?? ''
-      setError(msg.includes('expired') ? 'Code expired. Tap Resend.' : 'Wrong code. Try again.')
+      const isExpired = msg.includes('expired')
+      const isServer = msg.includes('unavailable') || err?.response?.status === 503
+      setError(isExpired ? 'Code expired. Tap Resend.' : isServer ? 'Server error. Try again in a moment.' : 'Wrong code. Try again.')
       Events.LOGIN_FAILED('invalid_otp')
       otpValueRef.current = ''
       setOtp('')

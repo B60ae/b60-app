@@ -72,7 +72,7 @@ authRouter.post('/otp/send',
     const expiresAt = new Date(Date.now() + OTP_TTL_MS).toISOString()
 
     // Upsert into DB — replaces any previous OTP for this email
-    await supabase.from('otp_store').upsert({
+    const { error: upsertErr } = await supabase.from('otp_store').upsert({
       email,
       otp_hash: hashOtp(otp),
       attempts: 0,
@@ -80,6 +80,10 @@ authRouter.post('/otp/send',
       expires_at: expiresAt,
       created_at: new Date().toISOString(),
     }, { onConflict: 'email' })
+    if (upsertErr) {
+      console.error('[OTP upsert failed]', upsertErr.message)
+      return res.status(503).json({ error: 'Service temporarily unavailable. Try again.' })
+    }
 
     try {
       await sendOtpEmail(email, otp)
@@ -119,6 +123,10 @@ authRouter.post('/otp/verify',
     // Generic error — don't reveal whether email exists
     const invalid = () => res.status(401).json({ error: 'Invalid or expired code' })
 
+    if (fetchErr) {
+      console.error('[OTP verify] Supabase error:', fetchErr.message)
+      return res.status(503).json({ error: 'Service temporarily unavailable. Try again.' })
+    }
     if (!record) return invalid()
 
     // Check lockout
