@@ -10,7 +10,6 @@ import { router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import { Search, X, MapPin, ShoppingBag, ChevronRight, Truck, Store, Trash2, Minus, Plus, ChevronLeft } from 'lucide-react-native'
 import { Image } from 'expo-image'
-import { LinearGradient } from 'expo-linear-gradient'
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withSequence, withTiming, FadeInDown, FadeOutDown,
 } from 'react-native-reanimated'
@@ -19,21 +18,20 @@ import { Events } from '../../services/analytics'
 import { SkeletonGrid } from '../../components/ui/SkeletonLoader'
 import { useCartStore } from '../../stores/cartStore'
 import { useAuthStore } from '../../stores/authStore'
-import { useThemeStore } from '../../stores/themeStore'
-import { LightTheme, DarkTheme, Spacing, Radius, Colors, Shadows } from '../../utils/theme'
+import { LightTheme, Spacing, Radius, Colors, Shadows } from '../../utils/theme'
 import { DirhamSymbol } from '../../components/ui/DirhamSymbol'
 import { Toast } from '../../components/ui/Toast'
 import { POINTS_TO_AED, MIN_REDEEM_POINTS } from '../../utils/constants'
 import type { MenuItem } from '../../types'
 
+const T = LightTheme
 type Step = 'method' | 'location' | 'menu'
-
 const { height: SCREEN_H } = Dimensions.get('window')
 
 // ─── Menu Item Card ────────────────────────────────────────────────────────────
 
-function MenuCard({ item, onPress, onAdd, T }: {
-  item: MenuItem; onPress: () => void; onAdd: () => void; T: any
+function MenuCard({ item, onPress, onAdd }: {
+  item: MenuItem; onPress: () => void; onAdd: () => void
 }) {
   const addScale = useSharedValue(1)
   const cardScale = useSharedValue(1)
@@ -44,26 +42,26 @@ function MenuCard({ item, onPress, onAdd, T }: {
     if (!item.is_available) return
     addScale.value = withSequence(
       withSpring(0.72, { damping: 4, stiffness: 800 }),
-      withSpring(1, { damping: 6, stiffness: 400 }),
+      withSpring(1,    { damping: 6, stiffness: 400 }),
     )
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
     onAdd()
   }
 
   return (
-    <Animated.View style={[styles.card, { backgroundColor: T.surfaceElevated, borderColor: T.border }, cardAnim]}>
+    <Animated.View style={[styles.card, cardAnim]}>
       <Pressable
         onPress={onPress}
         onPressIn={() => { cardScale.value = withSpring(0.97, { damping: 8, stiffness: 400 }) }}
-        onPressOut={() => { cardScale.value = withSpring(1, { damping: 8, stiffness: 300 }) }}
+        onPressOut={() => { cardScale.value = withSpring(1,    { damping: 8, stiffness: 300 }) }}
         style={styles.cardInner}
         disabled={!item.is_available}
       >
         <View style={styles.cardImage}>
           {item.image_url
             ? <Image source={{ uri: item.image_url }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
-            : <View style={[StyleSheet.absoluteFill, { backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={{ fontSize: 11, fontWeight: '900', color: T.textMuted, letterSpacing: 2 }}>B60</Text>
+            : <View style={[StyleSheet.absoluteFill, styles.cardImagePlaceholder]}>
+                <Text style={styles.cardPlaceholderText}>B60</Text>
               </View>
           }
           {item.is_featured && (
@@ -74,9 +72,9 @@ function MenuCard({ item, onPress, onAdd, T }: {
           )}
         </View>
         <View style={styles.cardBody}>
-          <Text style={[styles.cardName, { color: T.text }]} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
           {item.description
-            ? <Text style={[styles.cardDesc, { color: T.textMuted }]} numberOfLines={2}>{item.description}</Text>
+            ? <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
             : null
           }
           <View style={styles.cardFooter}>
@@ -98,11 +96,11 @@ function MenuCard({ item, onPress, onAdd, T }: {
   )
 }
 
-function SectionHeader({ label, T }: { label: string; T: any }) {
+function SectionHeader({ label }: { label: string }) {
   return (
     <View style={styles.sectionHeader}>
       <View style={styles.sectionAccent} />
-      <Text style={[styles.sectionHeaderText, { color: T.text }]}>{label.toUpperCase()}</Text>
+      <Text style={styles.sectionHeaderText}>{label.toUpperCase()}</Text>
     </View>
   )
 }
@@ -111,10 +109,10 @@ type ListRow = { type: 'header'; label: string; key: string } | { type: 'item'; 
 
 // ─── Cart Sheet ────────────────────────────────────────────────────────────────
 
-const STEP = 20 // points step for stepper
+const STEP = 100
 
-function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
-  visible: boolean; onClose: () => void; T: any; theme: any; onOrderPlaced: () => void
+function CartSheet({ visible, onClose, onOrderPlaced }: {
+  visible: boolean; onClose: () => void; onOrderPlaced: () => void
 }) {
   const insets = useSafeAreaInsets()
   const { items, locationId, pointsToRedeem, setPointsToRedeem, updateQuantity, removeItem, clearCart, subtotal, discount, total } = useCartStore()
@@ -126,23 +124,14 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   const userPoints = user?.loyalty_points ?? 0
-  // max redeemable: can't exceed what user has, and can't exceed subtotal value
   const maxRedeemable = Math.min(
     Math.floor(userPoints / STEP) * STEP,
     Math.floor(subtotal() / POINTS_TO_AED / STEP) * STEP,
   )
-  const canRedeem = userPoints >= STEP && maxRedeemable >= STEP
+  const canRedeem = userPoints >= MIN_REDEEM_POINTS && maxRedeemable >= STEP
 
-  const stepDown = () => {
-    const next = Math.max(0, pointsToRedeem - STEP)
-    setPointsToRedeem(next)
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-  }
-  const stepUp = () => {
-    const next = Math.min(maxRedeemable, pointsToRedeem + STEP)
-    setPointsToRedeem(next)
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-  }
+  const stepDown = () => { const next = Math.max(0, pointsToRedeem - STEP); setPointsToRedeem(next); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }
+  const stepUp   = () => { const next = Math.min(maxRedeemable, pointsToRedeem + STEP); setPointsToRedeem(next); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }
 
   const handlePlaceOrder = async () => {
     if (!locationId) { setToast({ message: 'Select a location first', type: 'error' }); return }
@@ -159,7 +148,7 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
         total: total(),
         points_redeemed: pointsToRedeem,
       })
-      const earned = Math.floor(total())
+      const earned = Math.floor(subtotal())
       Events.ORDER_PLACED(order.id, total(), locationId)
       updatePoints(userPoints - pointsToRedeem + earned)
       clearCart()
@@ -176,21 +165,19 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.sheetBackdrop} onPress={onClose} />
-      <View style={[styles.sheet, { backgroundColor: T.background, paddingBottom: insets.bottom + 16 }]}>
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
 
-        {/* Handle */}
         <View style={styles.sheetHandle}>
-          <View style={[styles.handleBar, { backgroundColor: T.border }]} />
+          <View style={styles.handleBar} />
         </View>
 
-        {/* Header */}
-        <View style={[styles.sheetHeader, { borderBottomColor: T.border }]}>
+        <View style={styles.sheetHeader}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.sheetTitle, { color: T.text }]}>Your Order</Text>
+            <Text style={styles.sheetTitle}>Your Order</Text>
             {selectedLocation && (
               <View style={styles.sheetLocRow}>
                 <MapPin size={11} color={Colors.primary} />
-                <Text style={[styles.sheetLocText, { color: T.textMuted }]}>{selectedLocation.name}</Text>
+                <Text style={styles.sheetLocText}>{selectedLocation.name}</Text>
               </View>
             )}
           </View>
@@ -202,46 +189,42 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
         {items.length === 0 ? (
           <View style={styles.emptyCart}>
             <ShoppingBag size={48} color={T.textMuted} strokeWidth={1.5} />
-            <Text style={[styles.emptyCartText, { color: T.textMuted }]}>Your cart is empty</Text>
+            <Text style={styles.emptyCartText}>Your cart is empty</Text>
           </View>
         ) : (
           <>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
 
-              {/* ── Items ── */}
-              <View style={[styles.itemsCard, { borderColor: T.border }]}>
+              <View style={styles.itemsCard}>
                 {items.map((ci, idx) => (
                   <View key={`${ci.menu_item.id}-${idx}`} style={[
                     styles.sheetItem,
-                    { borderBottomColor: T.border },
                     idx === items.length - 1 && { borderBottomWidth: 0 },
                   ]}>
                     {ci.menu_item.image_url
                       ? <Image source={{ uri: ci.menu_item.image_url }} style={styles.sheetThumb} contentFit="cover" />
-                      : <View style={[styles.sheetThumb, { backgroundColor: T.surface }]}><Text style={{ fontSize: 9, color: T.textMuted, fontWeight: '900' }}>B60</Text></View>
+                      : <View style={[styles.sheetThumb, { backgroundColor: T.surface }]} />
                     }
                     <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={[styles.sheetItemName, { color: T.text }]} numberOfLines={1}>{ci.menu_item.name}</Text>
+                      <Text style={styles.sheetItemName} numberOfLines={1}>{ci.menu_item.name}</Text>
                       {ci.selected_options?.length > 0 && (
-                        <Text style={[styles.sheetItemSub, { color: T.textMuted }]} numberOfLines={1}>
+                        <Text style={styles.sheetItemSub} numberOfLines={1}>
                           {ci.selected_options.map((o) => o.name).join(' · ')}
                         </Text>
                       )}
-                      <Text style={[styles.sheetItemPrice, { color: Colors.primary }]}>AED {ci.line_total.toFixed(0)}</Text>
+                      <Text style={styles.sheetItemPrice}>AED {ci.line_total.toFixed(0)}</Text>
                     </View>
                     <View style={styles.sheetQty}>
                       <Pressable
                         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); ci.quantity > 1 ? updateQuantity(idx, ci.quantity - 1) : removeItem(idx) }}
-                        style={[styles.qtyBtn, { borderColor: T.border, backgroundColor: T.surface }]}
-                        hitSlop={8}
+                        style={styles.qtyBtn} hitSlop={8}
                       >
                         {ci.quantity === 1 ? <Trash2 size={13} color="#EF4444" /> : <Minus size={13} color={T.text} />}
                       </Pressable>
-                      <Text style={[styles.qtyNum, { color: T.text }]}>{ci.quantity}</Text>
+                      <Text style={styles.qtyNum}>{ci.quantity}</Text>
                       <Pressable
                         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); updateQuantity(idx, ci.quantity + 1) }}
-                        style={[styles.qtyBtn, { borderColor: T.border, backgroundColor: T.surface }]}
-                        hitSlop={8}
+                        style={styles.qtyBtn} hitSlop={8}
                       >
                         <Plus size={13} color={T.text} />
                       </Pressable>
@@ -250,17 +233,16 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
                 ))}
               </View>
 
-              {/* ── Points stepper ── */}
               {canRedeem && (
-                <View style={[styles.pointsCard, { backgroundColor: T.surface, borderColor: pointsToRedeem > 0 ? Colors.primary : T.border }]}>
+                <View style={[styles.pointsCard, { borderColor: pointsToRedeem > 0 ? Colors.primary : '#000' }]}>
                   <View style={styles.pointsCardTop}>
-                    <View style={[styles.pointsIconWrap, { backgroundColor: 'rgba(240,90,26,0.12)' }]}>
+                    <View style={styles.pointsIconWrap}>
                       <Text style={{ fontSize: 16 }}>⚡</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.pointsLabel, { color: T.text }]}>Redeem Points</Text>
-                      <Text style={[styles.pointsSub, { color: T.textMuted }]}>
-                        You have <Text style={{ color: Colors.primary, fontWeight: '800' }}>{userPoints}</Text> pts · 20 pts = AED {(20 * POINTS_TO_AED).toFixed(2)}
+                      <Text style={styles.pointsLabel}>Redeem Points</Text>
+                      <Text style={styles.pointsSub}>
+                        You have <Text style={{ color: Colors.primary, fontWeight: '800' }}>{userPoints}</Text> pts
                       </Text>
                     </View>
                     {pointsToRedeem > 0 && (
@@ -270,50 +252,37 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
                     )}
                   </View>
                   <View style={styles.stepperRow}>
-                    <Pressable
-                      onPress={stepDown}
-                      disabled={pointsToRedeem <= 0}
-                      style={[styles.stepperBtn, { borderColor: T.border, backgroundColor: T.background, opacity: pointsToRedeem <= 0 ? 0.35 : 1 }]}
-                      hitSlop={8}
-                    >
+                    <Pressable onPress={stepDown} disabled={pointsToRedeem <= 0}
+                      style={[styles.stepperBtn, { opacity: pointsToRedeem <= 0 ? 0.35 : 1 }]} hitSlop={8}>
                       <Minus size={16} color={T.text} />
                     </Pressable>
-                    <View style={[styles.stepperValue, { borderColor: pointsToRedeem > 0 ? Colors.primary : T.border, backgroundColor: T.background }]}>
+                    <View style={[styles.stepperValue, { borderColor: pointsToRedeem > 0 ? Colors.primary : '#000' }]}>
                       <Text style={[styles.stepperValueText, { color: pointsToRedeem > 0 ? Colors.primary : T.textMuted }]}>
                         {pointsToRedeem > 0 ? `${pointsToRedeem} pts` : '0 pts'}
                       </Text>
                     </View>
-                    <Pressable
-                      onPress={stepUp}
-                      disabled={pointsToRedeem >= maxRedeemable}
-                      style={[styles.stepperBtn, { borderColor: T.border, backgroundColor: T.background, opacity: pointsToRedeem >= maxRedeemable ? 0.35 : 1 }]}
-                      hitSlop={8}
-                    >
+                    <Pressable onPress={stepUp} disabled={pointsToRedeem >= maxRedeemable}
+                      style={[styles.stepperBtn, { opacity: pointsToRedeem >= maxRedeemable ? 0.35 : 1 }]} hitSlop={8}>
                       <Plus size={16} color={T.text} />
                     </Pressable>
-                    <Pressable
-                      onPress={() => { setPointsToRedeem(maxRedeemable); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium) }}
-                      style={[styles.stepperMax, { backgroundColor: Colors.primary }]}
-                    >
+                    <Pressable onPress={() => { setPointsToRedeem(maxRedeemable); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium) }}
+                      style={styles.stepperMax}>
                       <Text style={styles.stepperMaxText}>MAX</Text>
                     </Pressable>
                     {pointsToRedeem > 0 && (
-                      <Pressable
-                        onPress={() => { setPointsToRedeem(0); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
-                        style={[styles.stepperClear, { borderColor: T.border }]}
-                      >
-                        <Text style={[styles.stepperClearText, { color: T.textMuted }]}>Clear</Text>
+                      <Pressable onPress={() => { setPointsToRedeem(0); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light) }}
+                        style={styles.stepperClear}>
+                        <Text style={styles.stepperClearText}>Clear</Text>
                       </Pressable>
                     )}
                   </View>
                 </View>
               )}
 
-              {/* ── Totals ── */}
-              <View style={[styles.totalsCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+              <View style={styles.totalsCard}>
                 <View style={styles.totalRow}>
-                  <Text style={[styles.totalLabel, { color: T.textSecondary }]}>Subtotal</Text>
-                  <Text style={[styles.totalVal, { color: T.text }]}>AED {subtotal().toFixed(2)}</Text>
+                  <Text style={styles.totalLabel}>Subtotal</Text>
+                  <Text style={styles.totalVal}>AED {subtotal().toFixed(2)}</Text>
                 </View>
                 {discount() > 0 && (
                   <View style={styles.totalRow}>
@@ -321,33 +290,30 @@ function CartSheet({ visible, onClose, T, theme, onOrderPlaced }: {
                     <Text style={[styles.totalVal, { color: Colors.success, fontWeight: '800' }]}>-AED {discount().toFixed(2)}</Text>
                   </View>
                 )}
-                <View style={[styles.totalDivider, { backgroundColor: T.border }]} />
+                <View style={styles.totalDivider} />
                 <View style={styles.totalRow}>
-                  <Text style={[styles.totalLabel, { color: T.text, fontWeight: '900', fontSize: 16 }]}>Total</Text>
+                  <Text style={[styles.totalLabel, { fontWeight: '900', fontSize: 16, color: T.text }]}>Total</Text>
                   <Text style={[styles.totalVal, { color: Colors.primary, fontWeight: '900', fontSize: 20 }]}>AED {total().toFixed(2)}</Text>
                 </View>
               </View>
 
             </ScrollView>
 
-            {/* ── Place Order ── */}
             <View style={styles.placeOrderWrap}>
               <Pressable
-                style={{ opacity: placing ? 0.7 : 1 }}
+                style={[styles.placeOrderBtn, { opacity: placing ? 0.7 : 1 }]}
                 onPress={handlePlaceOrder}
                 disabled={placing}
               >
-                <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.placeOrderGradient}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.placeOrderText}>{placing ? 'PLACING ORDER...' : 'PLACE ORDER'}</Text>
-                    {discount() > 0 && (
-                      <Text style={styles.placeOrderSaving}>Saving AED {discount().toFixed(0)} with points</Text>
-                    )}
-                  </View>
-                  <View style={styles.placeOrderPricePill}>
-                    <Text style={styles.placeOrderTotal}>AED {total().toFixed(0)}</Text>
-                  </View>
-                </LinearGradient>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.placeOrderText}>{placing ? 'PLACING ORDER...' : 'PLACE ORDER'}</Text>
+                  {discount() > 0 && (
+                    <Text style={styles.placeOrderSaving}>Saving AED {discount().toFixed(0)} with points</Text>
+                  )}
+                </View>
+                <View style={styles.placeOrderPricePill}>
+                  <Text style={styles.placeOrderTotal}>AED {total().toFixed(0)}</Text>
+                </View>
               </Pressable>
             </View>
           </>
@@ -368,10 +334,7 @@ export default function OrderScreen() {
   const [search, setSearch] = useState('')
   const searchRef = useRef<TextInput>(null)
 
-  const themeMode = useThemeStore((s) => s.themeMode)
-  const T = themeMode === 'light' ? LightTheme : DarkTheme
   const insets = useSafeAreaInsets()
-
   const { addItem, setLocation, locationId, items: cartItems } = useCartStore()
   const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0)
 
@@ -429,15 +392,12 @@ export default function OrderScreen() {
   const handleAddToCart = useCallback((item: MenuItem) => {
     addItem(item, 1, [])
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-    if (!cartVisible && cartCount === 0) {
-      // show cart peek on first add
-    }
-  }, [addItem, cartVisible, cartCount])
+  }, [addItem])
 
   const renderRow = useCallback(({ item: row }: { item: ListRow }) => {
-    if (row.type === 'header') return <SectionHeader label={row.label} T={T} />
-    return <MenuCard item={row.item} onPress={() => handleItemPress(row.item)} onAdd={() => handleAddToCart(row.item)} T={T} />
-  }, [T, handleItemPress, handleAddToCart])
+    if (row.type === 'header') return <SectionHeader label={row.label} />
+    return <MenuCard item={row.item} onPress={() => handleItemPress(row.item)} onAdd={() => handleAddToCart(row.item)} />
+  }, [handleItemPress, handleAddToCart])
 
   const categoryPills = useMemo(() => {
     const dynamic = categories?.map((cat) => ({ id: cat.id, label: cat.name })) ?? []
@@ -448,32 +408,29 @@ export default function OrderScreen() {
 
   if (step === 'method') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: T.background }]}>
-        <View style={styles.stepHeader}>
-          <Text style={[styles.stepTitle, { color: T.text }]}>Start an Order</Text>
-          <Text style={[styles.stepSub, { color: T.textSecondary }]}>How would you like to order?</Text>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.stepHeaderBlock}>
+          <Text style={styles.stepTitle}>Start an Order</Text>
+          <Text style={styles.stepSub}>How would you like to order?</Text>
         </View>
 
         <View style={styles.methodCards}>
           <Pressable
-            style={[styles.methodCard, { backgroundColor: T.surface, borderColor: T.border }]}
+            style={[styles.methodCard, Shadows.hard]}
             onPress={() => { Haptics.selectionAsync(); setStep('location') }}
           >
-            <View style={[styles.methodIcon, { backgroundColor: 'rgba(240,90,26,0.12)' }]}>
+            <View style={styles.methodIcon}>
               <Store size={32} color={Colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.methodLabel, { color: T.text }]}>Pickup</Text>
-              <Text style={[styles.methodSub, { color: T.textSecondary }]}>Order and pay in the app</Text>
+              <Text style={styles.methodLabel}>Pickup</Text>
+              <Text style={styles.methodSub}>Order and pay in the app</Text>
             </View>
             <ChevronRight size={20} color={T.textMuted} />
           </Pressable>
 
-          <Pressable
-            style={[styles.methodCard, { backgroundColor: T.surface, borderColor: T.border, opacity: 0.45 }]}
-            disabled
-          >
-            <View style={[styles.methodIcon, { backgroundColor: 'rgba(240,90,26,0.08)' }]}>
+          <Pressable style={[styles.methodCard, { opacity: 0.45 }]} disabled>
+            <View style={[styles.methodIcon, { backgroundColor: 'rgba(240,90,26,0.06)' }]}>
               <Truck size={32} color={T.textMuted} />
             </View>
             <View style={{ flex: 1 }}>
@@ -490,13 +447,13 @@ export default function OrderScreen() {
 
   if (step === 'location') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: T.background }]}>
-        <View style={styles.stepHeader}>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.stepHeaderBlock}>
           <Pressable onPress={() => setStep('method')} style={styles.backBtn} hitSlop={12}>
             <ChevronLeft size={22} color={T.text} />
           </Pressable>
-          <Text style={[styles.stepTitle, { color: T.text }]}>Pick a Location</Text>
-          <Text style={[styles.stepSub, { color: T.textSecondary }]}>Choose your pickup branch</Text>
+          <Text style={styles.stepTitle}>Pick a Location</Text>
+          <Text style={styles.stepSub}>Choose your pickup branch</Text>
         </View>
 
         <ScrollView contentContainerStyle={{ padding: Spacing.md, gap: Spacing.sm }}>
@@ -508,8 +465,8 @@ export default function OrderScreen() {
                 key={loc.id}
                 style={[
                   styles.locationCard,
-                  { backgroundColor: T.surface, borderColor: isSelected ? Colors.primary : T.border },
-                  isSelected && { borderWidth: 2 },
+                  isSelected && styles.locationCardSelected,
+                  Shadows.hardSm,
                 ]}
                 onPress={() => {
                   if (!isOpen) return
@@ -525,11 +482,11 @@ export default function OrderScreen() {
                   {loc.address && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
                       <MapPin size={11} color={T.textMuted} />
-                      <Text style={[styles.locAddr, { color: T.textSecondary }]} numberOfLines={1}>{loc.address}</Text>
+                      <Text style={styles.locAddr} numberOfLines={1}>{loc.address}</Text>
                     </View>
                   )}
                   {loc.hours && (
-                    <Text style={[styles.locAddr, { color: T.textMuted, marginTop: 2 }]}>{loc.hours}</Text>
+                    <Text style={[styles.locAddr, { marginTop: 2 }]}>{loc.hours}</Text>
                   )}
                 </View>
                 <View style={[styles.openPill, { backgroundColor: isOpen ? 'rgba(34,197,94,0.12)' : 'rgba(100,100,100,0.1)' }]}>
@@ -549,26 +506,24 @@ export default function OrderScreen() {
   // ── Step: Menu ────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: T.background }]} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
 
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: T.border }]}>
+      <View style={styles.menuHeader}>
         <View style={styles.headerTop}>
           <Pressable onPress={() => setStep('location')} hitSlop={12} style={styles.backBtn}>
             <ChevronLeft size={20} color={T.text} />
           </Pressable>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.title, { color: T.text }]}>MENU</Text>
+            <Text style={styles.menuTitle}>MENU</Text>
             {selectedLocation && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <MapPin size={11} color={Colors.primary} />
-                <Text style={[styles.headerSub, { color: T.textMuted }]}>{selectedLocation.name}</Text>
+                <Text style={styles.headerSub}>{selectedLocation.name}</Text>
               </View>
             )}
           </View>
-          {/* Cart button */}
           <Pressable
-            style={[styles.cartBtn, { backgroundColor: Colors.primary }]}
+            style={styles.cartBtn}
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setCartVisible(true) }}
           >
             <ShoppingBag size={18} color="#fff" />
@@ -580,8 +535,7 @@ export default function OrderScreen() {
           </Pressable>
         </View>
 
-        {/* Search */}
-        <View style={[styles.searchBar, { backgroundColor: T.surface, borderColor: T.border }]}>
+        <View style={styles.searchBar}>
           <Search size={15} color={T.textMuted} strokeWidth={2} />
           <TextInput
             ref={searchRef}
@@ -589,20 +543,19 @@ export default function OrderScreen() {
             onChangeText={setSearch}
             placeholder="Search the menu..."
             placeholderTextColor={T.textMuted}
-            style={[styles.searchInput, { color: T.text }]}
+            style={styles.searchInput}
             returnKeyType="search"
             autoCorrect={false}
           />
           {search.length > 0 && (
             <Pressable onPress={() => { setSearch(''); searchRef.current?.focus() }} hitSlop={10}>
-              <View style={[styles.clearBtn, { backgroundColor: T.textMuted }]}>
+              <View style={styles.clearBtn}>
                 <X size={10} color="#fff" strokeWidth={3} />
               </View>
             </Pressable>
           )}
         </View>
 
-        {/* Category pills */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsContent}>
           {categoryPills.map((cat) => {
             const isActive = activeCategoryId === cat.id
@@ -610,27 +563,23 @@ export default function OrderScreen() {
               <Pressable
                 key={String(cat.id)}
                 onPress={() => { Haptics.selectionAsync(); setActiveCategoryId(cat.id); setSearch('') }}
-                style={[styles.pill, isActive
-                  ? { backgroundColor: Colors.primary, borderColor: Colors.primary }
-                  : { backgroundColor: T.surface, borderColor: T.border }
-                ]}
+                style={[styles.pill, isActive ? styles.pillActive : styles.pillInactive]}
               >
-                <Text style={[styles.pillLabel, { color: isActive ? '#fff' : T.textSecondary }]}>{cat.label}</Text>
+                <Text style={[styles.pillLabel, { color: isActive ? '#fff' : T.text }]}>{cat.label}</Text>
               </Pressable>
             )
           })}
         </ScrollView>
       </View>
 
-      {/* Menu list */}
       {isLoading ? (
         <SkeletonGrid count={4} />
       ) : filtered.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={[styles.emptyText, { color: T.text }]}>
+          <Text style={styles.emptyText}>
             {search.trim() ? `Nothing for "${search.trim()}"` : 'Nothing here yet'}
           </Text>
-          <Text style={[styles.emptySubtext, { color: T.textMuted }]}>
+          <Text style={styles.emptySubtext}>
             {search.trim() ? 'Try a different search' : 'Check back soon'}
           </Text>
         </View>
@@ -646,7 +595,6 @@ export default function OrderScreen() {
         />
       )}
 
-      {/* Floating cart bar when items in cart */}
       {cartCount > 0 && (
         <Animated.View
           entering={FadeInDown.springify()}
@@ -657,232 +605,271 @@ export default function OrderScreen() {
             style={styles.floatingCartBtn}
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setCartVisible(true) }}
           >
-            <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.floatingCartGradient}>
-              <View style={styles.floatingCartBadge}>
-                <Text style={styles.floatingCartBadgeText}>{cartCount}</Text>
-              </View>
-              <Text style={styles.floatingCartText}>VIEW ORDER</Text>
-              <ChevronRight size={18} color="#fff" />
-            </LinearGradient>
+            <View style={styles.floatingCartBadge}>
+              <Text style={styles.floatingCartBadgeText}>{cartCount}</Text>
+            </View>
+            <Text style={styles.floatingCartText}>VIEW ORDER</Text>
+            <ChevronRight size={18} color="#fff" />
           </Pressable>
         </Animated.View>
       )}
 
-      {/* Cart sheet */}
       <CartSheet
         visible={cartVisible}
         onClose={() => setCartVisible(false)}
-        T={T}
-        theme={themeMode}
         onOrderPlaced={() => setStep('method')}
       />
     </SafeAreaView>
   )
 }
 
-// ─── Styles ────────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#FFF8F3' },
 
-  // Steps
-  stepHeader: { padding: Spacing.lg, paddingBottom: Spacing.md, gap: 4 },
-  stepTitle: { fontSize: 28, fontWeight: '900' },
-  stepSub: { fontSize: 14, fontWeight: '500' },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  // Method/Location step header
+  stepHeaderBlock: {
+    backgroundColor: Colors.primary,
+    paddingTop: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 32,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 6,
+  },
+  stepTitle: { fontSize: 26, fontWeight: '900', color: '#fff', textTransform: 'uppercase', letterSpacing: -0.5 },
+  stepSub: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: '600' },
+  backBtn: {
+    width: 36, height: 36, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: 8, marginBottom: 4,
+  },
 
-  // Method
+  // Method cards
   methodCards: { padding: Spacing.md, gap: Spacing.md },
   methodCard: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    padding: Spacing.lg, borderRadius: Radius.lg, borderWidth: 1.5,
+    padding: Spacing.lg, borderRadius: Radius.lg, borderWidth: 2.5, borderColor: '#000',
+    backgroundColor: '#fff',
   },
-  methodIcon: { width: 60, height: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  methodLabel: { fontSize: 18, fontWeight: '800' },
-  methodSub: { fontSize: 13, marginTop: 2 },
+  methodIcon: {
+    width: 60, height: 60, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(240,90,26,0.10)',
+    borderWidth: 2, borderColor: '#000',
+  },
+  methodLabel: { fontSize: 18, fontWeight: '900', color: T.text },
+  methodSub: { fontSize: 13, marginTop: 2, color: T.textSecondary },
 
   // Location
   locationCard: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: Radius.lg, borderWidth: 1.5,
+    borderRadius: Radius.lg, borderWidth: 2.5, borderColor: '#000',
     padding: Spacing.md, gap: Spacing.md, overflow: 'hidden',
+    backgroundColor: '#fff',
   },
+  locationCardSelected: { borderColor: Colors.primary, borderWidth: 3 },
   locAccent: { width: 4, height: '100%', borderRadius: 2, position: 'absolute', left: 0, top: 0, bottom: 0 },
   locName: { fontSize: 16, fontWeight: '800', paddingLeft: 8 },
-  locAddr: { fontSize: 12, paddingLeft: 8 },
+  locAddr: { fontSize: 12, paddingLeft: 8, color: T.textSecondary },
   openPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.full },
   openDot: { width: 6, height: 6, borderRadius: 3 },
   openPillText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
 
   // Menu header
-  header: { paddingTop: Spacing.sm, paddingBottom: 0, borderBottomWidth: 1, gap: Spacing.sm },
+  menuHeader: {
+    paddingTop: Spacing.sm, paddingBottom: 0,
+    borderBottomWidth: 2, borderBottomColor: '#000',
+    gap: Spacing.sm, backgroundColor: '#FFF8F3',
+  },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.md },
-  title: { fontSize: 26, fontWeight: '900', letterSpacing: -1 },
-  headerSub: { fontSize: 11, fontWeight: '600' },
-
-  // Cart button in header
+  menuTitle: { fontSize: 26, fontWeight: '900', letterSpacing: -1, color: T.text },
+  headerSub: { fontSize: 11, fontWeight: '600', color: T.textMuted },
   cartBtn: {
-    width: 42, height: 42, borderRadius: 21,
+    width: 42, height: 42, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
-    ...Shadows.glowStrong,
+    backgroundColor: Colors.primary,
+    borderWidth: 2.5, borderColor: '#000',
+    shadowColor: '#000', shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 0, elevation: 5,
   },
   cartBadge: {
     position: 'absolute', top: -4, right: -4,
-    backgroundColor: Colors.yellow, borderRadius: 8,
+    backgroundColor: Colors.yellow, borderRadius: 8, borderWidth: 1.5, borderColor: '#000',
     minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2,
   },
   cartBadgeText: { fontSize: 9, fontWeight: '900', color: '#000' },
 
-  // Search
   searchBar: {
     flexDirection: 'row', alignItems: 'center',
     borderRadius: Radius.lg, paddingHorizontal: Spacing.md,
     paddingVertical: Platform.OS === 'ios' ? 11 : 9,
-    gap: Spacing.sm, borderWidth: 1, marginHorizontal: Spacing.md,
+    gap: Spacing.sm, borderWidth: 2, borderColor: '#000',
+    marginHorizontal: Spacing.md,
+    backgroundColor: '#fff',
+    shadowColor: '#000', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 3,
   },
-  searchInput: { flex: 1, fontSize: 14, fontWeight: '500', padding: 0 },
-  clearBtn: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  searchInput: { flex: 1, fontSize: 14, fontWeight: '500', padding: 0, color: T.text },
+  clearBtn: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: T.textMuted },
 
-  // Pills
   pillsContent: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm, gap: 8, flexDirection: 'row' },
-  pill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: Radius.full, borderWidth: 1.5 },
-  pillLabel: { fontSize: 13, fontWeight: '700' },
+  pill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: Radius.full, borderWidth: 2 },
+  pillActive: { backgroundColor: Colors.primary, borderColor: '#000', shadowColor: '#000', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 3 },
+  pillInactive: { backgroundColor: '#fff', borderColor: '#000' },
+  pillLabel: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  // Section header
+  // Section header in list
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     paddingHorizontal: Spacing.md, paddingTop: Spacing.lg, paddingBottom: Spacing.sm,
   },
   sectionAccent: { width: 4, height: 18, backgroundColor: Colors.primary, borderRadius: 2 },
-  sectionHeaderText: { fontSize: 14, fontWeight: '900', letterSpacing: 1.5 },
+  sectionHeaderText: { fontSize: 13, fontWeight: '900', letterSpacing: 2, color: '#1B2A4A' },
 
   // Card
   card: {
     marginHorizontal: Spacing.md, marginBottom: 10,
-    borderRadius: Radius.lg, borderWidth: 1, overflow: 'hidden',
-    elevation: 2,
+    borderRadius: Radius.lg, borderWidth: 2.5, borderColor: '#000',
+    overflow: 'hidden', backgroundColor: '#fff',
+    shadowColor: '#000', shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 0, elevation: 5,
   },
   cardInner: { flexDirection: 'row', height: 110 },
   cardImage: { width: 110, height: 110, position: 'relative' },
-  favBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: Colors.primary, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  cardImagePlaceholder: { backgroundColor: '#F0F0F0', alignItems: 'center', justifyContent: 'center' },
+  cardPlaceholderText: { fontSize: 11, fontWeight: '900', color: T.textMuted, letterSpacing: 2 },
+  favBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: Colors.primary, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1.5, borderColor: '#000' },
   favBadgeText: { fontSize: 9, fontWeight: '900', color: '#fff', letterSpacing: 0.8 },
   soldOutOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
   soldOutText: { fontSize: 11, fontWeight: '900', color: '#fff', letterSpacing: 1 },
-  cardBody: { flex: 1, padding: Spacing.md, justifyContent: 'space-between' },
-  cardName: { fontSize: 16, fontWeight: '800', letterSpacing: -0.3 },
-  cardDesc: { fontSize: 12, lineHeight: 17, marginTop: 2 },
+  cardBody: { flex: 1, padding: Spacing.md, justifyContent: 'space-between', backgroundColor: '#FFF8F3' },
+  cardName: { fontSize: 15, fontWeight: '900', letterSpacing: -0.3, color: T.text, textTransform: 'uppercase' },
+  cardDesc: { fontSize: 12, lineHeight: 17, marginTop: 2, color: T.textMuted },
   cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardPrice: { fontSize: 17, fontWeight: '900', color: Colors.primary },
-  addBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center', elevation: 4 },
+  addBtn: {
+    width: 44, height: 44, borderRadius: 10, backgroundColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2.5, borderColor: '#000',
+    shadowColor: '#000', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 3,
+  },
   addBtnText: { fontSize: 22, fontWeight: '900', color: '#fff', lineHeight: 26 },
 
   // Floating cart
   floatingCart: { position: 'absolute', left: Spacing.md, right: Spacing.md },
-  floatingCartBtn: { borderRadius: Radius.lg, overflow: 'hidden', ...Shadows.glowStrong },
-  floatingCartGradient: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingVertical: 16, gap: Spacing.sm },
-  floatingCartBadge: { backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 12, minWidth: 24, height: 24, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  floatingCartBtn: {
+    borderRadius: Radius.lg, overflow: 'hidden',
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: Spacing.lg, paddingVertical: 16, gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    borderWidth: 2.5, borderColor: '#000',
+    shadowColor: '#000', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8,
+  },
+  floatingCartBadge: {
+    backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 12,
+    minWidth: 24, height: 24, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6,
+  },
   floatingCartBadgeText: { color: '#fff', fontSize: 13, fontWeight: '900' },
   floatingCartText: { flex: 1, color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
 
   // Empty
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 48 },
-  emptyText: { fontSize: 17, fontWeight: '700', textAlign: 'center' },
-  emptySubtext: { fontSize: 14, marginTop: 6, textAlign: 'center' },
+  emptyText: { fontSize: 17, fontWeight: '700', textAlign: 'center', color: T.text },
+  emptySubtext: { fontSize: 14, marginTop: 6, textAlign: 'center', color: T.textMuted },
 
   // Cart sheet
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { maxHeight: SCREEN_H * 0.88, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
+  sheet: {
+    maxHeight: SCREEN_H * 0.88, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    overflow: 'hidden', backgroundColor: '#FFF8F3',
+    borderTopWidth: 2.5, borderLeftWidth: 2.5, borderRightWidth: 2.5, borderColor: '#000',
+  },
   sheetHandle: { alignItems: 'center', paddingTop: 12, paddingBottom: 4 },
-  handleBar: { width: 40, height: 4, borderRadius: 2 },
+  handleBar: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#ccc' },
   sheetHeader: {
     flexDirection: 'row', alignItems: 'flex-start',
     paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md,
-    borderBottomWidth: 1, gap: Spacing.sm,
+    borderBottomWidth: 1.5, borderBottomColor: '#000', gap: Spacing.sm,
   },
-  sheetTitle: { fontSize: 22, fontWeight: '900', flex: 1 },
+  sheetTitle: { fontSize: 22, fontWeight: '900', flex: 1, color: T.text },
   sheetLocRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  sheetLocText: { fontSize: 12 },
+  sheetLocText: { fontSize: 12, color: T.textMuted },
   sheetClose: { padding: 4 },
-  sheetItems: { maxHeight: SCREEN_H * 0.45 },
   sheetItem: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1, borderBottomColor: '#eee',
   },
   sheetThumb: { width: 52, height: 52, borderRadius: Radius.sm },
-  sheetItemName: { fontSize: 14, fontWeight: '700' },
-  sheetItemSub: { fontSize: 11, marginTop: 1 },
-  sheetItemPrice: { fontSize: 14, fontWeight: '900', marginTop: 2 },
+  sheetItemName: { fontSize: 14, fontWeight: '700', color: T.text },
+  sheetItemSub: { fontSize: 11, marginTop: 1, color: T.textMuted },
+  sheetItemPrice: { fontSize: 14, fontWeight: '900', marginTop: 2, color: Colors.primary },
   sheetQty: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  qtyBtn: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  qtyNum: { fontSize: 14, fontWeight: '700', minWidth: 16, textAlign: 'center' },
-  emptyCart: { alignItems: 'center', justifyContent: 'center', padding: 48, gap: 12 },
-  emptyCartText: { fontSize: 16, fontWeight: '600' },
-  pointsRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    marginHorizontal: Spacing.lg, marginTop: Spacing.md,
-    padding: Spacing.md, borderRadius: Radius.md, borderWidth: 1.5,
+  qtyBtn: {
+    width: 36, height: 36, borderRadius: 8,
+    borderWidth: 1.5, borderColor: '#000',
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#fff',
   },
-  pointsLabel: { fontSize: 14, fontWeight: '700' },
-  pointsSub: { fontSize: 12, marginTop: 2 },
-  pointsCheck: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  totalsBox: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: 6, borderTopWidth: StyleSheet.hairlineWidth, marginTop: Spacing.md },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalLabel: { fontSize: 14, fontWeight: '600' },
-  totalVal: { fontSize: 14, fontWeight: '700' },
-  placeOrderBtn: { marginHorizontal: Spacing.lg, marginTop: Spacing.md, borderRadius: Radius.lg, overflow: 'hidden' },
-  placeOrderGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: 18 },
-  placeOrderText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
-  placeOrderTotal: { color: 'rgba(255,255,255,0.85)', fontSize: 16, fontWeight: '900' },
+  qtyNum: { fontSize: 14, fontWeight: '700', minWidth: 16, textAlign: 'center', color: T.text },
+  emptyCart: { alignItems: 'center', justifyContent: 'center', padding: 48, gap: 12 },
+  emptyCartText: { fontSize: 16, fontWeight: '600', color: T.textMuted },
 
-  // Cart redesign
+  // Points stepper
   itemsCard: {
     marginHorizontal: Spacing.md, marginTop: Spacing.md,
-    borderRadius: Radius.lg, borderWidth: 1, overflow: 'hidden',
+    borderRadius: Radius.lg, borderWidth: 2, borderColor: '#000', overflow: 'hidden',
+    backgroundColor: '#fff',
   },
   pointsCard: {
     marginHorizontal: Spacing.md, marginTop: Spacing.md,
-    borderRadius: Radius.lg, borderWidth: 1.5,
+    borderRadius: Radius.lg, borderWidth: 2,
     padding: Spacing.md, gap: Spacing.sm,
+    backgroundColor: '#fff',
   },
   pointsCardTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  pointsIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  savingBadge: {
-    backgroundColor: Colors.success, borderRadius: Radius.full,
-    paddingHorizontal: 10, paddingVertical: 4,
-  },
+  pointsIconWrap: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(240,90,26,0.10)' },
+  pointsLabel: { fontSize: 14, fontWeight: '700', color: T.text },
+  pointsSub: { fontSize: 12, marginTop: 2, color: T.textMuted },
+  savingBadge: { backgroundColor: Colors.success, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4 },
   savingBadgeText: { color: '#fff', fontSize: 12, fontWeight: '900' },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  stepperBtn: {
-    width: 40, height: 40, borderRadius: 12, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepperValue: {
-    flex: 1, height: 40, borderRadius: 12, borderWidth: 1.5,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  stepperBtn: { width: 40, height: 40, borderRadius: 10, borderWidth: 2, borderColor: '#000', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF8F3' },
+  stepperValue: { flex: 1, height: 40, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF8F3' },
   stepperValueText: { fontSize: 15, fontWeight: '800' },
-  stepperMax: {
-    paddingHorizontal: 14, height: 40, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  stepperMax: { paddingHorizontal: 14, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary, borderWidth: 2, borderColor: '#000' },
   stepperMaxText: { color: '#fff', fontSize: 13, fontWeight: '900' },
-  stepperClear: {
-    paddingHorizontal: 12, height: 40, borderRadius: 12, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepperClearText: { fontSize: 13, fontWeight: '700' },
+  stepperClear: { paddingHorizontal: 12, height: 40, borderRadius: 10, borderWidth: 1.5, borderColor: '#000', alignItems: 'center', justifyContent: 'center' },
+  stepperClearText: { fontSize: 13, fontWeight: '700', color: T.textMuted },
+
+  // Totals
   totalsCard: {
     marginHorizontal: Spacing.md, marginTop: Spacing.md,
-    borderRadius: Radius.lg, borderWidth: 1,
-    padding: Spacing.md, gap: 8,
+    borderRadius: Radius.lg, borderWidth: 2, borderColor: '#000',
+    padding: Spacing.md, gap: 8, backgroundColor: '#fff',
   },
-  totalDivider: { height: StyleSheet.hairlineWidth, marginVertical: 4 },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  totalLabel: { fontSize: 14, fontWeight: '600', color: T.textSecondary },
+  totalVal: { fontSize: 14, fontWeight: '700', color: T.text },
+  totalDivider: { height: 2, backgroundColor: '#000', marginVertical: 4 },
+
+  // Place order
   placeOrderWrap: { marginHorizontal: Spacing.md, marginTop: Spacing.sm },
+  placeOrderBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg, paddingVertical: 18,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.lg,
+    borderWidth: 2.5, borderColor: '#000',
+    shadowColor: '#000', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8,
+  },
+  placeOrderText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 1 },
   placeOrderSaving: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600', marginTop: 2 },
   placeOrderPricePill: {
     backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: Radius.md,
     paddingHorizontal: 14, paddingVertical: 8,
     alignItems: 'center', justifyContent: 'center',
   },
+  placeOrderTotal: { color: 'rgba(255,255,255,0.9)', fontSize: 16, fontWeight: '900' },
 })
