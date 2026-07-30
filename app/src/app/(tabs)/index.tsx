@@ -1,29 +1,24 @@
 import React, { useEffect, useRef, useState, useCallback, memo } from 'react'
 import {
   ScrollView, View, Text, StyleSheet, Pressable,
-  Animated, FlatList, Dimensions, Platform, Linking,
+  FlatList, Dimensions, Platform, Linking, Animated,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { Bell, Zap, Flame, Star, MapPin, Clock } from 'lucide-react-native'
+import { ShoppingCart } from 'lucide-react-native'
 import * as Haptics from 'expo-haptics'
 import { menuApi, locationsApi, loyaltyApi } from '../../services/api'
 import { IMAGES } from '../../utils/constants'
 import { useAuthStore } from '../../stores/authStore'
 import { useCartStore } from '../../stores/cartStore'
-import { HeroBanner } from '../../components/ui/HeroBanner'
-import { PointsBanner } from '../../components/ui/PointsBanner'
-import { SectionHeader } from '../../components/ui/SectionHeader'
 import { SkeletonLoader } from '../../components/ui/SkeletonLoader'
-import { LightTheme, Spacing, Radius, Shadows, Colors } from '../../utils/theme'
+import { V3, Shadows } from '../../utils/theme'
 import { getTier } from '../../utils/tiers'
 import type { MenuItem } from '../../types'
 
-const T = LightTheme
-const { width: SCREEN_WIDTH } = Dimensions.get('window')
-const FEATURED_CARD_WIDTH = 180
+const { width: W } = Dimensions.get('window')
 
 const LOCATION_MAPS: Record<string, string> = {
   'Oud Metha': 'https://maps.google.com/?q=B60+Burgers+Oud+Metha+Dubai',
@@ -37,120 +32,193 @@ function getMapsUrl(name: string, address: string) {
   return key ? LOCATION_MAPS[key] : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + address)}`
 }
 
-const FeaturedCard = memo(function FeaturedCard({
-  item, onPress, onAdd,
-}: { item: MenuItem; onPress: () => void; onAdd: () => void }) {
+// ─── Ticker ──────────────────────────────────────────────────────────────────
+const TICKER = ['100% Halal', 'Born in Dubai', 'Pickup only', 'No shortcuts', 'Smashed fresh', '4 spots']
+
+function Ticker() {
+  const x = useRef(new Animated.Value(0)).current
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(x, { toValue: -1, duration: 28000, useNativeDriver: true })
+    ).start()
+  }, [])
+  const items = [...TICKER, ...TICKER]
   return (
-    <Pressable style={styles.featuredCard} onPress={onPress}>
-      <Image source={{ uri: item.image_url }} style={styles.featuredCardImage} contentFit="cover" />
-      <View style={styles.featuredCardBody}>
-        <Text style={styles.featuredCardName} numberOfLines={2}>{item.name}</Text>
-        <Text style={styles.featuredCardPrice}>AED {Number(item.price || 0).toFixed(0)}</Text>
-        <Pressable style={styles.featuredAddBtn} onPress={onAdd} hitSlop={8}>
-          <Text style={styles.featuredAddBtnText}>+ ADD</Text>
-        </Pressable>
+    <View style={tk.bar}>
+      <Animated.View style={[{ flexDirection: 'row' }, { transform: [{ translateX: Animated.multiply(x, 0) }] }]}>
+        <View style={{ flexDirection: 'row', paddingVertical: 6 }}>
+          {items.map((t, i) => (
+            <Text key={i} style={tk.item}>
+              {t}
+              <Text style={tk.dot}>{' ▪ '}</Text>
+            </Text>
+          ))}
+        </View>
+      </Animated.View>
+    </View>
+  )
+}
+
+const tk = StyleSheet.create({
+  bar: {
+    backgroundColor: V3.o,
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  item: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 11,
+    color: '#FFFDF8',
+    paddingHorizontal: 0,
+  } as any,
+  dot: { fontSize: 9, color: 'rgba(255,253,248,0.6)' },
+})
+
+// ─── Top Bar ─────────────────────────────────────────────────────────────────
+function TopBar({ cartCount, onCart }: { cartCount: number; onCart: () => void }) {
+  return (
+    <View style={topS.bar}>
+      <Text style={topS.logoText}>B60 Burgers</Text>
+      <Pressable style={topS.cartBtn} onPress={onCart}>
+        <ShoppingCart size={20} color={V3.w} strokeWidth={1.8} />
+        {cartCount > 0 && (
+          <View style={topS.badge}>
+            <Text style={topS.badgeText}>{cartCount > 9 ? '9+' : cartCount}</Text>
+          </View>
+        )}
+      </Pressable>
+    </View>
+  )
+}
+
+const topS = StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  logoText: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 18,
+    color: V3.w,
+    letterSpacing: -0.4,
+  },
+  cartBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: V3.s,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    ...Shadows.iconBtn,
+  },
+  badge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: V3.o,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 9,
+    color: '#FFFDF8',
+  },
+})
+
+// ─── Rail Card ────────────────────────────────────────────────────────────────
+const RailCard = memo(function RailCard({
+  item, onPress,
+}: { item: MenuItem; onPress: () => void }) {
+  return (
+    <Pressable style={rail.card} onPress={onPress}>
+      <Image source={{ uri: item.image_url }} style={rail.img} contentFit="cover" />
+      <View style={rail.body}>
+        <Text style={rail.name} numberOfLines={2}>{item.name}</Text>
+        <Text style={rail.price}>AED {Number(item.price || 0).toFixed(0)}</Text>
       </View>
     </Pressable>
   )
 })
 
-const CATEGORY_QUICK = [
-  { id: 'burgers', label: 'Burgers' },
-  { id: 'chicken', label: 'Chicken' },
-  { id: 'fries', label: 'Fries' },
-  { id: 'dessert', label: 'Dessert' },
-  { id: 'extras', label: 'Extras' },
-]
+const rail = StyleSheet.create({
+  card: {
+    width: 148,
+    backgroundColor: V3.s,
+    borderRadius: 18,
+    overflow: 'hidden',
+    ...Shadows.card,
+  },
+  img: { width: 148, height: 130, backgroundColor: V3.s2 },
+  body: { padding: 12, gap: 5 },
+  name: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 13,
+    color: V3.w,
+    lineHeight: 16,
+  },
+  price: {
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: V3.od,
+    textTransform: 'uppercase',
+  },
+})
 
-const PROMOS = [
-  { id: '1', topLabel: '2× POINTS', subLabel: 'This weekend only', bg: Colors.primary, icon: Zap, tag: 'HOT' },
-  { id: '2', topLabel: 'NEW DROP',   subLabel: 'Classic Beef just got better', bg: '#1B2A4A', icon: Flame, tag: 'NEW' },
-  { id: '3', topLabel: 'LOYALTY',    subLabel: 'Redeem your points today', bg: '#16A34A', icon: Star, tag: null },
-]
-
-const HYPE_LINES = [
-  'SMASHING ORDERS RIGHT NOW',
-  'PICKUP IN UNDER 10 MINS',
-  'EARN POINTS ON EVERY ORDER',
-  'NO DELIVERY. NO WAIT. JUST SMASH.',
-]
-
-function getTimeGreeting(): string {
-  const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  return 'Good evening'
-}
-
-function HypeTicker() {
-  const [idx, setIdx] = useState(0)
-  const fade = useRef(new Animated.Value(0)).current
-
-  useEffect(() => {
-    Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }).start()
-    const interval = setInterval(() => {
-      Animated.timing(fade, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
-        setIdx(i => (i + 1) % HYPE_LINES.length)
-        Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }).start()
-      })
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [])
-
+// ─── Section Head ─────────────────────────────────────────────────────────────
+function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
   return (
-    <View style={tickerStyles.container}>
-      <View style={tickerStyles.dot} />
-      <Animated.Text style={[tickerStyles.text, { opacity: fade }]} numberOfLines={1}>
-        {HYPE_LINES[idx]}
-      </Animated.Text>
+    <View style={hd.row}>
+      <Text style={hd.title}>{title}</Text>
+      {action && (
+        <Pressable onPress={onAction}>
+          <Text style={hd.link}>{action} →</Text>
+        </Pressable>
+      )}
     </View>
   )
 }
 
-const tickerStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#000', paddingHorizontal: Spacing.md, paddingVertical: 10,
+const hd = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 24,
+    paddingBottom: 14,
   },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.yellow },
-  text: {
-    flex: 1, fontSize: 11, fontWeight: '900', color: Colors.yellow,
-    letterSpacing: 1.5, textTransform: 'uppercase',
+  title: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 22,
+    lineHeight: 24,
+    letterSpacing: -0.3,
+    color: V3.w,
+  },
+  link: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 9.5,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: V3.od,
   },
 })
 
-function StaggerSection({ index, children, style }: { index: number; children: React.ReactNode; style?: any }) {
-  const fade = useRef(new Animated.Value(0)).current
-  const slide = useRef(new Animated.Value(24)).current
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fade,  { toValue: 1, duration: 400, delay: index * 80, useNativeDriver: true }),
-      Animated.timing(slide, { toValue: 0, duration: 380, delay: index * 80, useNativeDriver: true }),
-    ]).start()
-  }, [])
-
-  return (
-    <Animated.View style={[style, { opacity: fade, transform: [{ translateY: slide }] }]}>
-      {children}
-    </Animated.View>
-  )
-}
-
+// ─── Home Screen ──────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const user = useAuthStore((s) => s.user)
+  const cartItems = useCartStore((s) => s.items)
   const addItem = useCartStore((s) => s.addItem)
-  const [activeCategory, setActiveCategory] = useState('burgers')
-
-  const pulseAnim = useRef(new Animated.Value(1)).current
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.6, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1,   duration: 700, useNativeDriver: true }),
-      ])
-    ).start()
-  }, [])
+  const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0)
 
   const { data: featured, isLoading: loadingFeatured } = useQuery({
     queryKey: ['menu', 'featured'],
@@ -175,324 +243,350 @@ export default function HomeScreen() {
     }
   }, [balance?.total_points])
 
+  const loyaltyPoints = user?.loyalty_points ?? 0
+  const tier = getTier(loyaltyPoints)
+
   const handleAddFeatured = useCallback((item: MenuItem) => {
     addItem(item, 1, [])
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
   }, [addItem])
 
-  const renderFeaturedItem = useCallback(({ item }: { item: MenuItem }) => (
-    <FeaturedCard
-      item={item}
-      onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })}
-      onAdd={() => handleAddFeatured(item)}
-    />
-  ), [handleAddFeatured])
-
-  const handleCategoryPress = (id: string) => {
-    setActiveCategory(id)
-    if (Platform.OS !== 'web') Haptics.selectionAsync()
-    router.push('/(tabs)/menu')
-  }
-
-  const loyaltyPoints = user?.loyalty_points ?? 0
-  const loyaltyTier = getTier(loyaltyPoints).name
-  const greeting = getTimeGreeting()
-  const firstName = user?.name?.split(' ')[0] ?? 'there'
-
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: V3.k }} edges={['top']}>
+      <TopBar cartCount={cartCount} onCart={() => router.push('/(tabs)/menu')} />
+      <Ticker />
 
-        {/* ── Orange curved header ── */}
-        <StaggerSection index={0} style={styles.headerBlock}>
-          <View style={styles.headerInner}>
-            <Image
-              source={require('../../../assets/images/icon.png')}
-              style={styles.headerLogo}
-              contentFit="contain"
-            />
-            <View style={styles.headerCenter}>
-              <Text style={styles.brandTagline}>B60 BURGERS</Text>
-              <Text style={styles.greetingText}>{greeting.toUpperCase()}, {firstName.toUpperCase()}</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+
+        {/* Hero drop card */}
+        <Pressable style={s.hero} onPress={() => router.push('/(tabs)/menu')}>
+          <Image source={{ uri: IMAGES.homeHero }} style={s.heroImg} contentFit="cover" />
+          <View style={s.heroGrad} />
+          <View style={s.heroBody}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={s.tag}>
+                <Text style={s.tagText}>New</Text>
+              </View>
+              <View style={s.tagGhost}>
+                <Text style={s.tagGhostText}>Limited run</Text>
+              </View>
             </View>
-            <Pressable
-              style={styles.notifBtn}
-              onPress={() => Platform.OS !== 'web' && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-            >
-              <Bell size={18} color="#fff" />
-            </Pressable>
+            <View style={s.heroFoot}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.heroName}>Tickle</Text>
+                <Text style={s.heroDesc} numberOfLines={2}>
+                  Fried onions, beef patty, special sauce, house jam, fresh jalapeño.
+                </Text>
+              </View>
+              <View style={s.priceChip}>
+                <Text style={s.priceText}>AED 26</Text>
+              </View>
+            </View>
           </View>
-        </StaggerSection>
+        </Pressable>
 
-        {/* ── Hype Ticker ── */}
-        <HypeTicker />
-
-        {/* ── Hero ── */}
-        <StaggerSection index={1} style={styles.heroWrapper}>
-          <HeroBanner
-            imageUri={IMAGES.homeHero}
-            title="SMASH IT."
-            subtitle="Bold burgers. Pick up in minutes."
-            ctaLabel="ORDER NOW"
-            onCtaPress={() => {
-              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-              router.push('/(tabs)/menu')
-            }}
-            height={260}
-          />
-          <View style={styles.liveContainer}>
-            <Animated.View style={[styles.livePulse, { transform: [{ scale: pulseAnim }] }]} />
-            <View style={styles.liveDot} />
-            <Text style={styles.liveLabel}>LIVE</Text>
-          </View>
-        </StaggerSection>
-
-        {/* ── Quick Categories ── */}
-        <StaggerSection index={2} style={{ marginTop: Spacing.lg }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
-            {CATEGORY_QUICK.map((cat, idx) => {
-              const active = activeCategory === cat.id
-              return (
-                <Pressable
-                  key={cat.id}
-                  onPress={() => handleCategoryPress(cat.id)}
-                  style={[
-                    styles.categoryChip,
-                    active
-                      ? { backgroundColor: T.primary, borderColor: '#000', ...Shadows.hard }
-                      : { backgroundColor: T.surface, borderColor: '#000', ...Shadows.hardSm },
-                    { transform: [{ rotate: idx % 2 === 0 ? '-1.5deg' : '1.5deg' }] },
-                  ]}
-                >
-                  <Text style={[styles.categoryLabel, { color: active ? '#fff' : T.text }]}>
-                    {cat.label.toUpperCase()}
-                  </Text>
-                </Pressable>
-              )
-            })}
-          </ScrollView>
-        </StaggerSection>
-
-        {/* ── Points ── */}
+        {/* Points / club card */}
         {user && (
-          <StaggerSection index={3} style={{ marginTop: Spacing.md }}>
-            <PointsBanner
-              points={loyaltyPoints}
-              tier={loyaltyTier as any}
-              aedValue={loyaltyPoints * 0.05}
-              onPress={() => router.push('/(tabs)/loyalty')}
-            />
-          </StaggerSection>
+          <Pressable style={s.clubCard} onPress={() => router.push('/(tabs)/loyalty')}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.clubLabel}>B60 Club · Your points</Text>
+              <Text style={s.clubPts}>{loyaltyPoints}</Text>
+              <Text style={s.clubTier}>{tier.name}</Text>
+            </View>
+            <Text style={s.clubArrow}>→</Text>
+          </Pressable>
         )}
 
-        {/* ── Street Offers ── */}
-        <StaggerSection index={user ? 4 : 3} style={{ marginTop: Spacing.lg }}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionAccent} />
-            <Text style={styles.sectionTitle}>STREET OFFERS</Text>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.promoRow}>
-            {PROMOS.map((promo) => {
-              const Icon = promo.icon
-              return (
-                <Pressable key={promo.id} style={[styles.promoCard, { backgroundColor: promo.bg }, Shadows.hard]}>
-                  {promo.tag && (
-                    <View style={styles.promoTag}>
-                      <Text style={styles.promoTagText}>{promo.tag}</Text>
-                    </View>
-                  )}
-                  <Icon size={18} color="rgba(255,255,255,0.85)" />
-                  <Text style={styles.promoTitle}>{promo.topLabel}</Text>
-                  <Text style={styles.promoSub}>{promo.subLabel}</Text>
-                </Pressable>
-              )
-            })}
-          </ScrollView>
-        </StaggerSection>
-
-        {/* ── Featured ── */}
-        <StaggerSection index={user ? 5 : 4} style={{ marginTop: Spacing.lg }}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionAccent} />
-            <Text style={styles.sectionTitle}>FAN FAVOURITES</Text>
-            <Pressable onPress={() => router.push('/(tabs)/menu')} style={styles.seeAllBtn}>
-              <Text style={styles.seeAllText}>SEE ALL →</Text>
-            </Pressable>
-          </View>
+        {/* Smash hits rail */}
+        <SectionHead title="Smash hits" action="Full menu" onAction={() => router.push('/(tabs)/menu')} />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 18, gap: 12, paddingBottom: 4 }}
+          style={{ overflow: 'visible' }}
+        >
           {loadingFeatured ? (
-            <View style={[styles.featuredRow, { flexDirection: 'row' }]}>
-              {[1, 2].map(i => <SkeletonLoader key={i} variant="card" width={FEATURED_CARD_WIDTH} height={120} />)}
-            </View>
+            <>
+              {[1, 2, 3].map((i) => (
+                <SkeletonLoader key={i} variant="card" width={148} height={195} />
+              ))}
+            </>
           ) : (
-            <FlatList
-              data={featured}
-              keyExtractor={item => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featuredRow}
-              renderItem={renderFeaturedItem}
-              getItemLayout={(_, index) => ({ length: 200, offset: 212 * index, index })}
-            />
+            (featured ?? []).slice(0, 5).map((item: MenuItem) => (
+              <RailCard
+                key={item.id}
+                item={item}
+                onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })}
+              />
+            ))
           )}
-        </StaggerSection>
+        </ScrollView>
 
-        {/* ── Locations ── */}
-        <StaggerSection index={user ? 6 : 5} style={{ marginTop: Spacing.lg, marginBottom: Spacing.xxl }}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionAccent} />
-            <Text style={styles.sectionTitle}>FIND US</Text>
+        {/* Play for points promo */}
+        <SectionHead title="Play for points" />
+        <Pressable style={s.promo} onPress={() => router.push('/(tabs)/loyalty')}>
+          <View style={s.promoIcon}>
+            <Text style={s.promoIconText}>2</Text>
           </View>
-          <View style={styles.locationList}>
-            {(locations ?? []).map((loc: any) => {
-              const isOpen = loc.is_open !== false
-              return (
-                <Pressable
-                  key={loc.id}
-                  style={[styles.locationCard, Shadows.hardSm]}
-                  onPress={async () => {
-                    const url = getMapsUrl(loc.name, loc.address ?? '')
-                    const supported = await Linking.canOpenURL(url)
-                    Linking.openURL(supported ? url : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.name)}`)
-                  }}
-                >
-                  <View style={[styles.locationAccent, { backgroundColor: isOpen ? T.primary : T.textMuted }]} />
-                  <Image
-                    source={require('../../../assets/images/icon.png')}
-                    style={[styles.locationLogo, !isOpen && { opacity: 0.4 }]}
-                    contentFit="contain"
-                  />
-                  <View style={styles.locationInfo}>
-                    <Text style={styles.locationName}>{loc.name}</Text>
-                    <View style={styles.locationAddrRow}>
-                      <MapPin size={11} color={T.textMuted} />
-                      <Text style={styles.locationAddr} numberOfLines={1}>{loc.address}</Text>
-                    </View>
-                    {loc.hours && (
-                      <View style={styles.locationAddrRow}>
-                        <Clock size={11} color={T.textMuted} />
-                        <Text style={styles.locationAddr}>{loc.hours}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <View style={[styles.openPill, { backgroundColor: isOpen ? 'rgba(34,197,94,0.12)' : 'rgba(100,100,100,0.1)' }]}>
-                    <View style={[styles.openDot, { backgroundColor: isOpen ? T.success : T.textMuted }]} />
-                    <Text style={[styles.openPillText, { color: isOpen ? T.success : T.textMuted }]}>
-                      {isOpen ? 'OPEN' : 'CLOSED'}
-                    </Text>
-                  </View>
-                </Pressable>
-              )
-            })}
+          <View style={{ flex: 1 }}>
+            <Text style={s.promoTitle}>Games in the club</Text>
+            <Text style={s.promoCopy}>Smash the patty, spin the wheel. Win points and a free burger.</Text>
           </View>
-        </StaggerSection>
+          <Text style={s.promoArrow}>→</Text>
+        </Pressable>
 
+        {/* Branches */}
+        <SectionHead title="Four spots" />
+        <View style={s.branchWrap}>
+          {(locations ?? []).slice(0, 4).map((loc: any, idx: number) => {
+            const isOpen = loc.is_open !== false
+            return (
+              <Pressable
+                key={loc.id}
+                style={s.branchRow}
+                onPress={() => {
+                  const url = getMapsUrl(loc.name, loc.address ?? '')
+                  Linking.openURL(url)
+                }}
+              >
+                <Text style={s.branchNum}>{String(idx + 1).padStart(2, '0')}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.branchName}>{loc.name}</Text>
+                  <Text style={s.branchAddr}>{loc.address}</Text>
+                </View>
+                <View style={[s.openDot, { backgroundColor: isOpen ? '#22C55E' : V3.dim2 }]} />
+              </Pressable>
+            )
+          })}
+        </View>
+
+        <Text style={s.footer}>Pickup only · 100% halal · Dubai & Sharjah</Text>
       </ScrollView>
     </SafeAreaView>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F3' },
-  scroll: { paddingBottom: Spacing.xxl },
+const s = StyleSheet.create({
+  // Hero drop card — 22px radius, orange gradient, margin 12px 18px 0
+  hero: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    height: 280,
+    borderRadius: 22,
+    overflow: 'hidden',
+    ...Shadows.cardStrong,
+  },
+  heroImg: { position: 'absolute', width: '100%', height: '100%' },
+  heroGrad: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(30,18,6,0.38)',
+  },
+  heroBody: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 18,
+    justifyContent: 'space-between',
+  },
+  tag: {
+    backgroundColor: V3.gold,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  tagText: {
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 9,
+    letterSpacing: 1.4,
+    color: V3.w,
+    textTransform: 'uppercase',
+  },
+  tagGhost: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,253,248,0.5)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  tagGhostText: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 9,
+    letterSpacing: 1.4,
+    color: 'rgba(255,253,248,0.8)',
+    textTransform: 'uppercase',
+  },
+  heroFoot: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  heroName: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 52,
+    lineHeight: 46,
+    letterSpacing: -1.6,
+    color: '#FFFDF8',
+  },
+  heroDesc: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(255,253,248,0.85)',
+    maxWidth: 220,
+    marginTop: 7,
+  },
+  priceChip: {
+    backgroundColor: V3.gold,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    alignSelf: 'flex-end',
+  },
+  priceText: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 15,
+    color: V3.w,
+    letterSpacing: -0.2,
+  },
 
-  // Orange curved header
-  headerBlock: {
-    backgroundColor: Colors.primary,
-    paddingTop: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingBottom: 36,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+  // Club card
+  clubCard: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    backgroundColor: V3.o,
+    borderRadius: 18,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...Shadows.card,
   },
-  headerInner: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  headerLogo: { width: 48, height: 48, borderRadius: 12 },
-  headerCenter: { flex: 1 },
-  brandTagline: { fontSize: 16, fontWeight: '900', color: '#fff', letterSpacing: 1 },
-  greetingText: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.75)', letterSpacing: 0.5, marginTop: 1 },
-  notifBtn: {
-    width: 40, height: 40, borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    alignItems: 'center', justifyContent: 'center',
+  clubLabel: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 9.5,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: 'rgba(255,253,248,0.7)',
+  },
+  clubPts: {
+    fontFamily: 'Archivo_900Black',
+    fontSize: 38,
+    lineHeight: 38,
+    letterSpacing: -1.2,
+    color: V3.gold,
+    marginTop: 4,
+  },
+  clubTier: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 13,
+    color: 'rgba(255,253,248,0.85)',
+    marginTop: 3,
+  },
+  clubArrow: {
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 18,
+    color: 'rgba(255,253,248,0.7)',
+    marginLeft: 8,
   },
 
-  heroWrapper: { position: 'relative' },
-  liveContainer: {
-    position: 'absolute', bottom: 20, right: 20,
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: Radius.full,
-    paddingHorizontal: 12, paddingVertical: 6,
+  // Promo card
+  promo: {
+    marginHorizontal: 18,
+    backgroundColor: V3.s,
+    borderRadius: 18,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    ...Shadows.card,
   },
-  livePulse: { position: 'absolute', left: 10, width: 10, height: 10, borderRadius: 5, opacity: 0.5, backgroundColor: Colors.primary },
-  liveDot: { width: 8, height: 8, borderRadius: 4, marginLeft: 2, backgroundColor: Colors.primary },
-  liveLabel: { fontSize: 11, fontWeight: '900', color: '#FFF', letterSpacing: 1 },
+  promoIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 999,
+    backgroundColor: V3.k,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  promoIconText: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 26,
+    lineHeight: 28,
+    color: V3.o,
+    letterSpacing: -0.5,
+  },
+  promoTitle: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 15,
+    color: V3.w,
+    lineHeight: 18,
+  },
+  promoCopy: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 13,
+    color: V3.dim,
+    lineHeight: 19,
+    marginTop: 4,
+  },
+  promoArrow: {
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 16,
+    color: V3.od,
+  },
 
-  categoryRow: { paddingHorizontal: Spacing.md, gap: Spacing.sm },
-  categoryChip: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: Radius.md,
-    paddingHorizontal: 16, paddingVertical: 13, borderWidth: 2.5, minHeight: 44,
+  // Branches
+  branchWrap: {
+    marginHorizontal: 18,
+    backgroundColor: V3.s,
+    borderRadius: 18,
+    overflow: 'hidden',
+    ...Shadows.card,
   },
-  categoryLabel: { fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
+  branchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: V3.ln,
+  },
+  branchNum: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 11,
+    letterSpacing: 1,
+    color: V3.dim2,
+    width: 24,
+  },
+  branchName: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 14,
+    color: V3.w,
+    lineHeight: 17,
+  },
+  branchAddr: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 12,
+    color: V3.dim2,
+    marginTop: 3,
+  },
+  openDot: { width: 7, height: 7, borderRadius: 4 },
 
-  sectionHeaderRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    paddingHorizontal: Spacing.md, marginBottom: Spacing.sm,
+  footer: {
+    fontFamily: 'JetBrainsMono_400Regular',
+    fontSize: 9.5,
+    letterSpacing: 1.6,
+    color: V3.dim2,
+    textTransform: 'uppercase',
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+    paddingBottom: 28,
   },
-  sectionAccent: { width: 4, height: 18, backgroundColor: Colors.primary, borderRadius: 2 },
-  sectionTitle: { flex: 1, fontSize: 13, fontWeight: '900', color: '#1B2A4A', letterSpacing: 2, textTransform: 'uppercase' },
-  seeAllBtn: {},
-  seeAllText: { fontSize: 10, fontWeight: '900', color: Colors.primary, letterSpacing: 1 },
-
-  promoRow: { paddingHorizontal: Spacing.md, gap: Spacing.md },
-  promoCard: {
-    width: 220, height: 120, padding: Spacing.md,
-    justifyContent: 'flex-end', gap: 4,
-    borderRadius: Radius.lg, borderWidth: 2.5, borderColor: '#000',
-  },
-  promoTitle: { fontSize: 18, fontWeight: '900', color: '#FFF', textTransform: 'uppercase' },
-  promoSub: { fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
-  promoTag: {
-    position: 'absolute', top: 10, right: 10,
-    backgroundColor: Colors.yellow, borderRadius: Radius.sm,
-    paddingHorizontal: 7, paddingVertical: 3,
-    borderWidth: 1.5, borderColor: '#000',
-    transform: [{ rotate: '3deg' }],
-  },
-  promoTagText: { fontSize: 9, fontWeight: '900', color: '#000', letterSpacing: 1 },
-
-  featuredRow: { paddingHorizontal: Spacing.md, gap: 12 },
-  featuredCard: {
-    width: 200, borderRadius: Radius.lg, borderWidth: 2.5, borderColor: '#000',
-    overflow: 'hidden', backgroundColor: '#fff',
-    shadowColor: '#000', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 6,
-  },
-  featuredCardImage: { width: '100%', height: 120 },
-  featuredCardBody: { padding: Spacing.sm, gap: 4, backgroundColor: '#fff' },
-  featuredCardName: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', lineHeight: 16, color: '#1B2A4A' },
-  featuredCardPrice: { fontSize: 15, fontWeight: '900', color: Colors.primary },
-  featuredAddBtn: {
-    backgroundColor: Colors.primary, borderRadius: Radius.sm, borderWidth: 2, borderColor: '#000',
-    paddingVertical: 10, alignItems: 'center', marginTop: 4, minHeight: 44, justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 3,
-  },
-  featuredAddBtnText: { fontSize: 12, fontWeight: '900', color: '#fff', letterSpacing: 1 },
-
-  locationList: { paddingHorizontal: Spacing.md, gap: Spacing.sm },
-  locationCard: {
-    flexDirection: 'row', alignItems: 'center',
-    borderRadius: Radius.lg, borderWidth: 2.5, borderColor: '#000',
-    overflow: 'hidden', gap: Spacing.sm, paddingRight: Spacing.sm,
-    backgroundColor: '#fff',
-  },
-  locationAccent: { width: 5, alignSelf: 'stretch' },
-  locationLogo: { width: 52, height: 52, margin: Spacing.sm },
-  locationInfo: { flex: 1, gap: 3 },
-  locationName: { fontSize: 14, fontWeight: '900', color: '#1B2A4A' },
-  locationAddrRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationAddr: { fontSize: 11, flex: 1, color: '#555' },
-  openPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 8, paddingVertical: 5, borderRadius: Radius.full,
-  },
-  openDot: { width: 6, height: 6, borderRadius: 3 },
-  openPillText: { fontSize: 9, fontWeight: '900', letterSpacing: 1 },
 })

@@ -1,31 +1,20 @@
 import { useRef, useEffect } from 'react'
 import { Tabs } from 'expo-router'
-import { ShoppingBag, ShoppingCart, Star, MoreHorizontal } from 'lucide-react-native'
-import { View, Text, StyleSheet, Animated } from 'react-native'
-import { LightTheme, DarkTheme } from '../../utils/theme'
+import { LayoutGrid, Star, MoreHorizontal } from 'lucide-react-native'
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native'
+import { LightTheme, DarkTheme, V3 } from '../../utils/theme'
 import { useCartStore } from '../../stores/cartStore'
 import { useThemeStore } from '../../stores/themeStore'
 
-function B60TabIcon({ color }: { color: string }) {
-  const isActive = color !== '#888888' && color !== '#444444' && color !== '#999999'
+function HomeTabIcon({ focused }: { focused: boolean }) {
   return (
-    <View style={[b60IconStyles.box, isActive && b60IconStyles.boxActive]}>
-      <Text style={[b60IconStyles.text, isActive && b60IconStyles.textActive]}>B60</Text>
+    <View style={styles.homeIcon}>
+      <Text style={[styles.homeText, focused && styles.homeTextActive]}>B60</Text>
     </View>
   )
 }
 
-const b60IconStyles = StyleSheet.create({
-  box: {
-    paddingHorizontal: 7, paddingVertical: 2,
-    borderRadius: 5, borderWidth: 1.5, borderColor: 'transparent',
-  },
-  boxActive: { backgroundColor: '#F05A1A', borderColor: '#F05A1A' },
-  text: { fontSize: 11, fontWeight: '900', color: '#888888', letterSpacing: -0.5 },
-  textActive: { color: '#ffffff' },
-})
-
-function CartTabIcon({ color, size, theme }: { color: string; size: number; theme: any }) {
+function CartBadge({ color, size }: { color: string; size: number }) {
   const count = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
   const prevCount = useRef(count)
   const badgeScale = useRef(new Animated.Value(1)).current
@@ -33,7 +22,7 @@ function CartTabIcon({ color, size, theme }: { color: string; size: number; them
   useEffect(() => {
     if (count > prevCount.current) {
       Animated.sequence([
-        Animated.spring(badgeScale, { toValue: 1.5, useNativeDriver: true, tension: 300, friction: 8 }),
+        Animated.spring(badgeScale, { toValue: 1.45, useNativeDriver: true, tension: 300, friction: 8 }),
         Animated.spring(badgeScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 8 }),
       ]).start()
     }
@@ -42,9 +31,9 @@ function CartTabIcon({ color, size, theme }: { color: string; size: number; them
 
   return (
     <View>
-      <ShoppingCart size={size} color={color} />
+      <LayoutGrid size={size} color={color} strokeWidth={1.8} />
       {count > 0 && (
-        <Animated.View style={[styles.badge, { backgroundColor: theme.primary, transform: [{ scale: badgeScale }] }]}>
+        <Animated.View style={[styles.badge, { transform: [{ scale: badgeScale }] }]}>
           <Text style={styles.badgeText}>{count > 9 ? '9+' : count}</Text>
         </Animated.View>
       )}
@@ -60,69 +49,105 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.primary,
-        tabBarInactiveTintColor: theme.textMuted,
+        tabBarActiveTintColor: theme.tabBarActive,
+        tabBarInactiveTintColor: theme.tabBarInactive,
         tabBarStyle: {
-          backgroundColor: theme.background,
-          borderTopColor: theme.border,
+          backgroundColor: theme.tabBarBg,
           borderTopWidth: 1,
-          height: 72,
-          paddingBottom: 12,
-          paddingTop: 4,
+          borderTopColor: V3.ln,
+          height: Platform.OS === 'ios' ? 80 : 62,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+          paddingTop: 0,
+          // Lift shadow
+          shadowColor: '#1E1206',
+          shadowOffset: { width: 0, height: -6 },
+          shadowOpacity: 0.05,
+          shadowRadius: 18,
+          elevation: 8,
         },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
+        tabBarLabelStyle: {
+          fontFamily: 'JetBrainsMono_400Regular',
+          fontSize: 8,
+          letterSpacing: 1.2,
+          textTransform: 'uppercase',
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          paddingTop: 10,
+          paddingBottom: 8,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'HOME',
-          tabBarIcon: ({ color }) => <B60TabIcon color={color} />
+          title: 'Home',
+          tabBarIcon: ({ focused }) => <HomeTabIcon focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="menu"
         options={{
-          title: 'ORDER',
-          tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />
+          title: 'Order',
+          tabBarIcon: ({ color, size }) => <CartBadge color={color} size={22} />,
         }}
       />
       <Tabs.Screen
         name="cart"
-        options={{
-          href: null,
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="loyalty"
         options={{
-          title: 'B60 CLUB',
-          tabBarIcon: ({ color, size }) => <Star size={size} color={color} />
+          title: 'B60 Club',
+          tabBarIcon: ({ color, size }) => <Star size={22} color={color} strokeWidth={1.8} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'MORE',
-          tabBarIcon: ({ color, size }) => <MoreHorizontal size={size} color={color} />
+          title: 'More',
+          tabBarIcon: ({ color, size }) => <MoreHorizontal size={22} color={color} strokeWidth={1.8} />,
         }}
       />
-      <Tabs.Screen 
-        name="vibe" 
-        options={{ 
-          href: null,
-        }} 
+      <Tabs.Screen
+        name="vibe"
+        options={{ href: null }}
       />
     </Tabs>
   )
 }
 
 const styles = StyleSheet.create({
+  homeIcon: {
+    height: 24,
+    justifyContent: 'center',
+  },
+  homeText: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 14,
+    letterSpacing: -0.5,
+    color: V3.dim2,
+  },
+  homeTextActive: {
+    color: V3.od,
+  },
   badge: {
-    position: 'absolute', top: -6, right: -10,
-    borderRadius: 999, minWidth: 18, height: 18,
-    alignItems: 'center', justifyContent: 'center',
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: V3.o,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 3,
   },
-  badgeText: { color: '#fff', fontSize: 10, fontWeight: '900' },
+  badgeText: {
+    color: '#FFFDF8',
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 9,
+    fontWeight: '500',
+  },
 })

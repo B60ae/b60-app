@@ -1,11 +1,22 @@
 import { useEffect, useState, Component, ReactNode } from 'react'
 import { View, Text, Pressable, AppState } from 'react-native'
-import { Stack, router } from 'expo-router'
+import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { useFonts } from 'expo-font'
+import {
+  Archivo_400Regular,
+  Archivo_700Bold,
+  Archivo_800ExtraBold,
+  Archivo_900Black,
+} from '@expo-google-fonts/archivo'
+import {
+  JetBrainsMono_400Regular,
+  JetBrainsMono_500Medium,
+} from '@expo-google-fonts/jetbrains-mono'
 import { useAuthStore } from '../stores/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { ONBOARDING_KEY } from './onboarding/index'
@@ -47,6 +58,15 @@ const queryClient = new QueryClient({
 })
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Archivo_400Regular,
+    Archivo_700Bold,
+    Archivo_800ExtraBold,
+    Archivo_900Black,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_500Medium,
+  })
+
   const loadSession = useAuthStore((s) => s.loadSession)
   const [onboardingChecked, setOnboardingChecked] = useState(false)
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
@@ -68,7 +88,7 @@ export default function RootLayout() {
   const themeMode = useThemeStore((s) => s.themeMode)
   const theme = themeMode === 'light' ? LightTheme : DarkTheme
 
-  if (!onboardingChecked) return null
+  if (!onboardingChecked || !fontsLoaded) return null
 
   return (
     <AppErrorBoundary>

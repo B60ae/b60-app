@@ -1,83 +1,145 @@
-// B60 Brand Design Tokens — Multi-Theme Support
+// B60 v3 — Soft/Warm Design Tokens
 export type ThemeMode = 'light' | 'dark'
 
+export const V3 = {
+  k: '#FAF3E9',         // page ground — warm cream
+  s: '#FFFDF8',         // card / surface
+  s2: '#F3E8DB',        // pressed state / track
+  w: '#1E1206',         // ink text — warm black
+  o: '#EF6D15',         // accent orange
+  od: '#C94D0C',        // deep orange — small text on cream (contrast safe)
+  gold: '#FFC61A',      // gold — add buttons, CTA on orange
+  ln: 'rgba(30,18,6,0.10)',   // hairlines
+  dim: 'rgba(30,18,6,0.65)',  // secondary text
+  dim2: 'rgba(30,18,6,0.45)', // tertiary text / labels
+  cream: '#FFFDF8',     // tab bar ground
+}
+
+// Legacy alias — keeps existing screens from hard-crashing
+export const V2 = {
+  k: V3.k,
+  s: V3.s,
+  s2: V3.s2,
+  w: V3.w,
+  o: V3.o,
+  od: V3.od,
+  gold: V3.gold,
+  cream: V3.cream,
+  ln: V3.ln,
+  dim: V3.dim,
+  dim2: V3.dim2,
+  navy: '#1B2A4A',
+  dk: '#1E1206',
+  ds: '#2A1A0E',
+  ds2: '#3A2615',
+  dw: '#FFF8F3',
+  dln: 'rgba(255,248,243,0.13)',
+  ddim: 'rgba(255,248,243,0.55)',
+  ddim2: 'rgba(255,248,243,0.36)',
+}
+
 export const Colors = {
-  primary: '#F05A1A',
-  primaryDark: '#C94400',
-  primaryLight: '#FF7A3D',
-  yellow: '#FFE500',
+  primary: '#EF6D15',
+  primaryDark: '#C94D0C',
+  primaryLight: '#FF8F2F',
+  gold: '#FFC61A',
   success: '#22C55E',
   error: '#EF4444',
   warning: '#F59E0B',
-  white: '#FFFFFF',
-  black: '#000000',
+  white: '#FFFDF8',
+  black: '#1E1206',
 }
 
 export const LightTheme = {
   ...Colors,
-  background: '#FFFFFF',
-  surface: '#F8F9FA',
-  surfaceElevated: '#FFFFFF',
-  border: '#EEEEEE',
-  borderStrong: '#DDDDDD',
-  text: '#1B2A4A',
-  textSecondary: '#444444',
-  textMuted: '#888888',
-  textInverse: '#FFFFFF',
-  overlay: 'rgba(0,0,0,0.5)',
-  primaryTint: 'rgba(240, 90, 26, 0.08)',
-  successTint: 'rgba(34, 197, 94, 0.1)',
-  errorTint: 'rgba(239, 68, 68, 0.1)',
-  // Brand Touches
-  cardBg: '#FFFFFF',
-  shadowColor: '#000',
+  background: V3.k,
+  surface: V3.s,
+  surfaceElevated: V3.s,
+  surface2: V3.s2,
+  border: V3.ln,
+  borderStrong: V3.w,
+  text: V3.w,
+  textSecondary: V3.dim,
+  textMuted: V3.dim2,
+  textInverse: V3.s,
+  overlay: 'rgba(30,18,6,0.5)',
+  primaryTint: 'rgba(239,109,21,0.08)',
+  successTint: 'rgba(34,197,94,0.1)',
+  errorTint: 'rgba(239,68,68,0.1)',
+  cardBg: V3.s,
+  shadowColor: '#1E1206',
+  tabBarBg: V3.cream,
+  tabBarActive: V3.od,
+  tabBarInactive: V3.dim2,
 }
 
 export const DarkTheme = {
   ...Colors,
-  background: '#0A0A0A',
-  surface: '#121212',
-  surfaceElevated: '#1E1E1E',
-  asphalt: '#1A1A1A',
-  border: '#2A2A2A',
-  borderStrong: '#3A3A3A',
-  text: '#FFFFFF',
-  textSecondary: '#AAAAAA',
-  textMuted: '#666666',
-  textInverse: '#000000',
+  background: V2.dk,
+  surface: V2.ds,
+  surfaceElevated: V2.ds2,
+  surface2: V2.ds2,
+  border: V2.dln,
+  borderStrong: V2.dw,
+  text: V2.dw,
+  textSecondary: V2.ddim,
+  textMuted: V2.ddim2,
+  textInverse: V2.dk,
   overlay: 'rgba(0,0,0,0.7)',
-  primaryTint: 'rgba(240, 90, 26, 0.15)',
-  successTint: 'rgba(34, 197, 94, 0.15)',
-  errorTint: 'rgba(239, 68, 68, 0.15)',
-  // Brand Touches
-  cardBg: '#121212',
+  primaryTint: 'rgba(239,109,21,0.15)',
+  successTint: 'rgba(34,197,94,0.15)',
+  errorTint: 'rgba(239,68,68,0.15)',
+  cardBg: V2.ds,
   shadowColor: '#000',
+  tabBarBg: V3.cream,
+  tabBarActive: V3.od,
+  tabBarInactive: V2.ddim2,
 }
 
+// V3 typography — Archivo 800 sentence-case display; mono for labels
 export const Fonts = {
-  heading: 'Outfit_700Bold',
-  headingBlack: 'Outfit_900Black',
-  body: 'Inter_400Regular',
-  bodySemiBold: 'Inter_600SemiBold',
+  display: 'Archivo_800ExtraBold',
+  displayBold: 'Archivo_800ExtraBold',
+  displayRegular: 'Archivo_400Regular',
+  mono: 'JetBrainsMono_500Medium',
+  monoRegular: 'JetBrainsMono_400Regular',
+  heading: 'Archivo_800ExtraBold',
+  headingBlack: 'Archivo_800ExtraBold',
+  body: 'Archivo_400Regular',
+  bodySemiBold: 'Archivo_700Bold',
+}
+
+// V3 type scale — sentence case, Archivo 800
+export const Type = {
+  d1: { fontFamily: 'Archivo_800ExtraBold', fontSize: 38, lineHeight: 38, letterSpacing: -0.76 },
+  d2: { fontFamily: 'Archivo_800ExtraBold', fontSize: 27, lineHeight: 29, letterSpacing: -0.4 },
+  d3: { fontFamily: 'Archivo_800ExtraBold', fontSize: 20, lineHeight: 22, letterSpacing: -0.2 },
+  d4: { fontFamily: 'Archivo_800ExtraBold', fontSize: 15, lineHeight: 18, letterSpacing: -0.1 },
+  d5: { fontFamily: 'Archivo_800ExtraBold', fontSize: 12, lineHeight: 15, letterSpacing: 0 },
+  m: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase' as const },
+  m9: { fontFamily: 'JetBrainsMono_400Regular', fontSize: 9.5, letterSpacing: 1.7, textTransform: 'uppercase' as const },
+  bd: { fontFamily: 'Archivo_400Regular', fontSize: 13, lineHeight: 20 },
+  loginHero: { fontFamily: 'Archivo_800ExtraBold', fontSize: 33, lineHeight: 34, letterSpacing: -1.15 },
+  pts: { fontFamily: 'Archivo_900Black', fontSize: 76, lineHeight: 68, letterSpacing: -3.4 },
 }
 
 export const Typography = {
-  h1: { fontSize: 32, fontWeight: '800' as const },
-  h2: { fontSize: 24, fontWeight: '700' as const },
-  h3: { fontSize: 20, fontWeight: '700' as const },
-  h4: { fontSize: 18, fontWeight: '600' as const },
-  body: { fontSize: 16, fontWeight: '400' as const },
-  bodySmall: { fontSize: 14, fontWeight: '400' as const },
-  caption: { fontSize: 12, fontWeight: '400' as const },
-  label: { fontSize: 14, fontWeight: '700' as const },
-  price: { fontSize: 18, fontWeight: '900' as const },
+  h1: { fontSize: 38, fontWeight: '800' as const },
+  h2: { fontSize: 27, fontWeight: '800' as const },
+  h3: { fontSize: 20, fontWeight: '800' as const },
+  h4: { fontSize: 15, fontWeight: '800' as const },
+  body: { fontSize: 13, fontWeight: '400' as const },
+  bodySmall: { fontSize: 10, fontWeight: '500' as const },
+  caption: { fontSize: 9.5, fontWeight: '400' as const },
+  label: { fontSize: 10, fontWeight: '500' as const, textTransform: 'uppercase' as const, letterSpacing: 1.6 },
+  price: { fontSize: 17, fontWeight: '800' as const },
 }
 
 export const Display = {
-  hero: { fontSize: 52, fontWeight: '900' as const, letterSpacing: -2, lineHeight: 52 },
-  title: { fontSize: 38, fontWeight: '900' as const, letterSpacing: -1.5, lineHeight: 40 },
-  label: { fontSize: 11, fontWeight: '800' as const, letterSpacing: 2, textTransform: 'uppercase' as const },
-  sticker: { fontSize: 13, fontWeight: '900' as const, letterSpacing: 0.5, textTransform: 'uppercase' as const },
+  hero: { fontSize: 38, fontWeight: '800' as const, letterSpacing: -0.76, lineHeight: 38 },
+  title: { fontSize: 27, fontWeight: '800' as const, letterSpacing: -0.4, lineHeight: 29 },
+  label: { fontSize: 10, fontWeight: '500' as const, letterSpacing: 1.6, textTransform: 'uppercase' as const },
+  sticker: { fontSize: 12, fontWeight: '800' as const, letterSpacing: 0 },
 }
 
 export const Spacing = {
@@ -87,49 +149,64 @@ export const Spacing = {
   lg: 24,
   xl: 32,
   xxl: 48,
+  gutter: 18,
 }
 
+// V3 radii — soft, card-first design
 export const Radius = {
-  sm: 6,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
+  sm: 8,
+  md: 14,
+  lg: 18,
+  xl: 22,
+  xxl: 28,
   full: 999,
 }
 
+// V3 shadows — soft drop shadows, warm ink color
 export const Shadows = {
   card: {
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: '#1E1206',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.07,
+    shadowRadius: 20,
+    elevation: 4,
   },
   cardStrong: {
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowColor: '#1E1206',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.11,
+    shadowRadius: 28,
+    elevation: 7,
   },
-  // Neobrutalist "Hard" Shadows
-  hard: {
-    shadowOffset: { width: 3, height: 3 },
+  // Button "ledge" drop shadow — gives the press-down feel
+  ledge: {
+    shadowColor: 'rgba(151,64,15,0.45)',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,
     elevation: 4,
   },
-  glow: {
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
+  // Tab bar lift shadow
+  tabLift: {
+    shadowColor: '#1E1206',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    elevation: 8,
   },
-  glowStrong: {
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
+  // Small icon button
+  iconBtn: {
+    shadowColor: '#1E1206',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
+  // No shadow
+  none: { shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 },
+  // Legacy
+  hard: { shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 },
+  hardSm: { shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 },
+  glow: { shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 },
+  glowStrong: { shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0, elevation: 0 },
 }
