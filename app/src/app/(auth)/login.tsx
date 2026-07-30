@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, StyleSheet, Pressable,
   Platform, Animated,
 } from 'react-native'
+import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import { authApi } from '../../services/api'
@@ -294,8 +295,11 @@ export default function LoginScreen() {
         {/* Logo stage — rounded square with warm radial feel */}
         <View style={s.stage}>
           <Animated.View style={[s.logoCard, { opacity: blockO, transform: [{ translateY: blockY }] }]}>
-            <Text style={s.logoB60}>B60</Text>
-            <Text style={s.logoSub}>Burgers</Text>
+            <Image
+              source={require('../../../assets/images/icon_logo.webp')}
+              style={s.logoImage}
+              contentFit="contain"
+            />
           </Animated.View>
         </View>
 
@@ -401,19 +405,9 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     ...Shadows.cardStrong,
   },
-  logoB60: {
-    fontFamily: 'Archivo_900Black',
-    fontSize: 68,
-    color: V3.o,
-    letterSpacing: -2.5,
-    lineHeight: 64,
-  },
-  logoSub: {
-    fontFamily: 'Archivo_800ExtraBold',
-    fontSize: 14,
-    color: V3.dim2,
-    letterSpacing: 0.2,
-    marginTop: 2,
+  logoImage: {
+    width: 140,
+    height: 140,
   },
 
   // Copy
