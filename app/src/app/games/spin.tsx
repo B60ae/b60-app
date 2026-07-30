@@ -272,7 +272,7 @@ function ConfettiDot({ dx, dy, color, delay }: { dx: number; dy: number; color: 
     )
     const t = setTimeout(() => { opacity.value = withTiming(0, { duration: 300 }) }, delay + 600)
     return () => clearTimeout(t)
-  }, [])
+  }, [dx, dy, delay])
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: x.value }, { translateY: y.value }, { scale: scale.value }],

@@ -93,7 +93,7 @@ export default function MoreScreen() {
     try {
       const updated = await authApi.updateProfile({ name: nameInput.trim() })
       const currentToken = useAuthStore.getState().token ?? ''
-      if (user) await setUser({ ...user, name: updated.name }, currentToken)
+      if (user && updated) await setUser({ ...user, name: updated.name }, currentToken)
       setEditingName(false)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch {
@@ -110,7 +110,7 @@ export default function MoreScreen() {
     try {
       const updated = await authApi.updateProfile({ phone: cleaned })
       const currentToken = useAuthStore.getState().token ?? ''
-      if (user) await setUser({ ...user, phone: updated.phone }, currentToken)
+      if (user && updated) await setUser({ ...user, phone: updated.phone }, currentToken)
       setEditingPhone(false)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     } catch {

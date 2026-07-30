@@ -35,7 +35,7 @@ export function Toast({ message, onHide, type = 'success', duration = 2500, acti
     }, duration)
 
     return () => clearTimeout(timer)
-  }, [duration])
+  }, [duration, onHide])
 
   const iconColor = type === 'error' ? theme.error : theme.success
   const Icon = type === 'error' ? XCircle : CheckCircle

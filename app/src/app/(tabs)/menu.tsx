@@ -363,7 +363,7 @@ export default function OrderScreen() {
 
   const handleItemPress = useCallback((item: MenuItem) => {
     Haptics.selectionAsync()
-    router.push({ pathname: '/item/[id]', params: { id: item.id } })
+    router.push({ pathname: '/item/[id]', params: { id: item.id } } as any)
   }, [])
 
   const handleAddToCart = useCallback((item: MenuItem) => {

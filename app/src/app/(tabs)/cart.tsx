@@ -156,7 +156,7 @@ export default function CartScreen() {
     if (pointsToRedeem > 0) Events.POINTS_REDEEMED(pointsToRedeem)
     try {
       const earned = pointsEarned()
-      const order = await ordersApi.create({
+      const order = await ordersApi.createOrder({
         items: items as any,
         location_id: locationId,
         subtotal: subtotal(),
@@ -169,7 +169,7 @@ export default function CartScreen() {
       router.push({
         pathname: '/order-success',
         params: { orderId: order.id, pointsEarned: order.points_earned ?? earned },
-      })
+      } as any)
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
       showToast('Order failed. Please try again.', 'error')

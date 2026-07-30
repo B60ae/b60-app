@@ -117,7 +117,7 @@ export default function OrderHistoryScreen() {
                   { backgroundColor: T.surfaceElevated, borderColor: T.border },
                   pressed && { opacity: 0.75 },
                 ]}
-                onPress={() => router.push({ pathname: '/order/[id]', params: { id: order.id } })}
+                onPress={() => router.push({ pathname: '/order/[id]', params: { id: order.id } } as any)}
               >
                 {/* Orange left accent */}
                 <View style={styles.cardAccent} />

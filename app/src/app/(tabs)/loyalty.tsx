@@ -232,7 +232,7 @@ function HistoryRow({ tx, index }: { tx: LoyaltyTransaction; index: number }) {
       delay: Math.min(index, 8) * 45,
       useNativeDriver: true,
     }).start()
-  }, [])
+  }, [index])
 
   return (
     <Animated.View

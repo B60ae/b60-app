@@ -50,7 +50,7 @@ function ConfettiDot({
       ),
     )
     opacity.value = withDelay(delay + 400, withTiming(0, { duration: 500 }))
-  }, [])
+  }, [dx, dy, delay])
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: x.value }, { translateY: y.value }] as any,
@@ -209,7 +209,7 @@ export default function OrderSuccessScreen() {
           <Pressable
             style={[styles.trackBtn, !orderId && { opacity: 0.4 }]}
             disabled={!orderId}
-            onPress={() => orderId && router.replace({ pathname: '/order/[id]', params: { id: orderId } })}
+            onPress={() => orderId && router.replace({ pathname: '/order/[id]', params: { id: orderId } } as any)}
           >
             <MapPin size={18} color="#fff" strokeWidth={2.5} />
             <Text style={styles.trackBtnText}>TRACK MY ORDER</Text>

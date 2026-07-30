@@ -316,7 +316,7 @@ export default function HomeScreen() {
               <RailCard
                 key={item.id}
                 item={item}
-                onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })}
+                onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } } as any)}
               />
             ))
           )}
