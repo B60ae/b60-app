@@ -1,136 +1,299 @@
-import React, { useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native'
+import React, { useEffect, useRef } from 'react'
+import {
+  View, Text, StyleSheet, ScrollView, Pressable,
+  Animated, Dimensions,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
-import {
-  Star, TrendingUp, Gift, ArrowUpRight, ArrowDownLeft,
-  ChevronDown, ChevronUp, ArrowRight, Zap, Trophy, RotateCcw,
-} from 'lucide-react-native'
+import { ShoppingCart, Zap, RotateCcw } from 'lucide-react-native'
 import { loyaltyApi, gamesApi } from '../../services/api'
 import { useAuthStore } from '../../stores/authStore'
-import { LightTheme, Colors, Spacing, Radius, Shadows } from '../../utils/theme'
-import { POINTS_TO_AED } from '../../utils/constants'
+import { POINTS_TO_AED, MIN_REDEEM_POINTS } from '../../utils/constants'
 import { TIERS, getTier } from '../../utils/tiers'
 import type { LoyaltyTransaction } from '../../types'
 
-const T = LightTheme
+import { V3, Shadows } from '../../utils/theme'
 
+// ─── Design tokens ───────────────────────────────────────────────────────────────
+const C = {
+  bg:      V3.k,
+  surface: V3.s,
+  black:   V3.w,
+  accent:  V3.o,
+  hairline: V3.ln,
+  dim:     V3.dim,
+  dim2:    V3.dim2,
+  gold:    V3.gold,
+  od:      V3.od,
+}
+
+const TIER_HEX: Record<string, string> = {
+  Bronze:   '#8A5A2B',
+  Silver:   '#C9C9C9',
+  Gold:     '#E8B31C',
+  Platinum: '#E5E4E2',
+}
+
+const TIER_PERKS: Record<string, string> = {
+  Bronze:   'Earn 1 pt per AED spent',
+  Silver:   'Priority support + bonus spin Fridays',
+  Gold:     'Free upgrade on every order',
+  Platinum: 'VIP treatment + monthly voucher',
+}
+
+const { width: SCREEN_W } = Dimensions.get('window')
+
+// ─── AnimatedPointsText ───────────────────────────────────────────────────────────────
 function AnimatedPointsText({ target }: { target: number }) {
   const [display, setDisplay] = React.useState(0)
-  React.useEffect(() => {
+
+  useEffect(() => {
+    if (target === 0) { setDisplay(0); return }
+    const duration = 620
     const steps = 40
-    const intervalMs = 1200 / steps
+    const intervalMs = duration / steps
     let step = 0
     const timer = setInterval(() => {
       step++
       const t = step / steps
-      const eased = 1 - (1 - t) * (1 - t)
+      const eased = 1 - Math.pow(1 - t, 3) // cubic ease-out
       setDisplay(Math.floor(eased * target))
-      if (step >= steps) clearInterval(timer)
+      if (step >= steps) {
+        setDisplay(target)
+        clearInterval(timer)
+      }
     }, intervalMs)
     return () => clearInterval(timer)
   }, [target])
-  return <Text style={styles.pointsNumber}>{display.toLocaleString()}</Text>
+
+  return <Text style={s.pointsNumber}>{display.toLocaleString()}</Text>
 }
 
-function ProgressBar({ progress, color }: { progress: number; color: string }) {
-  const filled = Math.round(Math.min(progress, 1) * 10)
+// ─── AnimatedProgressBar ──────────────────────────────────────────────────────────────
+function AnimatedProgressBar({ progress }: { progress: number }) {
+  const anim = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: Math.min(Math.max(progress, 0), 1),
+      duration: 1100,
+      useNativeDriver: false,
+      easing: (t: number) => 1 - Math.pow(1 - t, 3),
+    }).start()
+  }, [progress])
+
   return (
-    <View style={styles.meterRow}>
-      {Array.from({ length: 10 }).map((_, i) => (
-        <View
-          key={i}
-          style={[
-            styles.meterBlock,
-            { backgroundColor: i < filled ? color : '#E5E5E5', borderColor: '#000' },
-          ]}
-        />
-      ))}
+    <View style={s.progressTrack}>
+      <Animated.View
+        style={[
+          s.progressFill,
+          {
+            width: anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['0%', '100%'],
+            }),
+          },
+        ]}
+      />
     </View>
   )
 }
 
-function TransactionRow({ tx }: { tx: LoyaltyTransaction }) {
-  const isEarned = tx.type === 'earned' || tx.type === 'bonus'
+// ─── Points panel (orange, with sheen sweep) ────────────────────────────────────────────
+function PointsPanel({
+  points, redeemableAed, canRedeem, ptsToRedeem,
+}: {
+  points: number
+  redeemableAed: number
+  canRedeem: boolean
+  ptsToRedeem: number
+}) {
+  const sheenX = useRef(new Animated.Value(-SCREEN_W)).current
+
+  useEffect(() => {
+    const sweep = () => {
+      sheenX.setValue(-SCREEN_W)
+      Animated.timing(sheenX, {
+        toValue: SCREEN_W * 1.5,
+        duration: 800,
+        useNativeDriver: true,
+        easing: (t: number) => t,
+      }).start()
+    }
+    sweep()
+    const id = setInterval(sweep, 4500)
+    return () => clearInterval(id)
+  }, [])
+
   return (
-    <View style={[styles.txRow, { borderLeftColor: isEarned ? Colors.success : Colors.error }]}>
-      <View style={[styles.txIcon, { backgroundColor: isEarned ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.10)' }]}>
-        {isEarned
-          ? <ArrowUpRight size={14} color={Colors.success} />
-          : <ArrowDownLeft size={14} color={Colors.error} />}
+    <View style={s.pointsPanel}>
+      {/* Sheen overlay */}
+      <Animated.View
+        pointerEvents="none"
+        style={[s.sheen, { transform: [{ translateX: sheenX }] }]}
+      />
+
+      <View style={s.pointsRow}>
+        {/* Left: label + big number */}
+        <View style={s.pointsLeft}>
+          <Text style={s.panelLabel}>B60 CLUB · POINTS BALANCE</Text>
+          <AnimatedPointsText target={points} />
+        </View>
+
+        {/* Right: AED value */}
+        <View style={s.pointsRight}>
+          <Text style={s.aedValue}>AED {redeemableAed.toFixed(0)}</Text>
+          <Text style={s.aedLabel}>REDEEMABLE VALUE</Text>
+        </View>
       </View>
-      <View style={styles.txLeft}>
-        <Text style={styles.txType}>{tx.description}</Text>
-        <Text style={styles.txDate}>{new Date(tx.created_at).toLocaleDateString('en-AE')}</Text>
-      </View>
-      <Text style={[styles.txPoints, { color: isEarned ? Colors.success : Colors.error }]}>
-        {isEarned ? '+' : '-'}{Math.abs(tx.points)} pts
+
+      <Text style={s.panelHint}>
+        {canRedeem
+          ? 'APPLY AT CHECKOUT · 20 PTS = AED 1'
+          : `${ptsToRedeem} MORE POINTS TO REDEEM`}
       </Text>
     </View>
   )
 }
 
-function ArcadeCard({
-  title, subtitle, badge, bg, icon: Icon, onPress,
+// ─── Section head ─────────────────────────────────────────────────────────────────────
+function SectionHead({ label, right }: { label: string; right?: string }) {
+  return (
+    <View style={s.sectionHead}>
+      <Text style={s.sectionHeadText}>{label}</Text>
+      {right != null && <Text style={s.sectionHeadRight}>{right}</Text>}
+    </View>
+  )
+}
+
+// ─── Game card ──────────────────────────────────────────────────────────────────────────
+function GameCard({
+  title, subtitle, badge, icon: Icon, onPress,
 }: {
-  title: string; subtitle: string; badge?: string
-  bg: string; icon: any; onPress: () => void
+  title: string
+  subtitle: string
+  badge?: string
+  icon: any
+  onPress: () => void
 }) {
+  const pressed = useRef(new Animated.Value(0)).current
+
   return (
     <Pressable
-      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onPress() }}
-      style={({ pressed }) => [styles.arcadeCard, { opacity: pressed ? 0.88 : 1 }]}
+      onPressIn={() =>
+        Animated.timing(pressed, { toValue: 1, duration: 60, useNativeDriver: true }).start()
+      }
+      onPressOut={() =>
+        Animated.timing(pressed, { toValue: 0, duration: 100, useNativeDriver: true }).start()
+      }
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+        onPress()
+      }}
+      style={s.gameCardOuter}
     >
-      <View style={[styles.arcadeCardInner, { backgroundColor: bg }]}>
-        <View style={styles.arcadeDecor} />
-        <View style={styles.arcadeCardContent}>
-          <View style={styles.arcadeIconWrap}>
-            <Icon size={24} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.arcadeCardTitle}>{title}</Text>
-            <Text style={styles.arcadeCardSub}>{subtitle}</Text>
-          </View>
-          {badge
-            ? <View style={styles.arcadeBadge}><Text style={styles.arcadeBadgeText}>{badge}</Text></View>
-            : <ArrowRight size={18} color="rgba(255,255,255,0.7)" />}
+      <Animated.View
+        style={[
+          s.gameCard,
+          {
+            transform: [
+              { translateX: pressed.interpolate({ inputRange: [0, 1], outputRange: [0, 2] }) },
+              { translateY: pressed.interpolate({ inputRange: [0, 1], outputRange: [0, 2] }) },
+            ],
+          },
+        ]}
+      >
+        <View style={s.gameIconBox}>
+          <Icon size={20} color={C.black} strokeWidth={2} />
         </View>
-      </View>
+        <Text style={s.gameTitle}>{title}</Text>
+        <Text style={s.gameSub}>{subtitle}</Text>
+        {badge != null && (
+          <View style={s.gameBadge}>
+            <Text style={s.gameBadgeText}>{badge}</Text>
+          </View>
+        )}
+      </Animated.View>
     </Pressable>
   )
 }
 
+// ─── History row with stagger-in ─────────────────────────────────────────────────────────────
+function HistoryRow({ tx, index }: { tx: LoyaltyTransaction; index: number }) {
+  const anim = useRef(new Animated.Value(0)).current
+  const isEarned = tx.type === 'earned' || tx.type === 'bonus'
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 400,
+      delay: Math.min(index, 8) * 45,
+      useNativeDriver: true,
+    }).start()
+  }, [])
+
+  return (
+    <Animated.View
+      style={[
+        s.historyRow,
+        {
+          opacity: anim,
+          transform: [
+            {
+              translateY: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [12, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      <View style={s.historyLeft}>
+        <Text style={s.historyDesc}>{tx.description}</Text>
+        <Text style={s.historyDate}>{new Date(tx.created_at).toLocaleDateString('en-AE')}</Text>
+      </View>
+      <Text style={[s.historyPts, { color: isEarned ? C.accent : C.dim2 }]}>
+        {isEarned ? '+' : '-'}{Math.abs(tx.points)}
+      </Text>
+    </Animated.View>
+  )
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────────────────
 export default function LoyaltyScreen() {
-  const user = useAuthStore((s) => s.user)
+  const user           = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const [howToOpen, setHowToOpen] = React.useState(false)
 
   const { data: balance } = useQuery({
     queryKey: ['loyalty', 'balance'],
-    queryFn: loyaltyApi.getBalance,
-    staleTime: 0, enabled: isAuthenticated,
+    queryFn:  loyaltyApi.getBalance,
+    staleTime: 0,
+    enabled:  isAuthenticated,
   })
   const { data: history } = useQuery({
     queryKey: ['loyalty', 'history'],
-    queryFn: loyaltyApi.getHistory,
-    enabled: isAuthenticated,
+    queryFn:  loyaltyApi.getHistory,
+    enabled:  isAuthenticated,
   })
   const { data: spinStatus } = useQuery({
     queryKey: ['games', 'spin-status'],
-    queryFn: gamesApi.spinStatus,
-    enabled: isAuthenticated, staleTime: 0,
+    queryFn:  gamesApi.spinStatus,
+    enabled:  isAuthenticated,
+    staleTime: 0,
   })
   const { data: tapStatus } = useQuery({
     queryKey: ['games', 'tap-status'],
-    queryFn: gamesApi.tapStatus,
-    enabled: isAuthenticated, staleTime: 0,
+    queryFn:  gamesApi.tapStatus,
+    enabled:  isAuthenticated,
+    staleTime: 0,
   })
   const { data: leaderboardData } = useQuery({
     queryKey: ['games', 'leaderboard'],
-    queryFn: gamesApi.leaderboard,
-    enabled: isAuthenticated,
+    queryFn:  gamesApi.leaderboard,
+    enabled:  isAuthenticated,
   })
 
   useEffect(() => {
@@ -139,145 +302,158 @@ export default function LoyaltyScreen() {
     }
   }, [balance?.total_points])
 
-  const points = balance?.total_points ?? user?.loyalty_points ?? 0
-  const tier = getTier(points)
-  const nextTier = TIERS.find(t => t.min > points)
-  const progress = nextTier ? (points - tier.min) / (nextTier.min - tier.min) : 1
-  const topPlayer = leaderboardData?.leaderboard?.[0]
-  const yourRank = leaderboardData?.your_rank
+  const points         = balance?.total_points ?? user?.loyalty_points ?? 0
+  const tier           = getTier(points)
+  const nextTier       = TIERS.find((t) => t.min > points)
+  const progress       = nextTier ? (points - tier.min) / (nextTier.min - tier.min) : 1
+  const redeemableAed  = points * POINTS_TO_AED
+  const canRedeem      = points >= MIN_REDEEM_POINTS
+  const ptsToRedeem    = Math.max(0, MIN_REDEEM_POINTS - points)
+  const historyList    = history ?? []
+  const tierColor      = TIER_HEX[tier.name] ?? '#8A5A2B'
+
+  // leaderboard data kept for query freshness (not rendered in v2 loyalty layout)
+  void leaderboardData
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+    <SafeAreaView style={s.safe} edges={['top']}>
 
-        {/* ── Orange curved header ── */}
-        <View style={styles.headerBlock}>
-          <View style={styles.headerInner}>
-            <View>
-              <Text style={styles.headerTitle}>B60 CLUB</Text>
-              <Text style={styles.headerSub}>ORDER · EARN · PLAY · WIN</Text>
-            </View>
-            <Pressable
-              style={styles.leaderboardBtn}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/games/leaderboard' as any) }}
-            >
-              <Trophy size={16} color="#1B2A4A" />
-              {yourRank && <Text style={styles.leaderboardBtnText}>#{yourRank}</Text>}
-            </Pressable>
-          </View>
+      {/* ── TopBar ── */}
+      <View style={s.topBar}>
+        <View style={s.logoBox}>
+          <Text style={s.logoText}>B60</Text>
+        </View>
+        <Pressable
+          style={s.cartBtn}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+            router.push('/(tabs)/cart')
+          }}
+        >
+          <ShoppingCart size={20} color={C.black} strokeWidth={2} />
+        </Pressable>
+      </View>
 
-          {/* Points inside header */}
-          <View style={styles.pointsHeroCard}>
-            <View style={styles.cardTopRow}>
-              <Text style={styles.cardLabel}>YOUR POINTS</Text>
-              <View style={[styles.tierBadge, { backgroundColor: tier.color }]}>
-                <Star size={10} color="#000" fill="#000" />
-                <Text style={styles.tierBadgeText}>{tier.name.toUpperCase()}</Text>
-              </View>
-            </View>
-            <AnimatedPointsText target={points} />
-            <Text style={styles.aedValue}>≈ AED {(points * POINTS_TO_AED).toFixed(0)} redeemable</Text>
-            {nextTier && (
-              <View style={styles.progressSection}>
-                <ProgressBar progress={progress} color={tier.color} />
-                <Text style={styles.progressLabel}>{nextTier.min - points} pts to {nextTier.name}</Text>
-              </View>
-            )}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={s.scroll}
+        contentContainerStyle={s.scrollContent}
+      >
+
+        {/* ── Points panel ── */}
+        <PointsPanel
+          points={points}
+          redeemableAed={redeemableAed}
+          canRedeem={canRedeem}
+          ptsToRedeem={ptsToRedeem}
+        />
+
+        {/* ── Tier row ── */}
+        <View style={s.tierRow}>
+          <View style={[s.tierBadge, { backgroundColor: tierColor }]}>
+            <Text style={s.tierBadgeText}>{tier.name.toUpperCase()}</Text>
           </View>
+          <View style={s.tierProgressWrap}>
+            <AnimatedProgressBar progress={progress} />
+          </View>
+          {nextTier && (
+            <Text style={s.tierPtsLabel} numberOfLines={1}>
+              {(nextTier.min - points).toLocaleString()} PTS TO {nextTier.name.toUpperCase()}
+            </Text>
+          )}
         </View>
 
-        {/* ── Redeem CTA ── */}
-        <Pressable
-          style={styles.redeemBtn}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/cart') }}
-        >
-          <View>
-            <Text style={styles.redeemBtnText}>USE YOUR POINTS →</Text>
-            <Text style={styles.redeemBtnSub}>Save AED on your next smash</Text>
-          </View>
-          <ArrowRight size={20} color="#000" />
-        </Pressable>
+        {/* ── Perk row ── */}
+        <View style={s.perkRow}>
+          <Text style={s.perkLabel}>YOUR PERK</Text>
+          <Text style={s.perkText}>{TIER_PERKS[tier.name] ?? 'Earn 1 pt per AED spent'}</Text>
+        </View>
 
-        {/* ── ARCADE ── */}
-        <View style={styles.sectionBlock}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionAccent} />
-            <Text style={styles.sectionTitle}>ARCADE</Text>
-            <View style={styles.sectionPill}><Text style={styles.sectionPillText}>WIN PRIZES</Text></View>
-          </View>
-          <Text style={styles.sectionDesc}>Play games. Win points, vouchers & free food.</Text>
+        {/* ── Play for points ── */}
+        <SectionHead label="Play for points" right="Daily" />
 
-          <ArcadeCard
-            title="SPIN THE WHEEL"
-            subtitle={spinStatus?.can_spin ? `${spinStatus.spins_left} spin${spinStatus.spins_left !== 1 ? 's' : ''} left today` : 'Come back tomorrow'}
-            badge={spinStatus?.can_spin ? 'SPIN NOW' : undefined}
-            bg={Colors.primary}
-            icon={RotateCcw}
-            onPress={() => router.push('/games/spin' as any)}
-          />
-
-          <ArcadeCard
-            title="SMASH TAP"
-            subtitle={tapStatus
-              ? tapStatus.best_score > 0
-                ? `${tapStatus.plays_left} plays left · Best: ${tapStatus.best_score} taps`
-                : `${tapStatus.plays_left} play${tapStatus.plays_left !== 1 ? 's' : ''} left today`
-              : 'Tap as fast as you can'}
+        <View style={s.gameGrid}>
+          <GameCard
+            title="SMASH IT"
+            subtitle={
+              tapStatus
+                ? tapStatus.best_score > 0
+                  ? `${tapStatus.plays_left} plays left · Best: ${tapStatus.best_score}`
+                  : `${tapStatus.plays_left} play${tapStatus.plays_left !== 1 ? 's' : ''} left`
+                : 'Tap as fast as you can'
+            }
             badge={tapStatus && tapStatus.plays_left > 0 ? 'PLAY' : undefined}
-            bg="#1B2A4A"
             icon={Zap}
             onPress={() => router.push('/games/tap' as any)}
           />
-
-          <ArcadeCard
-            title="LEADERBOARD"
-            subtitle={topPlayer ? `#1 ${topPlayer.display_name} — ${topPlayer.total_score} pts` : 'Weekly competition · Resets Monday'}
-            bg="#0D1829"
-            icon={Trophy}
-            onPress={() => router.push('/games/leaderboard' as any)}
+          <View style={s.gameGridDivider} />
+          <GameCard
+            title="SPIN THE WHEEL"
+            subtitle={
+              spinStatus?.can_spin
+                ? `${spinStatus.spins_left} spin${spinStatus.spins_left !== 1 ? 's' : ''} left`
+                : 'Come back tomorrow'
+            }
+            badge={spinStatus?.can_spin ? 'SPIN' : undefined}
+            icon={RotateCcw}
+            onPress={() => router.push('/games/spin' as any)}
           />
         </View>
 
-        {/* ── How to Earn accordion ── */}
-        <View style={styles.accordionCard}>
-          <Pressable
-            style={styles.accordionHeader}
-            onPress={() => { Haptics.selectionAsync(); setHowToOpen(!howToOpen) }}
-          >
-            <Text style={styles.accordionTitle}>How to Earn</Text>
-            {howToOpen ? <ChevronUp size={18} color={T.textMuted} /> : <ChevronDown size={18} color={T.textMuted} />}
-          </Pressable>
-          {howToOpen && (
-            <View style={styles.accordionBody}>
-              {[
-                { icon: TrendingUp, color: T.primary, bg: T.primaryTint, text: 'Spend AED 1 → Earn 1 Point' },
-                { icon: Gift, color: T.success, bg: T.successTint, text: '100 Points → AED 5 off your order' },
-                { icon: Star, color: '#B8860B', bg: 'rgba(255,215,0,0.15)', text: 'Reach Gold tier for exclusive perks' },
-                { icon: RotateCcw, color: Colors.primary, bg: T.primaryTint, text: 'Daily spin → win up to 500 pts or free food' },
-              ].map(({ icon: Icon, color, bg, text }, i) => (
-                <View key={i} style={styles.ruleRow}>
-                  <View style={[styles.ruleIcon, { backgroundColor: bg }]}><Icon size={16} color={color} /></View>
-                  <Text style={styles.ruleText}>{text}</Text>
+        {/* ── Tiers ── */}
+        <SectionHead label="Tiers" />
+
+        <View style={s.tierTableCard}>
+          {TIERS.map((t) => {
+            const isCurrent = t.name === tier.name
+            const tc = TIER_HEX[t.name] ?? '#8A5A2B'
+            return (
+              <View key={t.name} style={[s.tierTableRow, isCurrent && s.tierTableRowActive]}>
+                <View style={[s.tierTableBadge, { backgroundColor: tc }]}>
+                  <Text style={s.tierTableBadgeText}>{t.name}</Text>
                 </View>
-              ))}
+                <Text style={s.tierTableRange}>
+                  {t.max === Infinity
+                    ? `${t.min.toLocaleString()}+`
+                    : `${t.min.toLocaleString()}–${t.max.toLocaleString()}`}
+                </Text>
+                <Text style={s.tierTablePerk} numberOfLines={2}>
+                  {TIER_PERKS[t.name] ?? ''}
+                </Text>
+                {isCurrent && (
+                  <View style={s.youTag}>
+                    <Text style={s.youTagText}>You</Text>
+                  </View>
+                )}
+              </View>
+            )
+          })}
+        </View>
+
+        {/* ── History ── */}
+        <SectionHead
+          label="History"
+          right={historyList.length > 0 ? String(historyList.length) : undefined}
+        />
+
+        <View style={s.historyCard}>
+          {historyList.length > 0 ? (
+            historyList.map((tx, i) => (
+              <HistoryRow key={tx.id} tx={tx} index={i} />
+            ))
+          ) : (
+            <View style={s.emptyHistory}>
+              <Text style={s.emptyTitle}>No history yet</Text>
+              <Text style={s.emptyBody}>Place your first order and watch those points stack.</Text>
             </View>
           )}
         </View>
 
-        {/* ── Transaction History ── */}
-        <View style={styles.historySection}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionAccent} />
-            <Text style={styles.sectionTitle}>HISTORY</Text>
-          </View>
-          {history && history.length > 0 ? (
-            history.map((tx) => <TransactionRow key={tx.id} tx={tx} />)
-          ) : (
-            <View style={styles.emptyHistory}>
-              <Text style={styles.emptyText}>No History Yet</Text>
-              <Text style={styles.emptySubtext}>Place your first order and watch those points stack.</Text>
-            </View>
-          )}
+        {/* ── Footer ── */}
+        <View style={s.footer}>
+          <Text style={s.footerText}>
+            1 AED SPENT = 1 POINT · 20 POINTS = AED 1 OFF · MINIMUM 100 POINTS TO REDEEM
+          </Text>
         </View>
 
       </ScrollView>
@@ -285,133 +461,379 @@ export default function LoyaltyScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F3' },
-  scroll: { gap: Spacing.md, paddingBottom: Spacing.xxl },
+// ─── Styles ─────────────────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  safe:          { flex: 1, backgroundColor: C.bg },
+  scroll:        { flex: 1 },
+  scrollContent: { paddingBottom: 48 },
 
-  // Orange curved header
-  headerBlock: {
-    backgroundColor: Colors.primary,
-    paddingTop: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingBottom: 28,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    gap: Spacing.md,
+  // ── TopBar
+  topBar: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    justifyContent:    'space-between',
+    paddingHorizontal: 18,
+    paddingVertical:   14,
+    backgroundColor:   C.bg,
   },
-  headerInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  headerTitle: { fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: 1 },
-  headerSub: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5, marginTop: 1 },
-  leaderboardBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 8,
-    backgroundColor: Colors.yellow,
-    borderRadius: Radius.md, borderWidth: 2, borderColor: '#000',
-    shadowColor: '#000', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 3,
+  logoBox: { paddingHorizontal: 0 },
+  logoText: {
+    fontFamily:    'Archivo_800ExtraBold',
+    fontSize:      18,
+    color:         C.black,
+    letterSpacing: -0.4,
   },
-  leaderboardBtnText: { fontSize: 13, fontWeight: '800', color: '#1B2A4A' },
+  cartBtn: {
+    width: 40, height: 40, borderRadius: 14,
+    backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center',
+    ...Shadows.iconBtn,
+  },
 
-  // Points hero card (inside header)
-  pointsHeroCard: {
-    backgroundColor: '#fff', borderRadius: Radius.lg, borderWidth: 2.5, borderColor: '#000',
-    padding: Spacing.md, gap: Spacing.sm,
-    shadowColor: '#000', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 6,
+  // ── Points panel — floating card, orange gradient bg
+  pointsPanel: {
+    backgroundColor:   C.accent,
+    marginHorizontal:  18,
+    marginTop:         14,
+    borderRadius:      22,
+    paddingHorizontal: 18,
+    paddingTop:        20,
+    paddingBottom:     18,
+    overflow:          'hidden',
+    ...Shadows.cardStrong,
   },
-  cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardLabel: { fontSize: 10, fontWeight: '800', color: T.textMuted, letterSpacing: 2.5, textTransform: 'uppercase' },
+  sheen: {
+    position:        'absolute',
+    top:             0,
+    bottom:          0,
+    left:            -20,
+    width:           80,
+    backgroundColor: 'rgba(255,253,248,0.12)',
+    transform:       [{ skewX: '-12deg' }],
+  },
+  pointsRow: {
+    flexDirection:  'row',
+    alignItems:     'flex-start',
+    justifyContent: 'space-between',
+  },
+  pointsLeft: { flex: 1, paddingRight: 12 },
+  panelLabel: {
+    fontFamily:    'JetBrainsMono_400Regular',
+    fontSize:      9.5,
+    color:         'rgba(255,253,248,0.7)',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    marginBottom:  2,
+  },
+  pointsNumber: {
+    fontFamily:    'Archivo_900Black',
+    fontSize:      76,
+    lineHeight:    62,
+    letterSpacing: -3.4,
+    color:         C.gold,
+    marginTop:     6,
+  },
+  pointsRight: { alignItems: 'flex-end', paddingTop: 6 },
+  aedValue: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize:   22,
+    color:      '#FFFDF8',
+    fontWeight: '800' as const,
+  },
+  aedLabel: {
+    fontFamily:    'JetBrainsMono_400Regular',
+    fontSize:      9,
+    color:         'rgba(255,253,248,0.65)',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginTop:     3,
+  },
+  panelHint: {
+    fontFamily:    'JetBrainsMono_400Regular',
+    fontSize:      9.5,
+    color:         'rgba(255,253,248,0.7)',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginTop:     14,
+  },
+
+  // ── Tier row — inside floating card
+  tierRow: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               10,
+    marginHorizontal:  18,
+    marginTop:         12,
+    paddingHorizontal: 16,
+    paddingVertical:   14,
+    borderRadius:      18,
+    backgroundColor:   C.surface,
+    ...Shadows.card,
+  },
   tierBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.full,
-    borderWidth: 1.5, borderColor: '#000',
+    paddingHorizontal: 10,
+    paddingVertical:   5,
+    borderRadius:      999,
+    backgroundColor:   C.bg,
   },
-  tierBadgeText: { fontSize: 10, fontWeight: '900', color: '#000' },
-  pointsNumber: { fontSize: 68, fontWeight: '900', color: '#1B2A4A', lineHeight: 74 },
-  aedValue: { fontSize: 13, color: T.textMuted, fontWeight: '600' },
-  progressSection: { gap: 6 },
-  meterRow: { flexDirection: 'row', gap: 3 },
-  meterBlock: { flex: 1, height: 8, borderRadius: 2, borderWidth: 1 },
-  progressLabel: { color: T.textMuted, fontSize: 12, fontWeight: '600' },
+  tierBadgeText: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize:   12,
+    color:      C.od,
+  },
+  tierProgressWrap: { flex: 1 },
+  progressTrack: {
+    height:          8,
+    backgroundColor: C.bg,
+    borderRadius:    999,
+    overflow:        'hidden',
+  },
+  progressFill: {
+    height:          '100%',
+    backgroundColor: C.accent,
+    borderRadius:    999,
+  },
+  tierPtsLabel: {
+    fontFamily:    'JetBrainsMono_400Regular',
+    fontSize:      9,
+    color:         C.dim2,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    flexShrink:    1,
+    maxWidth:      100,
+  },
 
-  // Redeem
-  redeemBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginHorizontal: Spacing.md,
-    borderRadius: Radius.md, padding: Spacing.md,
-    backgroundColor: Colors.yellow,
-    borderWidth: 2.5, borderColor: '#000',
-    shadowColor: '#000', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 6,
+  // ── Perk row
+  perkRow: {
+    marginHorizontal:  18,
+    marginTop:         10,
+    paddingHorizontal: 16,
+    paddingVertical:   14,
+    borderRadius:      18,
+    gap:               4,
+    backgroundColor:   C.surface,
+    ...Shadows.card,
   },
-  redeemBtnText: { fontSize: 16, fontWeight: '900', color: '#000' },
-  redeemBtnSub: { fontSize: 12, fontWeight: '600', color: '#333', marginTop: 1 },
+  perkLabel: {
+    fontFamily:    'JetBrainsMono_400Regular',
+    fontSize:      9.5,
+    color:         C.dim2,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  perkText: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize:   14,
+    color:      C.black,
+    lineHeight: 20,
+  },
 
-  // Section
-  sectionBlock: { paddingHorizontal: Spacing.md, gap: Spacing.sm },
-  sectionHeaderRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+  // ── Section head
+  sectionHead: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    justifyContent:    'space-between',
+    paddingHorizontal: 18,
+    paddingTop:        22,
+    paddingBottom:     12,
+    backgroundColor:   C.bg,
   },
-  sectionAccent: { width: 4, height: 18, backgroundColor: Colors.primary, borderRadius: 2 },
-  sectionTitle: { flex: 1, fontSize: 13, fontWeight: '900', color: '#1B2A4A', letterSpacing: 2, textTransform: 'uppercase' },
-  sectionPill: { backgroundColor: Colors.primary, paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.full, borderWidth: 2, borderColor: '#000' },
-  sectionPillText: { color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
-  sectionDesc: { fontSize: 13, color: T.textMuted, marginTop: -4, paddingHorizontal: Spacing.md },
+  sectionHeadText: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize:   20,
+    color:      C.black,
+    letterSpacing: -0.2,
+  },
+  sectionHeadRight: {
+    fontFamily:    'JetBrainsMono_400Regular',
+    fontSize:      9.5,
+    color:         C.dim2,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
 
-  // Arcade card
-  arcadeCard: {
-    borderRadius: Radius.lg, overflow: 'hidden',
-    borderWidth: 2.5, borderColor: '#000',
-    shadowColor: '#000', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 6,
+  // ── Game grid
+  gameGrid: {
+    flexDirection:    'row',
+    marginHorizontal: 18,
+    gap:              10,
+    marginBottom:     4,
   },
-  arcadeCardInner: { padding: Spacing.md, overflow: 'hidden' },
-  arcadeDecor: { position: 'absolute', right: -30, top: -30, width: 100, height: 100, borderRadius: 50, borderWidth: 20, borderColor: 'rgba(255,255,255,0.06)' },
-  arcadeCardContent: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  arcadeIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  arcadeCardTitle: { fontSize: 15, fontWeight: '900', color: '#fff' },
-  arcadeCardSub: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
-  arcadeBadge: {
-    backgroundColor: Colors.yellow, borderRadius: Radius.full,
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderWidth: 1.5, borderColor: '#000',
+  gameGridDivider: { width: 0 },
+  gameCardOuter: { flex: 1 },
+  gameCard: {
+    minHeight:       132,
+    padding:         16,
+    backgroundColor: C.surface,
+    borderRadius:    18,
+    gap:             6,
+    ...Shadows.card,
   },
-  arcadeBadgeText: { fontSize: 11, fontWeight: '900', color: '#000' },
+  gameIconBox: {
+    width:           38,
+    height:          38,
+    borderRadius:    999,
+    backgroundColor: C.bg,
+    alignItems:      'center',
+    justifyContent:  'center',
+    marginBottom:    4,
+  },
+  gameTitle: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize:   13,
+    color:      C.black,
+    lineHeight: 16,
+  },
+  gameSub: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize:   12,
+    color:      C.dim2,
+    lineHeight: 16,
+  },
+  gameBadge: {
+    alignSelf:         'flex-start',
+    backgroundColor:   C.gold,
+    paddingHorizontal: 8,
+    paddingVertical:   3,
+    borderRadius:      999,
+    marginTop:         4,
+  },
+  gameBadgeText: {
+    fontFamily:    'JetBrainsMono_500Medium',
+    fontSize:      9,
+    color:         C.black,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
 
-  // Accordion
-  accordionCard: {
-    marginHorizontal: Spacing.md, borderRadius: Radius.lg,
-    borderWidth: 2.5, borderColor: '#000',
-    backgroundColor: '#fff',
-    shadowColor: '#000', shadowOffset: { width: 3, height: 3 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4,
-    overflow: 'hidden',
+  // ── Tier table
+  tierTableCard: {
+    marginHorizontal: 18,
+    backgroundColor:  C.surface,
+    borderRadius:     18,
+    overflow:         'hidden',
+    ...Shadows.card,
+    marginBottom:     4,
   },
-  accordionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.md },
-  accordionTitle: { fontSize: 15, fontWeight: '900', color: '#1B2A4A', letterSpacing: 0.5 },
-  accordionBody: { padding: Spacing.md, paddingTop: 0, gap: Spacing.sm },
-  ruleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  ruleIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#eee' },
-  ruleText: { fontSize: 14, flex: 1, color: T.textSecondary },
+  tierTableRow: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    paddingHorizontal: 16,
+    paddingVertical:   12,
+    borderBottomWidth: 1,
+    borderBottomColor: C.hairline,
+    gap:               10,
+    backgroundColor:   C.surface,
+  },
+  tierTableRowActive: { backgroundColor: 'rgba(239,109,21,0.06)' },
+  tierTableBadge: {
+    paddingHorizontal: 8,
+    paddingVertical:   4,
+    borderRadius:      999,
+    backgroundColor:   C.bg,
+  },
+  tierTableBadgeText: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize:   10,
+    color:      C.od,
+  },
+  tierTableRange: {
+    fontFamily:    'JetBrainsMono_400Regular',
+    fontSize:      9,
+    color:         C.dim2,
+    width:         80,
+    letterSpacing: 0.4,
+  },
+  tierTablePerk: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize:   11,
+    color:      C.dim,
+    flex:       1,
+    lineHeight: 16,
+  },
+  youTag: {
+    backgroundColor:   C.gold,
+    paddingHorizontal: 7,
+    paddingVertical:   2,
+    borderRadius:      999,
+  },
+  youTagText: {
+    fontFamily:    'JetBrainsMono_500Medium',
+    fontSize:      8,
+    color:         C.black,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
 
-  // History
-  historySection: { gap: Spacing.sm },
+  // ── History card + rows
+  historyCard: {
+    marginHorizontal: 18,
+    backgroundColor:  C.surface,
+    borderRadius:     18,
+    overflow:         'hidden',
+    ...Shadows.card,
+    marginBottom:     4,
+  },
+  historyRow: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    justifyContent:    'space-between',
+    paddingHorizontal: 16,
+    paddingVertical:   13,
+    borderBottomWidth: 1,
+    borderBottomColor: C.hairline,
+    backgroundColor:   C.surface,
+  },
+  historyLeft: { flex: 1, gap: 2 },
+  historyDesc: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize:   13,
+    color:      C.black,
+  },
+  historyDate: {
+    fontFamily:    'JetBrainsMono_400Regular',
+    fontSize:      10,
+    color:         C.dim2,
+    letterSpacing: 0.5,
+  },
+  historyPts: {
+    fontFamily:    'Archivo_800ExtraBold',
+    fontSize:      15,
+    letterSpacing: -0.5,
+  },
   emptyHistory: {
-    marginHorizontal: Spacing.md, padding: Spacing.xl,
-    alignItems: 'center', gap: Spacing.sm,
-    backgroundColor: '#fff', borderRadius: Radius.lg,
-    borderWidth: 2, borderColor: '#000',
+    paddingHorizontal: 18,
+    paddingVertical:   36,
+    alignItems:        'center',
+    gap:               6,
+    backgroundColor:   C.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: C.hairline,
   },
-  emptyText: { fontSize: 16, fontWeight: '700', color: '#1B2A4A' },
-  emptySubtext: { fontSize: 13, color: T.textMuted, textAlign: 'center' },
-  txRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    marginHorizontal: Spacing.md,
-    borderRadius: Radius.md, padding: Spacing.sm + 2,
-    backgroundColor: '#fff',
-    borderWidth: 2, borderColor: '#000',
-    borderLeftWidth: 4,
-    shadowColor: '#000', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 2,
+  emptyTitle: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize:   14,
+    color:      C.black,
   },
-  txIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  txLeft: { flex: 1, gap: 1 },
-  txType: { fontSize: 13, fontWeight: '600', color: '#1B2A4A' },
-  txDate: { fontSize: 11, color: T.textMuted },
-  txPoints: { fontSize: 14, fontWeight: '800' },
+  emptyBody: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize:   12,
+    color:      C.dim2,
+    textAlign:  'center',
+  },
+
+  // ── Footer
+  footer: {
+    paddingHorizontal: 18,
+    paddingVertical:   20,
+    marginTop:         10,
+  },
+  footerText: {
+    fontFamily:    'JetBrainsMono_400Regular',
+    fontSize:      9,
+    color:         C.dim2,
+    letterSpacing: 1.0,
+    textTransform: 'uppercase',
+    textAlign:     'center',
+    lineHeight:    14,
+  },
 })
