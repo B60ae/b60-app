@@ -112,7 +112,7 @@ function PadKey({ label, aux, onPress, disabled }: { label: string; aux?: boolea
     Animated.timing(bg, { toValue: 0, duration: 80, useNativeDriver: false }).start()
   }
 
-  const backgroundColor = bg.interpolate({ inputRange: [0, 1], outputRange: [V3.s, V3.gold] })
+  const backgroundColor = bg.interpolate({ inputRange: [0, 1], outputRange: ['#FFFFFF', V3.gold] })
   const textColor = bg.interpolate({ inputRange: [0, 1], outputRange: [V3.w, V3.w] })
 
   return (
@@ -148,8 +148,8 @@ const pad = StyleSheet.create({
     flexBasis: '30%',
     flexGrow: 1,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: V3.ln,
+    borderWidth: 1.5,
+    borderColor: 'rgba(30,18,6,0.15)',
     ...Shadows.iconBtn,
   },
   inner: { alignItems: 'center', justifyContent: 'center', paddingVertical: 14 },
