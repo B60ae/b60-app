@@ -486,17 +486,10 @@ export default function OrderScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
 
-      <View style={[styles.menuHeader, { borderBottomColor: theme.borderStrong }]}>
+      <View style={styles.menuHeader}>
         <View style={styles.menuHeaderTop}>
-          <Pressable onPress={() => setStep('location')} hitSlop={12} style={styles.backBtn}>
-            <ChevronLeft size={20} color={theme.text} strokeWidth={2} />
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.pageTitle, { color: theme.text }]}>ORDER</Text>
-            {selectedLocation && (
-              <Text style={[styles.menuLocLabel, { color: theme.textMuted }]}>{selectedLocation.name.toUpperCase()}</Text>
-            )}
-          </View>
+          <Text style={styles.menuTitle}>THE MENU</Text>
+          <Text style={styles.halalLabel}>100% HALAL</Text>
           <Pressable
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setCartVisible(true) }}
             style={styles.cartBtn}
@@ -510,6 +503,13 @@ export default function OrderScreen() {
             )}
           </Pressable>
         </View>
+        <Pressable style={styles.menuLocBar} onPress={() => setStep('location')}>
+          <View style={styles.menuLocDot} />
+          <Text style={styles.menuLocText}>
+            PICKUP · <Text style={styles.menuLocName}>{selectedLocation ? selectedLocation.name.toUpperCase() : 'SELECT BRANCH'}</Text>
+          </Text>
+          <Text style={styles.menuLocChange}>CHANGE</Text>
+        </Pressable>
 
         <View style={styles.searchBar}>
           <Search size={14} color={theme.textMuted} strokeWidth={2} />
@@ -659,11 +659,27 @@ const styles = StyleSheet.create({
     fontFamily: 'JetBrainsMono_500Medium', fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase',
   },
 
-  menuHeader: { borderBottomWidth: 2 },
+  menuHeader: { borderBottomWidth: 1, borderBottomColor: V3.ln },
   menuHeaderTop: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 18, paddingTop: 10, paddingBottom: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 18, paddingTop: 14, paddingBottom: 6,
   },
+  menuTitle: {
+    flex: 1, fontFamily: 'Archivo_900Black', fontSize: 28, letterSpacing: -0.8, color: V3.w,
+  },
+  halalLabel: {
+    fontFamily: 'JetBrainsMono_400Regular', fontSize: 9, letterSpacing: 1.4,
+    textTransform: 'uppercase', color: V3.dim2,
+  },
+  menuLocBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 18, paddingVertical: 9,
+    borderTopWidth: 1, borderTopColor: V3.ln,
+  },
+  menuLocDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#22C55E' },
+  menuLocText: { fontFamily: 'JetBrainsMono_400Regular', fontSize: 11, letterSpacing: 0.8, color: V3.dim, flex: 1 },
+  menuLocName: { fontFamily: 'JetBrainsMono_500Medium', color: V3.w },
+  menuLocChange: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 10, letterSpacing: 1, color: V3.o },
   menuLocLabel: {
     fontFamily: 'JetBrainsMono_400Regular', fontSize: 8.5, letterSpacing: 1.4, textTransform: 'uppercase', marginTop: 2,
   },
@@ -752,7 +768,7 @@ const styles = StyleSheet.create({
     fontFamily: 'JetBrainsMono_500Medium', fontSize: 9, color: '#FFFDF8', letterSpacing: 1,
   },
   cardName: {
-    fontFamily: 'Archivo_800ExtraBold', fontSize: 14, color: V3.w, lineHeight: 17,
+    fontFamily: 'Archivo_800ExtraBold', fontSize: 14, color: V3.w, lineHeight: 17, textTransform: 'uppercase',
   },
   cardDesc: {
     fontFamily: 'Archivo_400Regular', fontSize: 12, color: V3.dim, lineHeight: 17,
@@ -762,19 +778,17 @@ const styles = StyleSheet.create({
     color: V3.od, textTransform: 'uppercase', marginTop: 4,
   },
   addBtn: {
-    position: 'absolute', bottom: -2, right: -2,
-    width: 30, height: 30, borderRadius: 999,
+    position: 'absolute', bottom: -4, right: -4,
+    width: 36, height: 36, borderRadius: 999,
     backgroundColor: V3.gold,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: 'rgba(151,64,15,0.3)',
+    shadowColor: 'rgba(151,64,15,0.35)',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 2,
+    shadowOpacity: 1, shadowRadius: 0, elevation: 3,
   },
   addBtnInner: { alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' },
   addBtnText: {
-    fontFamily: 'Archivo_800ExtraBold', fontSize: 18, color: V3.w, lineHeight: 22,
+    fontFamily: 'Archivo_800ExtraBold', fontSize: 22, color: V3.w, lineHeight: 26,
   },
 
   floatingCart: { position: 'absolute', left: 18, right: 18 },
