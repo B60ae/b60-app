@@ -115,19 +115,21 @@ function PadKey({ label, aux, onPress, disabled }: { label: string; aux?: boolea
   const textColor = bg.interpolate({ inputRange: [0, 1], outputRange: [V3.w, V3.w] })
 
   return (
-    <Animated.View style={[pad.key, { backgroundColor, transform: [{ scale }] }]}>
-      <Pressable
-        onPress={onPress}
-        onPressIn={handleIn}
-        onPressOut={handleOut}
-        disabled={disabled}
-        style={pad.inner}
-        hitSlop={4}
-      >
-        <Animated.Text style={[aux ? pad.auxText : pad.keyText, { color: textColor }, disabled && pad.disabledText]}>
-          {label}
-        </Animated.Text>
-      </Pressable>
+    <Animated.View style={[pad.key, { backgroundColor }]}>
+      <Animated.View style={{ flex: 1, transform: [{ scale }] }}>
+        <Pressable
+          onPress={onPress}
+          onPressIn={handleIn}
+          onPressOut={handleOut}
+          disabled={disabled}
+          style={pad.inner}
+          hitSlop={4}
+        >
+          <Animated.Text style={[aux ? pad.auxText : pad.keyText, { color: textColor }, disabled && pad.disabledText]}>
+            {label}
+          </Animated.Text>
+        </Pressable>
+      </Animated.View>
     </Animated.View>
   )
 }
