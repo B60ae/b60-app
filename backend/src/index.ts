@@ -137,6 +137,18 @@ const server = app.listen(PORT, () =>
 
 server.setTimeout(30000)
 
+// Keep Render free tier awake — ping self every 10 minutes
+if (process.env.RENDER_EXTERNAL_URL) {
+  setInterval(async () => {
+    try {
+      const res = await fetch(`${process.env.RENDER_EXTERNAL_URL}/health`)
+      if (!res.ok) console.warn('[keepalive] /health returned', res.status)
+    } catch (e: any) {
+      console.warn('[keepalive] ping failed:', e.message)
+    }
+  }, 10 * 60 * 1000)
+}
+
 process.on('SIGTERM', () => {
   console.log('[SIGTERM] Graceful shutdown...')
   server.close(() => {
