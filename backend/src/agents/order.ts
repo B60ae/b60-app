@@ -87,6 +87,21 @@ export async function processOrder(input: CreateOrderInput): Promise<OrderAgentR
     return { success: false, error: 'Failed to create order', code: 'DB_ERROR' };
   }
 
+  return {
+    success: true,
+    orderId: order.id,
+    status: 'pending',
+    total: input.total,
+    estimatedReadyAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    dartPending: true,
+  };
+}
+
+// processDartAsync runs after the HTTP response is sent — never blocks the client
+export async function processDartAsync(orderId: string, input: CreateOrderInput): Promise<void> {
+  const { data: order } = await supabase.from('orders').select('id').eq('id', orderId).single();
+  if (!order) return;
+
   // Step 3 — Attempt DartPOS with retry + backoff
   let dartPosOrderId: string | null = null;
   let estimatedReadyMinutes = 15;
@@ -130,16 +145,6 @@ export async function processOrder(input: CreateOrderInput): Promise<OrderAgentR
   if (updateError) {
     console.error('[OrderAgent] Failed to update order status:', updateError);
   }
-
-  return {
-    success: true,
-    orderId: order.id,
-    status: finalStatus,
-    total: input.total,
-    estimatedReadyAt,
-    dartPosOrderId: dartPosOrderId ?? undefined,
-    dartPending,
-  };
 }
 
 async function submitToDartWithRetry(
