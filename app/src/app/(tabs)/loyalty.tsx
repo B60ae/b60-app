@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Pressable,
   Animated, Dimensions,
 } from 'react-native'
+import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
@@ -320,14 +321,16 @@ export default function LoyaltyScreen() {
 
       {/* ── TopBar ── */}
       <View style={s.topBar}>
-        <View style={s.logoBox}>
-          <Text style={s.logoText}>B60</Text>
-        </View>
+        <Image
+          source={require('../../../../assets/images/icon_logo.webp')}
+          style={s.topBarLogo}
+          contentFit="contain"
+        />
         <Pressable
           style={s.cartBtn}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-            router.push('/(tabs)/cart')
+            router.push('/(tabs)/menu')
           }}
         >
           <ShoppingCart size={20} color={C.black} strokeWidth={2} />
@@ -476,13 +479,7 @@ const s = StyleSheet.create({
     paddingVertical:   14,
     backgroundColor:   C.bg,
   },
-  logoBox: { paddingHorizontal: 0 },
-  logoText: {
-    fontFamily:    'Archivo_800ExtraBold',
-    fontSize:      18,
-    color:         C.black,
-    letterSpacing: -0.4,
-  },
+  topBarLogo: { width: 44, height: 44 },
   cartBtn: {
     width: 40, height: 40, borderRadius: 14,
     backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center',
