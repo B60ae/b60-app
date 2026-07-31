@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   checkMark: {
     fontSize: 42,
     color: Colors.white,
-    fontWeight: '900',
+    fontFamily: 'Archivo_900Black',
     lineHeight: 50,
   },
 
@@ -284,11 +284,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 36,
-    fontWeight: '900',
+    fontFamily: 'Archivo_900Black',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
+    fontFamily: 'Archivo_400Regular',
     textAlign: 'center',
     marginTop: -6,
   },
@@ -307,17 +308,17 @@ const styles = StyleSheet.create({
   },
   orderIdLabel: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: 'JetBrainsMono_500Medium',
     letterSpacing: 2,
   },
   orderIdValue: {
     fontSize: 36,
-    fontWeight: '900',
+    fontFamily: 'Archivo_900Black',
     letterSpacing: 3,
   },
   orderIdSub: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Archivo_400Regular',
   },
 
   pointsCard: {
@@ -333,8 +334,8 @@ const styles = StyleSheet.create({
   },
   coinWrapper: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   pointsTextBlock: { flex: 1 },
-  pointsTitle: { fontSize: 18, fontWeight: '800' },
-  pointsSub: { fontSize: 13, marginTop: 2 },
+  pointsTitle: { fontSize: 18, fontFamily: 'Archivo_800ExtraBold' },
+  pointsSub: { fontSize: 13, fontFamily: 'Archivo_400Regular', marginTop: 2 },
 
   ctaGroup: { width: '100%', gap: Spacing.sm, marginTop: Spacing.sm },
   trackBtn: {
@@ -347,7 +348,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md + 2,
     ...Shadows.glowStrong,
   },
-  trackBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
+  trackBtnText: { fontSize: 16, fontFamily: 'Archivo_800ExtraBold', color: '#fff' },
   menuBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -357,5 +358,5 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderWidth: 1.5,
   },
-  menuBtnText: { fontSize: 15, fontWeight: '700' },
+  menuBtnText: { fontSize: 15, fontFamily: 'Archivo_700Bold' },
 })

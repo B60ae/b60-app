@@ -271,8 +271,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   headerText: { flex: 1 },
-  title: { fontSize: 20, fontWeight: '800' },
-  orderId: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5 },
+  title: { fontSize: 20, fontFamily: 'Archivo_800ExtraBold' },
+  orderId: { fontSize: 12, fontFamily: 'Archivo_700Bold', letterSpacing: 0.5 },
 
   readyBanner: { borderRadius: Radius.xl, overflow: 'hidden' },
   readyGradient: {
@@ -280,8 +280,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  readyTitle: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
-  readySub: { fontSize: 14, color: 'rgba(255,255,255,0.85)', textAlign: 'center' },
+  readyTitle: { fontSize: 22, fontFamily: 'Archivo_900Black', color: '#fff', letterSpacing: -0.5 },
+  readySub: { fontSize: 14, fontFamily: 'Archivo_400Regular', color: 'rgba(255,255,255,0.85)', textAlign: 'center' },
 
   timelineCard: {
     borderRadius: Radius.lg,
@@ -327,9 +327,9 @@ const styles = StyleSheet.create({
   stepIconDone: { backgroundColor: '#22C55E', borderColor: '#22C55E' },
   stepIconActive: { backgroundColor: '#F05A1A', borderColor: '#F05A1A' },
   stepContent: { flex: 1, paddingTop: 8 },
-  stepLabel: { fontSize: 15, fontWeight: '600' },
-  stepSub: { fontSize: 12, marginTop: 2 },
-  stepDone: { fontSize: 11, color: '#22C55E', fontWeight: '700', marginTop: 2 },
+  stepLabel: { fontSize: 15, fontFamily: 'Archivo_700Bold' },
+  stepSub: { fontSize: 12, fontFamily: 'Archivo_400Regular', marginTop: 2 },
+  stepDone: { fontSize: 11, fontFamily: 'Archivo_700Bold', color: '#22C55E', marginTop: 2 },
 
   etaCard: {
     flexDirection: 'row',
@@ -345,10 +345,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   etaContent: { flex: 1 },
-  etaLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  etaTime: { fontSize: 28, fontWeight: '900', letterSpacing: -0.5 },
+  etaLabel: { fontSize: 11, fontFamily: 'JetBrainsMono_500Medium', textTransform: 'uppercase', letterSpacing: 0.5 },
+  etaTime: { fontSize: 28, fontFamily: 'Archivo_900Black', letterSpacing: -0.5 },
   etaRight: { alignItems: 'center', gap: 4 },
-  lastUpdated: { fontSize: 10, fontWeight: '600' },
+  lastUpdated: { fontSize: 10, fontFamily: 'JetBrainsMono_400Regular' },
 
   summaryCard: {
     borderRadius: Radius.lg,
@@ -356,15 +356,15 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     borderWidth: 1,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
+  sectionTitle: { fontSize: 16, fontFamily: 'Archivo_800ExtraBold', marginBottom: 4 },
   summaryItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  summaryItemName: { fontSize: 14 },
-  summaryItemPrice: { fontSize: 14, fontWeight: '700' },
+  summaryItemName: { fontSize: 14, fontFamily: 'Archivo_400Regular' },
+  summaryItemPrice: { fontSize: 14, fontFamily: 'Archivo_700Bold' },
   divider: { height: 1 },
-  totalLabel: { fontSize: 16, fontWeight: '800' },
-  totalValue: { fontSize: 18, fontWeight: '900', color: '#F05A1A' },
+  totalLabel: { fontSize: 16, fontFamily: 'Archivo_800ExtraBold' },
+  totalValue: { fontSize: 18, fontFamily: 'Archivo_900Black', color: '#F05A1A' },
   pointsEarnedRow: { alignItems: 'flex-end' },
-  pointsEarned: { fontSize: 12, color: '#22C55E', fontWeight: '700' },
+  pointsEarned: { fontSize: 12, fontFamily: 'Archivo_700Bold', color: '#22C55E' },
 })
 
 const cancelStyles = StyleSheet.create({
@@ -376,5 +376,5 @@ const cancelStyles = StyleSheet.create({
     borderColor: '#EF4444',
     marginTop: 4,
   },
-  text: { fontSize: 14, fontWeight: '700', color: '#EF4444' },
+  text: { fontSize: 14, fontFamily: 'Archivo_700Bold', color: '#EF4444' },
 })

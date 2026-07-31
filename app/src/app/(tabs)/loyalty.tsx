@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, Pressable,
-  Animated, Dimensions,
+  Animated, Dimensions, FlatList,
 } from 'react-native'
 import { Image } from 'expo-image'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -432,9 +432,12 @@ export default function LoyaltyScreen() {
 
         <View style={s.historyCard}>
           {historyList.length > 0 ? (
-            historyList.map((tx, i) => (
-              <HistoryRow key={tx.id} tx={tx} index={i} />
-            ))
+            <FlatList
+              data={historyList}
+              keyExtractor={(tx) => tx.id}
+              renderItem={({ item, index }) => <HistoryRow tx={item} index={index} />}
+              scrollEnabled={false}
+            />
           ) : (
             <View style={s.emptyHistory}>
               <Text style={s.emptyTitle}>No history yet</Text>

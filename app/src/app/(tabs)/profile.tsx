@@ -73,7 +73,7 @@ export default function ProfileScreen() {
   const { user, logout } = useAuthStore()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
-  const { data: orders } = useQuery({
+  const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ['orders', 'history'],
     queryFn: ordersApi.getHistory,
     enabled: isAuthenticated,
@@ -163,7 +163,17 @@ export default function ProfileScreen() {
         {/* Past orders */}
         <Text style={s.sectionTitle}>Past orders</Text>
         <View style={s.card}>
-          {orders && orders.length > 0 ? (
+          {ordersLoading ? (
+            <>
+              {[0, 1, 2].map((i) => (
+                <View key={i} style={[s.orderRow, i === 2 && { borderBottomWidth: 0 }]}>
+                  <View style={[s.skeletonLine, { width: '40%', marginBottom: 6 }]} />
+                  <View style={[s.skeletonLine, { width: '70%', marginBottom: 4 }]} />
+                  <View style={[s.skeletonLine, { width: '55%' }]} />
+                </View>
+              ))}
+            </>
+          ) : orders && orders.length > 0 ? (
             orders.slice(0, 8).map((order: Order, idx: number) => {
               const locName = getLocationName(order.location_id)
               const datePart = formatOrderDate(order.created_at)
@@ -262,6 +272,8 @@ const s = StyleSheet.create({
   orderPrice: { fontFamily: 'JetBrainsMono_500Medium', fontSize: 13, color: V3.o, letterSpacing: 0.5 },
   orderItems: { fontFamily: 'Archivo_400Regular', fontSize: 13, color: V3.dim, lineHeight: 18 },
   orderMeta: { fontFamily: 'JetBrainsMono_400Regular', fontSize: 9.5, color: V3.dim2, letterSpacing: 0.8 },
+
+  skeletonLine: { height: 10, borderRadius: 5, backgroundColor: V3.s2 },
 
   emptyOrders: { padding: 28, alignItems: 'center', gap: 8 },
   emptyText: { fontFamily: 'Archivo_400Regular', fontSize: 14, color: V3.dim2 },

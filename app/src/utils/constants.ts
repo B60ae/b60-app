@@ -7,8 +7,6 @@ export const IMAGES = {
   loginHero: 'https://b60.ae/images/vegas.webp',
   homeHero: 'https://b60.ae/images/fancy.webp',
 } as const
-export const SUPABASE_URL = Constants.expoConfig?.extra?.supabaseUrl ?? ''
-export const SUPABASE_ANON_KEY = Constants.expoConfig?.extra?.supabaseAnonKey ?? ''
 
 export const POINTS_PER_AED = 1           // 1 point per 1 AED spent
 export const POINTS_TO_AED = 0.05         // 20 points = 1 AED
