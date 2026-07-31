@@ -2,7 +2,7 @@ import { Pressable, Text, StyleSheet, ActivityIndicator, Platform, View, ViewSty
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { LinearGradient } from 'expo-linear-gradient'
-import { LightTheme, DarkTheme, Radius, Shadows, Spacing } from '../../utils/theme'
+import { LightTheme, DarkTheme, Colors, Radius, Shadows, Spacing } from '../../utils/theme'
 import { useThemeStore } from '../../stores/themeStore'
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
@@ -75,9 +75,9 @@ export function Button({
       backgroundColor: 'transparent',
     },
     yellow: {
-      backgroundColor: theme.yellow,
+      backgroundColor: Colors.gold,
       borderWidth: 2,
-      borderColor: theme.black,
+      borderColor: Colors.black,
     },
     brand: {
       borderWidth: 2,
@@ -96,7 +96,7 @@ export function Button({
     outline: theme.primary,
     ghost: theme.primary,
     brand: theme.white,
-    yellow: theme.black,
+    yellow: Colors.black,
     hard: theme.white,
   }
 

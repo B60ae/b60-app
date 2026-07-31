@@ -91,8 +91,8 @@ export const DarkTheme = {
   errorTint: 'rgba(239,68,68,0.15)',
   cardBg: V2.ds,
   shadowColor: '#000',
-  tabBarBg: V3.cream,
-  tabBarActive: V3.od,
+  tabBarBg: V2.dk,
+  tabBarActive: V3.gold,
   tabBarInactive: V2.ddim2,
 }
 

@@ -407,7 +407,7 @@ export default function TapScreen() {
           </View>
           <View style={[styles.scoreDivider, { backgroundColor: isDark ? Colors.primary + '33' : T.border }]} />
           <View style={styles.scoreBlock}>
-            <Text style={[styles.scoreNum, { color: Colors.yellow }]}>
+            <Text style={[styles.scoreNum, { color: Colors.gold }]}>
               {String(Math.floor(taps / 10)).padStart(2, '0')}
             </Text>
             <Text style={[styles.scoreLabel, { color: T.textMuted }]}>PTS</Text>
@@ -416,10 +416,10 @@ export default function TapScreen() {
 
         {/* Best score badge */}
         {tapStatus && gameState === 'idle' && (
-          <View style={[styles.bestBadge, { backgroundColor: T.surface, borderColor: isDark ? Colors.yellow + '40' : T.border }]}>
-            <Star size={12} color={Colors.yellow} fill={Colors.yellow} />
+          <View style={[styles.bestBadge, { backgroundColor: T.surface, borderColor: isDark ? Colors.gold + '40' : T.border }]}>
+            <Star size={12} color={Colors.gold} fill={Colors.gold} />
             <Text style={[styles.bestText, { color: T.textMuted }]}>
-              BEST: <Text style={{ color: Colors.yellow }}>{tapStatus.best_score}</Text> TAPS
+              BEST: <Text style={{ color: Colors.gold }}>{tapStatus.best_score}</Text> TAPS
             </Text>
             <Text style={[styles.bestSep, { color: T.textMuted }]}>·</Text>
             <Text style={[styles.bestText, { color: T.textMuted }]}>
@@ -494,7 +494,7 @@ export default function TapScreen() {
               </View>
             ) : result ? (
               <LinearGradient colors={[Colors.primary, Colors.primaryDark]} style={styles.resultCard}>
-                <Trophy size={28} color={Colors.yellow} fill={Colors.yellow} />
+                <Trophy size={28} color={Colors.gold} fill={Colors.gold} />
                 <Text style={styles.resultScore}>{String(result.score).padStart(2, '0')}</Text>
                 <Text style={styles.resultScoreLabel}>TAPS</Text>
                 {result.points_earned > 0 && (
@@ -505,7 +505,7 @@ export default function TapScreen() {
                 )}
                 {tapStatus && result.score > tapStatus.best_score && (
                   <View style={styles.newRecordBadge}>
-                    <Star size={12} color={Colors.yellow} fill={Colors.yellow} />
+                    <Star size={12} color={Colors.gold} fill={Colors.gold} />
                     <Text style={styles.newRecordText}>NEW RECORD!</Text>
                   </View>
                 )}
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
   resultScoreLabel: { fontSize: 12, fontWeight: '800', color: 'rgba(255,255,255,0.6)', letterSpacing: 4 },
   resultPtsBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: Colors.yellow, borderRadius: Radius.full,
+    backgroundColor: Colors.gold, borderRadius: Radius.full,
     paddingHorizontal: 16, paddingVertical: 8, marginTop: 8,
   },
   resultPtsText: { fontSize: 14, fontWeight: '900', color: '#1B2A4A', letterSpacing: 1 },
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: Radius.full,
     paddingHorizontal: 12, paddingVertical: 5, marginTop: 4,
   },
-  newRecordText: { fontSize: 11, fontWeight: '900', color: Colors.yellow, letterSpacing: 2 },
+  newRecordText: { fontSize: 11, fontWeight: '900', color: Colors.gold, letterSpacing: 2 },
 
   submittingRow: {
     alignItems: 'center', paddingVertical: 20,

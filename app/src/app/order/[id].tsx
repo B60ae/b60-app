@@ -16,6 +16,7 @@ import { LightTheme, DarkTheme, Spacing, Radius, Shadows } from '../../utils/the
 import type { OrderStatus } from '../../types'
 
 const STATUS_STEPS: { key: OrderStatus; label: string; sub: string; icon: any }[] = [
+  { key: 'pending', label: 'Order Received', sub: 'Waiting for confirmation', icon: Clock },
   { key: 'confirmed', label: 'Order Confirmed', sub: 'We got your order!', icon: CheckCircle },
   { key: 'preparing', label: 'Being Prepared', sub: 'Chef is smashing your burger', icon: ChefHat },
   { key: 'ready', label: 'Ready for Pickup!', sub: 'Head to the counter', icon: Package },

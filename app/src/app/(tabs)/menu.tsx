@@ -28,8 +28,7 @@ import { POINTS_TO_AED, MIN_REDEEM_POINTS } from '../../utils/constants'
 import type { MenuItem } from '../../types'
 
 const STEP = 100
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window')
-const CARD_W = Math.floor((SCREEN_W - 37) / 2) // 18px padding each side, 1px center gap
+const { height: SCREEN_H } = Dimensions.get('window')
 type Step = 'method' | 'location' | 'menu'
 
 type ListRow =

@@ -291,12 +291,6 @@ export default function LoyaltyScreen() {
     enabled:  isAuthenticated,
     staleTime: 0,
   })
-  const { data: leaderboardData } = useQuery({
-    queryKey: ['games', 'leaderboard'],
-    queryFn:  gamesApi.leaderboard,
-    enabled:  isAuthenticated,
-  })
-
   useEffect(() => {
     if (balance?.total_points !== undefined) {
       useAuthStore.getState().updatePoints(balance.total_points)
@@ -313,16 +307,13 @@ export default function LoyaltyScreen() {
   const historyList    = history ?? []
   const tierColor      = TIER_HEX[tier.name] ?? '#8A5A2B'
 
-  // leaderboard data kept for query freshness (not rendered in v2 loyalty layout)
-  void leaderboardData
-
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
 
       {/* ── TopBar ── */}
       <View style={s.topBar}>
         <Image
-          source={require('../../../../assets/images/icon_logo.webp')}
+          source={require('../../../assets/images/icon_logo.webp')}
           style={s.topBarLogo}
           contentFit="contain"
         />

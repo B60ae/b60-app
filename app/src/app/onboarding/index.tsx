@@ -33,7 +33,7 @@ const SLIDES = [
     title: '400°C.\n60 SECONDS.\nPURE BEEF.',
     body: 'Fresh never frozen. Smashed hard on a blazing flat top. That caramelised crust? You can\'t get it any other way.',
     image: 'https://b60.ae/images/classic-beef.webp',
-    accent: Colors.yellow,
+    accent: Colors.gold,
     icon: Flame,
     gradient: ['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.8)', '#000'] as string[],
   },

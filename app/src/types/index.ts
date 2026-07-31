@@ -115,7 +115,7 @@ export interface LoyaltyBalance {
   total_points: number
   redeemable_points: number
   aed_value: number
-  tier: 'Bronze' | 'Silver' | 'Gold'
+  tier: 'Bronze' | 'Silver' | 'Gold' | 'Platinum'
   next_tier_points?: number
 }
 

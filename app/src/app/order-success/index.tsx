@@ -21,10 +21,10 @@ import { useThemeStore } from '../../stores/themeStore'
 // Confetti dot config
 const DOTS = [
   { color: Colors.primary, dx: -90, dy: -110, size: 10, delay: 0 },
-  { color: Colors.yellow, dx: 80, dy: -130, size: 8, delay: 60 },
+  { color: Colors.gold, dx: 80, dy: -130, size: 8, delay: 60 },
   { color: Colors.success, dx: 120, dy: -60, size: 12, delay: 30 },
   { color: Colors.primary, dx: -120, dy: -50, size: 7, delay: 80 },
-  { color: Colors.yellow, dx: 60, dy: -150, size: 9, delay: 50 },
+  { color: Colors.gold, dx: 60, dy: -150, size: 9, delay: 50 },
   { color: Colors.primaryLight, dx: -60, dy: -140, size: 11, delay: 20 },
   { color: Colors.success, dx: 100, dy: -100, size: 8, delay: 70 },
   { color: Colors.primary, dx: -30, dy: -160, size: 10, delay: 40 },
@@ -40,7 +40,7 @@ function ConfettiDot({
   const opacity = useSharedValue(0)
 
   useEffect(() => {
-    opacity.value = withDelay(delay, withTiming(1, { duration: 200 }))
+    opacity.value = withDelay(delay, withSequence(withTiming(1, { duration: 200 }), withDelay(400, withTiming(0, { duration: 500 }))))
     x.value = withDelay(delay, withSpring(dx, { damping: 14, stiffness: 80 }))
     y.value = withDelay(
       delay,
@@ -49,7 +49,6 @@ function ConfettiDot({
         withDelay(600, withTiming(dy + 80, { duration: 600, easing: Easing.in(Easing.quad) })),
       ),
     )
-    opacity.value = withDelay(delay + 400, withTiming(0, { duration: 500 }))
   }, [dx, dy, delay])
 
   const style = useAnimatedStyle(() => ({
