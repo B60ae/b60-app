@@ -3,7 +3,7 @@ import { body, param, validationResult } from 'express-validator'
 import { supabase } from '../config/supabase'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { getOrderStatusFromDart } from '../services/dartPos'
-import { processOrder } from '../agents/order'
+import { processOrder, processDartAsync } from '../agents/order'
 import { award as awardLoyalty } from '../agents/loyalty'
 
 export const ordersRouter = Router()
@@ -54,7 +54,34 @@ ordersRouter.post('/',
       return res.status(statusCode).json({ error: result.error, code: result.code })
     }
 
-    // Award points via Loyalty Agent (fire-and-forget — failure is queued internally)
+    // Respond immediately — client gets 201 before DartPOS is even attempted
+    res.status(201).json({
+      id: result.orderId,
+      status: 'pending',
+      total: result.total,
+      estimated_ready_at: result.estimatedReadyAt,
+    })
+
+    // Fire-and-forget background work — never blocks the response
+    processDartAsync(result.orderId!, {
+      userId,
+      locationId: location_id,
+      items: req.body.items.map((i: any) => ({
+        id: i.menu_item.id,
+        name: i.menu_item.name,
+        price: i.menu_item.price,
+        quantity: i.quantity,
+        customizations: i.selected_options,
+      })),
+      subtotal,
+      discount: discount ?? 0,
+      total,
+      pointsRedeemed: points_redeemed ?? 0,
+      voucherCode: voucher_code,
+      customerName: req.user?.name,
+      customerPhone: req.user?.phone,
+    }).catch(e => console.error('[Orders] DartPOS async error:', e))
+
     awardLoyalty({
       userId,
       sourceId: result.orderId!,
@@ -62,17 +89,7 @@ ordersRouter.post('/',
       source: 'order',
     }).catch(e => console.error('[Orders] Loyalty award error:', e))
 
-    // Update order streak for games leaderboard
     updateOrderStreak(userId).catch(e => console.error('[Orders] Streak update failed:', e))
-
-    res.status(201).json({
-      id: result.orderId,
-      status: result.status,
-      total: result.total,
-      estimated_ready_at: result.estimatedReadyAt,
-      dart_pos_order_id: result.dartPosOrderId,
-      dart_pending: result.dartPending,
-    })
   }
 )
 

@@ -172,7 +172,7 @@ export default function ItemDetailScreen() {
                     ]}
                     onPress={() => {
                       Haptics.selectionAsync()
-                      toggleOption(option, 'multi', group.id)
+                      toggleOption(option, group.type, group.id)
                     }}
                   >
                     <View style={[
@@ -273,21 +273,21 @@ const styles = StyleSheet.create({
   },
   fanFavBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#F05A1A',
+    backgroundColor: Colors.primary,
     borderRadius: Radius.sm,
     paddingHorizontal: 8, paddingVertical: 3,
     marginBottom: 4,
   },
-  fanFavText: { fontSize: 10, fontWeight: '900', color: '#fff', letterSpacing: 1 },
+  fanFavText: { fontFamily: 'Archivo_900Black', fontSize: 10, color: '#fff', letterSpacing: 1 },
   nameOnImage: {
-    fontSize: 32, fontWeight: '900', color: '#fff',
+    fontFamily: 'Archivo_900Black', fontSize: 32, color: '#fff',
     letterSpacing: -0.5, lineHeight: 36,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
   },
   priceOnImage: {
-    fontSize: 22, fontWeight: '900', color: '#F05A1A',
+    fontFamily: 'Archivo_900Black', fontSize: 22, color: Colors.primary,
     textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
@@ -303,8 +303,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg, padding: Spacing.md,
     borderWidth: 1, gap: Spacing.sm,
   },
-  addonsTitle: { fontSize: 13, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
-  addonsSub: { fontSize: 12, fontWeight: '500', marginTop: -4 },
+  addonsTitle: { fontFamily: 'Archivo_900Black', fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase' },
+  addonsSub: { fontFamily: 'Archivo_700Bold', fontSize: 12, marginTop: -4 },
   addonsList: { gap: 8 },
   addonRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
@@ -314,21 +314,21 @@ const styles = StyleSheet.create({
     width: 20, height: 20, borderRadius: 4, borderWidth: 2,
     alignItems: 'center', justifyContent: 'center',
   },
-  addonName: { flex: 1, fontSize: 14, fontWeight: '600' },
-  addonPrice: { fontSize: 13, fontWeight: '700' },
+  addonName: { fontFamily: 'Archivo_700Bold', flex: 1, fontSize: 14 },
+  addonPrice: { fontFamily: 'Archivo_700Bold', fontSize: 13 },
 
   // Quantity
   qtySection: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1,
   },
-  qtyLabel: { fontSize: 13, fontWeight: '900', letterSpacing: 1.5 },
+  qtyLabel: { fontFamily: 'Archivo_900Black', fontSize: 13, letterSpacing: 1.5 },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   qtyBtn: {
     width: 44, height: 44, borderRadius: Radius.full,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1.5,
   },
-  qty: { fontSize: 26, fontWeight: '900', minWidth: 32, textAlign: 'center' },
+  qty: { fontFamily: 'Archivo_900Black', fontSize: 26, minWidth: 32, textAlign: 'center' },
 
   // Sticky CTA
   stickyCtaWrapper: { position: 'absolute', bottom: 0, left: 0, right: 0 },
@@ -341,9 +341,9 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F05A1A', borderRadius: Radius.xl,
+    backgroundColor: Colors.primary, borderRadius: Radius.xl,
     paddingVertical: 16, paddingHorizontal: Spacing.lg,
-    shadowColor: '#F05A1A',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.45, shadowRadius: 16, elevation: 8,
   },
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     minWidth: 26, height: 26, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 6, marginRight: 10,
   },
-  qtyBadgeText: { fontSize: 13, fontWeight: '900', color: '#fff' },
-  addBtnText: { flex: 1, fontSize: 16, fontWeight: '900', color: '#fff', letterSpacing: 0.3 },
-  addBtnPrice: { fontSize: 17, fontWeight: '900', color: '#fff' },
+  qtyBadgeText: { fontFamily: 'Archivo_900Black', fontSize: 13, color: '#fff' },
+  addBtnText: { fontFamily: 'Archivo_900Black', flex: 1, fontSize: 16, color: '#fff', letterSpacing: 0.3 },
+  addBtnPrice: { fontFamily: 'Archivo_900Black', fontSize: 17, color: '#fff' },
 })

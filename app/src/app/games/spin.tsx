@@ -556,7 +556,7 @@ export default function SpinScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.lastWinLabel}>LAST WIN</Text>
               <Text style={styles.lastWinValue}>
-                {result.type === 'points' ? `${result.prize_value} PTS` : 'FREE BURGER'}
+                {result.type === 'points' ? `${result.prize_value} PTS` : result.type === 'burger' ? 'FREE BURGER' : 'NO WIN'}
               </Text>
             </View>
             <View style={styles.lastWinBadge}>

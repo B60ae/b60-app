@@ -70,7 +70,7 @@ export default function OrderTrackingScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: T.background }]}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 }}>
-          <Text style={{ color: T.text, fontSize: 16, fontWeight: '700' }}>Failed to load order</Text>
+          <Text style={{ color: T.text, fontSize: 16, fontFamily: 'Archivo_700Bold' }}>Failed to load order</Text>
           <Pressable onPress={() => refetch()} style={{ backgroundColor: T.primary, borderRadius: 8, paddingHorizontal: 24, paddingVertical: 12 }}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>Try Again</Text>
           </Pressable>
