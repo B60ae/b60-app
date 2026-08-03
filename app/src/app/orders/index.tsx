@@ -12,7 +12,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { OrderStatusBadge } from '../../components/features/OrderStatusBadge'
 import { SkeletonLoader } from '../../components/ui/SkeletonLoader'
-import { LightTheme, DarkTheme, Spacing, Radius } from '../../utils/theme'
+import { LightTheme, DarkTheme, Colors, Spacing, Radius } from '../../utils/theme'
 
 export default function OrderHistoryScreen() {
   const [refreshing, setRefreshing] = useState(false)
@@ -97,8 +97,8 @@ export default function OrderHistoryScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#F05A1A"
-              colors={['#F05A1A']}
+              tintColor={Colors.primary}
+              colors={[Colors.primary]}
             />
           }
           renderItem={({ item: order }) => {
@@ -180,15 +180,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  title: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
+  title: { fontFamily: 'Archivo_900Black', fontSize: 22, letterSpacing: -0.5 },
   countBadge: {
-    backgroundColor: '#F05A1A',
+    backgroundColor: Colors.primary,
     borderRadius: Radius.full,
     minWidth: 24, height: 24,
     paddingHorizontal: 7,
     alignItems: 'center', justifyContent: 'center',
   },
-  countBadgeText: { fontSize: 12, fontWeight: '800', color: '#fff' },
+  countBadgeText: { fontFamily: 'Archivo_800ExtraBold', fontSize: 12, color: '#fff' },
 
   skeletonList: { padding: Spacing.md, gap: Spacing.sm },
 
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0, top: 0, bottom: 0,
     width: 4,
-    backgroundColor: '#F05A1A',
+    backgroundColor: Colors.primary,
     borderTopLeftRadius: Radius.lg,
     borderBottomLeftRadius: Radius.lg,
   },
@@ -229,14 +229,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', gap: Spacing.sm,
   },
-  orderId: { fontSize: 15, fontWeight: '800' },
-  itemName: { fontSize: 13, fontWeight: '500' },
+  orderId: { fontFamily: 'Archivo_800ExtraBold', fontSize: 15 },
+  itemName: { fontFamily: 'Archivo_400Regular', fontSize: 13 },
   infoBottom: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', marginTop: 2,
   },
-  date: { fontSize: 11, fontWeight: '500' },
-  total: { fontSize: 15, fontWeight: '800', color: '#F05A1A' },
+  date: { fontFamily: 'Archivo_400Regular', fontSize: 11 },
+  total: { fontFamily: 'Archivo_800ExtraBold', fontSize: 15, color: Colors.primary },
 
   emptyState: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
@@ -247,19 +247,19 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, marginBottom: Spacing.sm,
   },
-  emptyTitle: { fontSize: 24, fontWeight: '800' },
-  emptySub: { fontSize: 14, textAlign: 'center', lineHeight: 22, marginTop: -4 },
+  emptyTitle: { fontFamily: 'Archivo_800ExtraBold', fontSize: 24 },
+  emptySub: { fontFamily: 'Archivo_400Regular', fontSize: 14, textAlign: 'center', lineHeight: 22, marginTop: -4 },
   browseBtn: {
     marginTop: Spacing.sm,
-    backgroundColor: '#F05A1A',
+    backgroundColor: Colors.primary,
     borderRadius: Radius.lg,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
-    shadowColor: '#F05A1A',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 6,
   },
-  browseBtnText: { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
+  browseBtnText: { fontFamily: 'Archivo_800ExtraBold', fontSize: 15, color: '#fff', letterSpacing: 0.5 },
 })

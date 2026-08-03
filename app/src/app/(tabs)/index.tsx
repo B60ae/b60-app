@@ -290,6 +290,7 @@ function getMapsUrl(name: string) {
 // ─── Home Screen ──────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const user = useAuthStore((s) => s.user)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const cartItems = useCartStore((s) => s.items)
   const cartLocationId = useCartStore((s) => s.locationId)
   const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0)
@@ -307,7 +308,7 @@ export default function HomeScreen() {
   const { data: balance } = useQuery({
     queryKey: ['loyalty', 'balance'],
     queryFn: loyaltyApi.getBalance,
-    enabled: !!user,
+    enabled: isAuthenticated,
     staleTime: 0,
   })
 

@@ -4,6 +4,7 @@ import {
   Platform, Animated,
 } from 'react-native'
 import { Image } from 'expo-image'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import { authApi } from '../../services/api'
@@ -113,7 +114,7 @@ function PadKey({ label, aux, onPress, disabled }: { label: string; aux?: boolea
   }
 
   const backgroundColor = bg.interpolate({ inputRange: [0, 1], outputRange: ['#FFFFFF', V3.gold] })
-  const textColor = bg.interpolate({ inputRange: [0, 1], outputRange: [V3.w, V3.w] })
+  const textColor = bg.interpolate({ inputRange: [0, 1], outputRange: [V3.w, '#1E1206'] })
 
   return (
     <Animated.View style={[pad.key, { backgroundColor }]}>
@@ -291,7 +292,7 @@ export default function LoginScreen() {
   // EMAIL STEP
   if (step === 'email') {
     return (
-      <View style={s.root}>
+      <SafeAreaView style={s.root}>
         {/* Logo stage — rounded square with warm radial feel */}
         <View style={s.stage}>
           <Animated.View style={[s.logoCard, { opacity: blockO, transform: [{ translateY: blockY }] }]}>
@@ -341,13 +342,13 @@ export default function LoginScreen() {
           </Pressable>
           <Text style={s.legal}>By continuing you agree to the B60 terms.</Text>
         </Animated.View>
-      </View>
+      </SafeAreaView>
     )
   }
 
   // OTP STEP
   return (
-    <View style={[s.root, s.rootOtp]}>
+    <SafeAreaView style={[s.root, s.rootOtp]}>
       <View style={s.otpTop}>
         <Pressable
           onPress={() => { setStep('email'); otpRef.current = ''; setOtp(''); setError('') }}
@@ -374,7 +375,7 @@ export default function LoginScreen() {
 
       <NumPad onDigit={pushDigit} onDel={delDigit} onResend={handleResend} cooldown={cooldown} />
       <Text style={s.otpLegal}>Enter your 6-digit code</Text>
-    </View>
+    </SafeAreaView>
   )
 }
 
